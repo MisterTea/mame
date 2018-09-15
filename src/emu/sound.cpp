@@ -12,7 +12,7 @@
 #include "speaker.h"
 #include "emuopts.h"
 #include "osdepend.h"
-#include "config.h"
+#include "emuconfig.h"
 #include "wavwrite.h"
 
 
@@ -1082,6 +1082,9 @@ void sound_manager::config_save(config_type cfg_type, util::xml::data_node *pare
 //  and send it to the OSD layer
 //-------------------------------------------------
 
+extern bool catchingUp;
+extern bool SKIP_OSD;
+
 void sound_manager::update(void *ptr, int param)
 {
 	VPRINTF(("sound_update\n"));
@@ -1123,7 +1126,7 @@ void sound_manager::update(void *ptr, int param)
 	// play the result
 	if (finalmix_offset > 0)
 	{
-		if (!m_nosound_mode)
+		if (!m_nosound_mode && !catchingUp && !SKIP_OSD)
 			machine().osd().update_audio_stream(finalmix, finalmix_offset / 2);
 		machine().osd().add_audio_to_recording(finalmix, finalmix_offset / 2);
 		machine().video().add_sound_to_recording(finalmix, finalmix_offset / 2);

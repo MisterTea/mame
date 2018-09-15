@@ -15,7 +15,7 @@
 #include "debug/debugcon.h"
 #include "debug/debugcpu.h"
 
-#include "config.h"
+#include "emuconfig.h"
 #include "debugger.h"
 #include "modules/lib/osdobj_common.h"
 #include "debug_module.h"

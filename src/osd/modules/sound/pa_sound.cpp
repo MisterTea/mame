@@ -47,6 +47,9 @@ public:
 
 	virtual void update_audio_stream(bool is_throttled, const s16 *buffer, int samples_this_frame) override;
 	virtual void set_mastervolume(int attenuation) override;
+  virtual void pauseAudio(bool pause) override {
+    // TODO: Implement
+  }
 
 private:
 	// Lock free SPSC ring buffer

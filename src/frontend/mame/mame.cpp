@@ -8,6 +8,10 @@
 
 ***************************************************************************/
 
+#include "NSM_Common.h"
+#include "NSM_Server.h"
+#include "NSM_Client.h"
+
 #include "emu.h"
 #include "mame.h"
 #include "emuopts.h"
@@ -227,6 +231,22 @@ int mame_machine_manager::execute()
 		// create the machine configuration
 		machine_config config(*system, m_options);
 
+		//Set up client/server as appropriate
+		if(m_options.client())
+		  {
+		    deleteGlobalClient();
+		    createGlobalClient(m_options.username());
+		  }
+		else if(m_options.server())
+		  {
+		    deleteGlobalServer();
+		    createGlobalServer(m_options.username(),
+                           (unsigned short)m_options.port(),
+                           m_options.baseDelay(),
+                           m_options.rollback());
+		    netServer->setSyncTransferTime(m_options.syncTransferSeconds());
+		  }
+
 		// create the machine structure and driver
 		running_machine machine(config, *this);
 
@@ -235,6 +255,9 @@ int mame_machine_manager::execute()
 		// run the machine
 		error = machine.run(is_empty);
 		m_firstrun = false;
+
+		deleteGlobalClient();
+		deleteGlobalServer();
 
 		// check the state of the machine
 		if (m_new_driver_pending)

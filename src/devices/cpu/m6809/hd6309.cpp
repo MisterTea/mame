@@ -763,7 +763,7 @@ bool hd6309_device::divd()
 
 inline void hd6309_device::execute_one()
 {
-	switch(pop_state())
+	switch(int(pop_state()))
 	{
 #include "cpu/m6809/hd6309.hxx"
 	}

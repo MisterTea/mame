@@ -257,6 +257,8 @@ end
 		"softfloat",
 		ext_lib("jpeg"),
 		"7z",
+    "protobuf",
+    "raknet",
 	}
 if (STANDALONE~=true) then
 	links {

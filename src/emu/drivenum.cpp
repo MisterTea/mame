@@ -268,7 +268,8 @@ void driver_enumerator::find_approximate_matches(const char *string, std::size_t
 	if (!string || !string[0])
 	{
 		// seed the RNG first
-		srand(osd_ticks());
+		//JJG: Use a fixed seed.
+		srand(1234);
 
 		// allocate a temporary list
 		std::vector<int> templist(m_filtered_count);

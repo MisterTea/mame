@@ -24,6 +24,7 @@ includedirs {
 	MAME_DIR .. "src/lib",
 	MAME_DIR .. "src/lib/util",
 	MAME_DIR .. "3rdparty",
+	MAME_DIR .. "3rdparty/protobuf",
 	GEN_DIR  .. "emu",
 	GEN_DIR  .. "emu/layout",
 }
@@ -39,6 +40,14 @@ includedirs {
 }
 
 files {
+	MAME_DIR .. "src/emu/NSM_Common.cpp",
+	MAME_DIR .. "src/emu/NSM_Common.h",
+	MAME_DIR .. "src/emu/NSM_Server.cpp",
+	MAME_DIR .. "src/emu/NSM_Server.h",
+	MAME_DIR .. "src/emu/NSM_Client.cpp",
+	MAME_DIR .. "src/emu/NSM_Client.h",
+	MAME_DIR .. "src/emu/nsm.pb.cpp",
+
 	MAME_DIR .. "src/emu/emu.h",
 	MAME_DIR .. "src/emu/emufwd.h",
 	MAME_DIR .. "src/emu/main.h",
@@ -309,5 +318,3 @@ files {
 dependency {
 	{ "$(OBJDIR)/src/emu/drivers/empty.o", "$(GCH)", true  },
 }
-
-

@@ -220,6 +220,18 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_HTTP_PORT,                                  "8080",      OPTION_INTEGER,    "HTTP server port" },
 	{ OPTION_HTTP_ROOT,                                  "web",       OPTION_STRING,     "HTTP server document root" },
 
+    // net options
+	{ OPTION_USERNAME,               "Player",         OPTION_STRING,    "Username for displaying network info" },
+	{ OPTION_SERVER,               "0",         OPTION_BOOLEAN,    "Is this a server in the network" },
+	{ OPTION_CLIENT,               "0",         OPTION_BOOLEAN,    "Is this a client in the network" },
+	{ OPTION_HOSTNAME,               "127.0.0.1",         OPTION_STRING,    "hostname of server to connect to" },
+	{ OPTION_PORT,               "5805",         OPTION_INTEGER,    "port of server to connect to" },
+	{ OPTION_SELFPORT,               "5805",         OPTION_INTEGER,    "local port for other peers to connect to" },
+	{ OPTION_SECONDSBETWEENSYNC,               "30",         OPTION_INTEGER,    "Number of seconds to wait between syncs" },
+	{ OPTION_SYNCTRANSFERSECONDS,               "10",         OPTION_INTEGER,    "Number of seconds to spend transfering the sync" },
+	{ OPTION_BASEDELAY,               "16",         OPTION_INTEGER,    "Lowest amount to add to ping when doing ping estimation" },
+	{ OPTION_ROLLBACK,               "0",         OPTION_BOOLEAN,    "Enable rollback netplay (0-latency)" },
+
 	{ nullptr }
 };
 

@@ -8,6 +8,8 @@
 
 ***************************************************************************/
 
+#include "RakNet/GetTime.h"
+
 #include "emu.h"
 #include "luaengine.h"
 #include "mame.h"
@@ -265,13 +267,21 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 
 int cli_frontend::execute(std::vector<std::string> &args)
 {
+  // Initial rand
+  srand(1234);
+
+  // Initialize raknet time.
+  RakNet::GetTime();
+
 	// wrap the core execution in a try/catch to field all fatal errors
 	m_result = EMU_ERR_NONE;
 	mame_machine_manager *manager = mame_machine_manager::instance(m_options, m_osd);
-
+#if 0
 	try
 	{
+#endif
 		start_execution(manager, args);
+#if 0
 	}
 	// handle exceptions of various types
 	catch (emu_fatalerror &fatal)
@@ -321,6 +331,7 @@ int cli_frontend::execute(std::vector<std::string> &args)
 		osd_printf_error("Caught unhandled exception\n");
 		m_result = EMU_ERR_FATALERROR;
 	}
+#endif
 
 	util::archive_file::cache_clear();
 	global_free(manager);

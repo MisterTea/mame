@@ -18,7 +18,7 @@
 
 // MAME headers
 #include "emu.h"
-#include "config.h"
+#include "emuconfig.h"
 #include "debugger.h"
 
 // MAMEOS headers

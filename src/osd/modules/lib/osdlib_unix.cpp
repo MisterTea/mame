@@ -157,6 +157,7 @@ public:
 protected:
 	virtual generic_fptr_t get_symbol_address(char const *symbol) override
 	{
+<<<<<<< HEAD:src/osd/modules/lib/osdlib_unix.cpp
 		/*
 		 * given a list of libraries, if a first symbol is successfully loaded from
 		 * one of them, all additional symbols will be loaded from the same library
@@ -197,6 +198,15 @@ private:
 dynamic_module::ptr dynamic_module::open(std::vector<std::string> &&names)
 {
 	return std::make_unique<dynamic_module_posix_impl>(names);
+=======
+		// take a couple of msecs off the top for good measure
+		msec -= 2;
+		usleep(msec*1000);
+	} else {
+    // Yield the processor
+    usleep(0);
+  }
+>>>>>>> mamehub0160:src/osd/modules/lib/osdlib_unix.c
 }
 
 } // namespace osd

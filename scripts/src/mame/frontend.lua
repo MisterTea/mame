@@ -30,6 +30,7 @@ includedirs {
 	MAME_DIR .. "src/lib",
 	MAME_DIR .. "src/lib/util",
 	MAME_DIR .. "3rdparty",
+	MAME_DIR .. "3rdparty/protobuf",
 	GEN_DIR  .. "emu",
 	GEN_DIR  .. "emu/layout",
 }
@@ -71,6 +72,8 @@ files {
 	MAME_DIR .. "src/frontend/mame/luaengine.h",
 	MAME_DIR .. "src/frontend/mame/mame.cpp",
 	MAME_DIR .. "src/frontend/mame/mame.h",
+	MAME_DIR .. "src/frontend/mame/mamehub.cpp",
+	MAME_DIR .. "src/frontend/mame/mamehub.h",
 	MAME_DIR .. "src/frontend/mame/mameopts.cpp",
 	MAME_DIR .. "src/frontend/mame/mameopts.h",
 	MAME_DIR .. "src/frontend/mame/media_ident.cpp",

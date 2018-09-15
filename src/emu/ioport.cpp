@@ -90,9 +90,22 @@
 
 ***************************************************************************/
 
+#include "NSM_Common.h"
+#include "NSM_Server.h"
+#include "NSM_Client.h"
+
+#include "nsm.pb.h"
+
+#include <boost/circular_buffer.hpp>
+
+#include <map>
+#include <vector>
+#include <string>
+#include <iomanip>
+
 #include "emu.h"
 #include "emuopts.h"
-#include "config.h"
+#include "emuconfig.h"
 #include "xmlfile.h"
 #include "profiler.h"
 #include "ui/uimain.h"
@@ -104,8 +117,11 @@
 #include <ctype.h>
 #include <time.h>
 
+using namespace std;
+using namespace nsm;
 
 namespace {
+
 // temporary: set this to 1 to enable the originally defined behavior that
 // a field specified via PORT_MODIFY which intersects a previously-defined
 // field completely wipes out the previous definition
@@ -449,7 +465,7 @@ void digital_joystick::frame_update()
 		for (const simple_list_wrapper<ioport_field> &i : m_field[direction])
 		{
 			machine = &i.object()->machine();
-			if (machine->input().seq_pressed(i.object()->seq(SEQ_TYPE_STANDARD)))
+      if (machine->input().seq_pressed(i.object()->seq(true, SEQ_TYPE_STANDARD)))
 				m_current |= 1 << direction;
 		}
 
@@ -674,8 +690,56 @@ const char *ioport_field::name() const
 //  given input field
 //-------------------------------------------------
 
-const input_seq &ioport_field::seq(input_seq_type seqtype) const
+// playerFieldMap maps inputs for players onto their player 1
+// equivalent.
+map<const ioport_field*,const ioport_field*> playerFieldMap;
+
+const input_seq &ioport_field::seq(bool checkMapping, input_seq_type seqtype) const
 {
+  if(checkMapping && netCommon && netCommon->getSelfPeerID()>0) {
+    int player = netCommon->getPlayer();
+
+    ioport_type typeToMap = type();
+    int playerToMap = this->player();
+
+    if (playerToMap < 0 || playerToMap >= MAX_PLAYERS) {
+      // Invalid player
+      return input_seq::empty_seq;
+    }
+
+    if(typeToMap >= IPT_START1 && typeToMap <= IPT_START8) {
+      typeToMap = IPT_START1;
+      playerToMap = type() - IPT_START1;
+    }
+    if(typeToMap >= IPT_COIN1 && typeToMap <= IPT_COIN12) {
+      typeToMap = IPT_COIN1;
+      playerToMap = type() - IPT_COIN1;
+    }
+    if(typeToMap >= IPT_SERVICE1 && typeToMap <= IPT_SERVICE4) {
+      typeToMap = IPT_SERVICE1;
+      playerToMap = type() - IPT_SERVICE1;
+    }
+    if(typeToMap >= IPT_TILT1 && typeToMap <= IPT_TILT4) {
+      typeToMap = IPT_TILT1;
+      playerToMap = type() - IPT_TILT1;
+    }
+
+    map<const ioport_field*,const ioport_field*>::iterator it = playerFieldMap.find(this);
+
+    if(it != playerFieldMap.end()) {
+      if(player != playerToMap) {
+        // We shouldn't be controlling this player
+        return input_seq::empty_seq;
+      }
+      //cout << "MAPPING " << name() << " TO " << it->second->name() << endl;
+      return it->second->seq(false, seqtype);
+    } else if(name()) {
+      // cout << "FOUND NO MAP FOR " << name() << endl;
+    } else {
+      // cout << "FOUND NO MAP FOR UNKNOWN INPUT" << endl;
+    }
+  }
+
 	// if no live state, return default
 	if (m_live == nullptr)
 		return defseq(seqtype);
@@ -712,7 +776,7 @@ const input_seq &ioport_field::defseq(input_seq_type seqtype) const
 
 void ioport_field::set_defseq(input_seq_type seqtype, const input_seq &newseq)
 {
-	const bool was_changed = seq(seqtype) != defseq(seqtype);
+	const bool was_changed = seq(false, seqtype) != defseq(seqtype);
 
 	// set the new sequence
 	m_seq[seqtype] = newseq;
@@ -864,7 +928,7 @@ void ioport_field::get_user_settings(user_settings &settings)
 
 	// copy the basics
 	for (input_seq_type seqtype = SEQ_TYPE_STANDARD; seqtype < SEQ_TYPE_TOTAL; ++seqtype)
-		settings.seq[seqtype] = seq(seqtype);
+    settings.seq[seqtype] = seq(false, seqtype);
 
 	// if there's a list of settings or we're an adjuster, copy the current value
 	if (!m_settinglist.empty() || m_type == IPT_ADJUSTER)
@@ -1098,7 +1162,8 @@ void ioport_field::frame_update(ioport_value &result)
 	}
 
 	// if the state changed, look for switch down/switch up
-	bool curstate = m_digital_value || machine().input().seq_pressed(seq());
+	bool curstate = m_digital_value || machine().input().seq_pressed(seq(true, SEQ_TYPE_STANDARD));
+  // JJG: Probably need to do something here for autofire
 	if (m_live->autofire && !machine().ioport().get_autofire_toggle())
 	{
 		if (curstate)
@@ -1188,7 +1253,7 @@ void ioport_field::frame_update(ioport_value &result)
 
 	// if we're active, set the appropriate bits in the digital state
 	if (curstate)
-		result |= m_mask;
+    result |= m_mask;
 }
 
 
@@ -1654,6 +1719,9 @@ ioport_port_live::ioport_port_live(ioport_port &port)
 		// let the field initialize its live state
 		field.init_live_state(analog);
 	}
+
+  port.machine().save().save_item(NULL, "ioport", port.tag(), 0, defvalue, "defvalue");
+  port.machine().save().save_item(NULL, "ioport", port.tag(), 1, digital, "digital");
 }
 
 
@@ -1679,7 +1747,8 @@ ioport_manager::ioport_manager(running_machine &machine)
 		m_timecode_count(0),
 		m_timecode_last_time(attotime::zero),
 		m_autofire_toggle(false),
-		m_autofire_delay(3)                 // 1 seems too fast for a bunch of games
+		m_autofire_delay(3),                 // 1 seems too fast for a bunch of games
+    m_framecount(0)
 {
 	memset(m_type_to_entry, 0, sizeof(m_type_to_entry));
 }
@@ -1690,8 +1759,20 @@ ioport_manager::ioport_manager(running_machine &machine)
 //  create live state information
 //-------------------------------------------------
 
+boost::circular_buffer<std::pair<attotime,InputState> > playerInputData[MAX_PLAYERS];
+attotime lastFutureInputTime(0,0);
+int baseDelayFromPing = 40;
+attotime mostRecentSentReport;
+attotime inputStartTime(1,0);
+
 time_t ioport_manager::initialize()
 {
+  machine().save().save_item(NULL, "ioport", "manager", 0, m_framecount, "framecount");
+
+  for(int a=0;a<MAX_PLAYERS;a++) {
+    playerInputData[a].set_capacity(30000);
+  }
+
 	// add an exit callback and a frame callback
 	machine().add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(&ioport_manager::exit, this));
 	machine().add_notifier(MACHINE_NOTIFY_FRAME, machine_notify_delegate(&ioport_manager::frame_update_callback, this));
@@ -1760,6 +1841,108 @@ time_t ioport_manager::initialize()
 
 	// register callbacks for when we load configurations
 	machine().configuration().config_register("input", config_load_delegate(&ioport_manager::load_config, this), config_save_delegate(&ioport_manager::save_config, this));
+
+  // Set up player X->player Y maps
+  vector<ioport_port*> ports;
+  for (auto &port : m_portlist) {
+    ports.push_back(port.second.get());
+  }
+  for (int portFromIndex=0;portFromIndex<m_portlist.size();portFromIndex++) {
+    ioport_port* portFrom = ports[portFromIndex];
+    for (ioport_field &fieldFrom : portFrom->fields()) {
+      int fromPlayer = fieldFrom.player();
+      ioport_type fromType = fieldFrom.type();
+
+      if(fromType >= IPT_START1 && fromType <= IPT_START8) {
+        fromPlayer = (fromType - IPT_START1);
+        fromType = IPT_START1;
+      }
+      if(fromType >= IPT_COIN1 && fromType <= IPT_COIN12) {
+        fromPlayer = (fromType - IPT_COIN1);
+        fromType = IPT_COIN1;
+      }
+      if(fromType >= IPT_SERVICE1 && fromType <= IPT_SERVICE4) {
+        fromPlayer = (fromType - IPT_SERVICE1);
+        fromType = IPT_SERVICE1;
+      }
+      if(fromType >= IPT_TILT1 && fromType <= IPT_TILT4) {
+        fromPlayer = (fromType - IPT_TILT1);
+        fromType = IPT_TILT1;
+      }
+
+      if (fromPlayer==0) {
+        playerFieldMap[&fieldFrom] = &fieldFrom;
+      }
+
+      if(fromType<IPT_START1) {
+        continue; // Don't map these psuedo-inputs
+      }
+
+      bool done = false;
+      for (int portToIndex=portFromIndex;!done && portToIndex>=0;portToIndex--) {
+        ioport_port* portTo = ports[portToIndex];
+        for (ioport_field &fieldTo : portTo->fields()) {
+          if (done) break;
+          if(&fieldFrom == &fieldTo)
+            continue; // Don't map a field to itself
+
+          int toPlayer = fieldTo.player();
+
+          ioport_type toType = fieldTo.type();
+
+          if(toType >= IPT_START1 && toType <= IPT_START8) {
+            toPlayer = (toType - IPT_START1);
+            toType = IPT_START1;
+          }
+          if(toType >= IPT_COIN1 && toType <= IPT_COIN12) {
+            toPlayer = (toType - IPT_COIN1);
+            toType = IPT_COIN1;
+          }
+          if(toType >= IPT_SERVICE1 && toType <= IPT_SERVICE4) {
+            toPlayer = (toType - IPT_SERVICE1);
+            toType = IPT_SERVICE1;
+          }
+          if(toType >= IPT_TILT1 && toType <= IPT_TILT4) {
+            toPlayer = (toType - IPT_TILT1);
+            toType = IPT_TILT1;
+          }
+
+          if (toPlayer != 0) {
+            continue;  // We only want to map players 2+ to player 1
+          }
+
+          if (fieldFrom.name() && fieldTo.name()) {
+            cout << "CHECKING " << fieldFrom.name() << " AND " << fieldTo.name() << endl;
+          }
+
+          if(fromType == toType) {
+            if(fromPlayer == toPlayer) {
+              if(fieldFrom.name() && fieldTo.name() && !strcmp(fieldFrom.name(),fieldTo.name())) {
+                cout << "UH O, FOUND THE SAME EXACT INPUT FIELDS: " << fieldFrom.name() << " AND " << fieldTo.name() << endl;
+              }
+            } else {
+              map<const ioport_field*, const ioport_field*>::iterator it =
+                playerFieldMap.find(&fieldFrom);
+              if (it == playerFieldMap.end() || portTo == portFrom) {
+                if (it != playerFieldMap.end()) {
+                  cout << "DUPLICATE FOUND" << endl;
+                }
+                playerFieldMap[&fieldFrom] = &fieldTo;
+                done = true;
+
+                if (fieldFrom.name() && fieldTo.name()) {
+                  cout << "MAPPING " << fieldFrom.name() << " TO " << fieldTo.name() << endl;
+                } else {
+                  cout << "MAPPING UNNAMED " << fromType << " " << fromPlayer << " TO " << toType << " " << toPlayer << endl;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
 
 	// open playback and record files if specified
 	time_t basetime = playback_init();
@@ -2020,18 +2203,39 @@ void ioport_manager::frame_update_callback()
 		frame_update();
 }
 
+extern attotime protoToAttotime(const Attotime &at);
+
+nsm::Attotime attotimeToProto(const attotime& at) {
+  nsm::Attotime nsmAttotime;
+  nsmAttotime.set_seconds(at.seconds());
+  nsmAttotime.set_attoseconds(at.attoseconds());
+  return nsmAttotime;
+}
 
 //-------------------------------------------------
 //  frame_update_internal - core logic for
 //  per-frame input port updating
 //-------------------------------------------------
 
+s64 lastInputFramecount = -1;
+extern s64 inputFrameNumber;
+
 void ioport_manager::frame_update()
 {
+  m_framecount++;
+  inputFrameNumber++;
+
+  //cout << "UPDATING FRAME\n";
 g_profiler.start(PROFILER_INPUT);
 
+  if(netServer)
+  {
+    //This line is here because it needs to run at about 60hz
+    netServer->popSyncQueue();
+  }
+
 	// record/playback information about the current frame
-	attotime curtime = machine().time();
+	attotime curtime = machine().machine_time();
 	playback_frame(curtime);
 	record_frame(curtime);
 
@@ -2050,23 +2254,410 @@ g_profiler.start(PROFILER_INPUT);
 	for (auto &port : m_portlist)
 		port.second->update_defvalue(false);
 
+  nsm::InputState inputState;
+  inputState.set_framecount(m_framecount);
 	// loop over all input ports
 	for (auto &port : m_portlist)
 	{
 		port.second->frame_update();
 
-		// handle playback/record
-		playback_port(*port.second.get());
-		record_port(*port.second.get());
+    if(netCommon) {
+      // store local inputs in buffer for broadcast
+      nsm::InputPort *inputPort = inputState.add_ports();
+      store_local_port(*port.second.get(), inputPort);
+    }
+  }
 
-		// call device line write handlers
-		ioport_value newvalue = port.second->read();
-		for (dynamic_field &dynfield : port.second->live().writelist)
-			if (dynfield.field().type() != IPT_OUTPUT)
-				dynfield.write(newvalue);
+  for(int a=0;a<MAX_PLAYERS;a++) {
+    if(netServer) {
+      if(a==0 || netServer->hasPeerWithID(a+1)==false) {
+        inputState.add_players(a);
+      }
+    } else if(netClient) {
+      if(a == netClient->getSelfPeerID()-1) {
+        inputState.add_players(a);
+      }
+    }
+  }
+
+  attotime curMachineTime = machine().machine_time();
+  //cout << "AT TIME " << curMachineTime.seconds << "." << curMachineTime.attoseconds << endl;
+
+  //cout << "MOST RECENT SENT REPORT " << mostRecentSentReport.seconds << "." << mostRecentSentReport.attoseconds << endl;
+  if(netCommon) {
+    bool rollback = netCommon->isRollback();
+    // Calculate the time that the new inputs will take effect
+    int delayFromPing=40;
+    delayFromPing = max(delayFromPing,min(600,/*baseDelayFromPing +*/ netCommon->getLargestPing(curMachineTime.seconds())/2));
+    attoseconds_t attosecondsToLead = 0;
+    if (!rollback) {
+      attosecondsToLead = ATTOSECONDS_PER_MILLISECOND*delayFromPing;
+    }
+    attotime futureInputTime = curMachineTime + attotime(0,attosecondsToLead);
+    if (futureInputTime < inputStartTime) {
+      // Inputs before the input start time are not valid.
+    } else if(futureInputTime <= mostRecentSentReport) {
+      // We haven't caught up with the server yet, don't send.
+    } else if(futureInputTime <= lastFutureInputTime) {
+      // This input would occur in the past or be a duplicate, ignore it.
+    } else if(m_framecount <= lastInputFramecount) {
+      // This input would occur in the past or be a duplicate, ignore it.
+    } else {
+      if (!rollback && lastFutureInputTime < inputStartTime) {
+        // Make sure that the first input is exactly on the input start time.
+        futureInputTime = inputStartTime;
+      }
+      lastFutureInputTime = futureInputTime;
+      lastInputFramecount = m_framecount;
+
+      //cout << "SENDING INPUTS AT TIME " << futureInputTime.seconds << "." << futureInputTime.attoseconds << endl;
+      nsm::Attotime nsmAttotime = attotimeToProto(futureInputTime);
+      netCommon->sendInputs(nsmAttotime, PeerInputData::INPUT, inputState);
+
+      // Process my own inputs immediately because we know they won't
+      // cause a rollback and we need to use them right away.
+      while(true) {
+        nsm::PeerInputData input = netCommon->popInput(netCommon->getSelfPeerID());
+        if (input.has_time()) {
+          machine().processNetworkBuffer(&input, netCommon->getSelfPeerID());
+        } else {
+          break;
+        }
+      }
+    }
 	}
 
-g_profiler.stop();
+  vector<nsm::InputState*> remoteInputStates;
+
+  if( curMachineTime >= inputStartTime && netCommon) {
+    remoteInputStates = fetch_remote_inputs(curMachineTime);
+  }
+
+  int portIndex=0;
+	for (auto &portPair : m_portlist)
+	{
+    ioport_port* port = portPair.second.get();
+    if (!netCommon) {
+      // handle playback
+      playback_port(*port);
+    }
+
+    if(netCommon) {
+      merge_ports(*port, remoteInputStates, portIndex);
+    }
+
+    // handle record
+    record_port(*port);
+
+		// call device line write handlers
+		ioport_value newvalue = port->read();
+		for (dynamic_field &dynfield : port->live().writelist)
+			if (dynfield.field().type() != IPT_OUTPUT)
+				dynfield.write(newvalue);
+
+    portIndex++;
+  }
+
+  g_profiler.stop();
+}
+
+bool waitingForClientCatchup = false;
+int framesSinceDelayCheck = 0;
+
+void ioport_manager::pollForPeerCatchup(attotime curMachineTime) {
+  bool thisIsBadFrame=false;
+  bool gotStale = false;
+  while(true) {
+    static time_t realtime = time(NULL);
+    bool printDebug=false;
+    if(printDebug || realtime != time(NULL))
+    {
+      printDebug=true;
+      realtime = time(NULL);
+    }
+
+    if(!netCommon->update(&(machine()))) {
+      cout << "NETWORK FAILED\n";
+      ::exit(1);
+    }
+
+    while (true) {
+      int oldestPeer = netCommon->getOldestPeerInputTime().first;
+
+      if(netCommon->hasPeerWithID(oldestPeer)==false) {
+        //The peer we were waiting on is gone.
+        continue;
+      }
+
+      PeerInputData peerInput = netCommon->popInput(oldestPeer);
+
+      if (peerInput.has_time()) {
+        machine().processNetworkBuffer(&peerInput, oldestPeer);
+      } else {
+        break;
+      }
+    }
+
+    pair<int,nsm::Attotime> peerTimeProtoPair = netCommon->getOldestPeerInputTime();
+    pair<int,attotime> peerTimePair = pair<int,attotime>(peerTimeProtoPair.first,protoToAttotime(peerTimeProtoPair.second));
+
+    if(peerTimePair.first == -1 || peerTimePair.second > curMachineTime) {
+      if(waitingForClientCatchup) {
+        waitingForClientCatchup=false;
+        machine().osd().pauseAudio(false);
+      }
+      if(printDebug)
+        cout << "Peer " << peerTimePair.first << " is caught up with " << peerTimePair.second.seconds() << "." << peerTimePair.second.attoseconds() << endl;
+
+      if(framesSinceDelayCheck>=60 && netServer && !waitingForClientCatchup) {
+        cout << "Decreasing base delay from " << baseDelayFromPing;
+
+        int smallestBaseDelay = machine().options().baseDelay();
+        baseDelayFromPing = max(smallestBaseDelay,baseDelayFromPing-20);
+        framesSinceDelayCheck=0;
+        cout << " to " << baseDelayFromPing << endl;
+        netServer->sendBaseDelay(baseDelayFromPing);
+      }
+
+      break;
+    }
+
+    if(!thisIsBadFrame && netServer && framesSinceDelayCheck>=30 && !waitingForClientCatchup) {
+      cout << "Increasing base delay from " << baseDelayFromPing;
+      baseDelayFromPing = min(210,baseDelayFromPing+20);
+      thisIsBadFrame=true;
+      framesSinceDelayCheck = 0;
+      cout << " to " << baseDelayFromPing << ": " << peerTimePair.second << " <= " << curMachineTime << endl;
+      netServer->sendBaseDelay(baseDelayFromPing);
+    }
+
+    if(printDebug && !gotStale) {
+      gotStale = true;
+      cout << "Peer " << peerTimePair.first << " is stale with last input at " << peerTimePair.second.seconds() << "." << peerTimePair.second.attoseconds() << " (" << curMachineTime.seconds() << "." << curMachineTime.attoseconds() << ")" << endl;
+    }
+    if(peerTimePair.second.seconds()+2 < curMachineTime.seconds()) {
+      waitingForClientCatchup=true;
+      machine().osd().pauseAudio(true);
+    }
+    emulator_info::draw_user_interface(machine());
+    machine().osd().update(false);
+
+    osd_sleep(0);
+  }
+}
+
+void ioport_manager::pollForDataAfter(int player, attotime curMachineTime) {
+  while(true) {
+    bool stale=true;
+    if (!playerInputData[player].empty()) {
+      if (netCommon->isRollback()) {
+        if (playerInputData[player].rbegin()->second.framecount() >= (m_framecount-60)) {
+          // In rollback, we check framecount to see that we aren't 1s behind or more
+          stale = false;
+        }
+      } else {
+        stale = playerInputData[player].rbegin()->first <= curMachineTime;
+      }
+    }
+
+    if (!stale) {
+      break;
+    }
+
+    static time_t realtime = time(NULL);
+    bool printDebug=false;
+    if(printDebug || realtime != time(NULL))
+    {
+      printDebug=true;
+      realtime = time(NULL);
+    }
+
+    if(printDebug) {
+      cout << "PLAYER " << player << " is stale with last input before " << curMachineTime.seconds() << "." << curMachineTime.attoseconds() << endl;
+    }
+
+    bool gotInput = false;
+    vector<int> peerIDs;
+    netCommon->getPeerIDs(peerIDs);
+
+    for(int a=0; a<(int)peerIDs.size(); a++)
+    {
+      int peerID = peerIDs[a];
+      PeerInputData peerInput = netCommon->popInput(peerID);
+
+      if (peerInput.has_time()) {
+        machine().processNetworkBuffer(&peerInput, peerID);
+        gotInput=true;
+      }
+    }
+
+    if(!gotInput)
+    {
+      cout << "MISSING INPUT DATA FOR PLAYER " << player << " AT " << curMachineTime.seconds() << "." << curMachineTime.attoseconds() << endl;
+      //throw emu_fatalerror("MISSING INPUT DATA FOR PLAYER");
+      osd_sleep(0);
+      break;
+    }
+
+  }
+
+  //if(printDebug)
+  //cout << "PLAYER " << player << " is up to date with last input at " << playerInputData[player].rbegin()->first.seconds << "." << playerInputData[player].rbegin()->first.attoseconds << endl;
+}
+
+extern bool doRollback;
+extern attotime rollbackTime;
+
+std::vector<nsm::InputState*> ioport_manager::fetch_remote_inputs(attotime curMachineTime) {
+  bool rollback = netCommon->isRollback();
+  vector<nsm::InputState*> retval;
+
+  framesSinceDelayCheck++;
+  attotime checkInputTime = curMachineTime;
+  if (rollback) {
+    // Only make sure we have inputs from at least a second ago
+    checkInputTime -= attotime(1,0);
+  }
+  pollForPeerCatchup(checkInputTime);
+
+  for(int player=0;player<MAX_PLAYERS;player++) {
+    // Poll for new player input data
+
+    // Note we have to do this first or it will invalidate the iterators we assign further down
+    pollForDataAfter(player, checkInputTime);
+  }
+
+  for(int player=0;player<MAX_PLAYERS;player++) {
+    boost::circular_buffer<std::pair<attotime,InputState> >::reverse_iterator it = playerInputData[player].rbegin();
+    boost::circular_buffer<std::pair<attotime,InputState> >::reverse_iterator itold = playerInputData[player].rbegin();
+
+    while(true)
+    {
+      if (rollback) {
+        if (it->second.framecount() <= m_framecount) {
+          retval.push_back(&(it->second));
+          break;
+        }
+      } else {
+        if(it==playerInputData[player].rend())
+        {
+          cout << "MISSING PLAYER INPUT IN THE PAST " << playerInputData[player].size() << endl;
+          throw emu_fatalerror("OOPS: INVALID PLAYER INPUT");
+        }
+        else if(it->first<=curMachineTime)
+        {
+          if (rollback) {
+            if (player <= 1) {
+              cout << "INPUT TIMES FOR " << player << ": " << it->first << " / " << curMachineTime << endl;
+              cout << "INPUT DATA: " << it->second.DebugString() << endl;
+            }
+            if (netServer && player == 0 && it->first != curMachineTime) {
+              cout << "Invalid machine time: " << it->first << ' ' << curMachineTime << endl;
+              throw emu_fatalerror("INVALID MACHINE TIME");
+              cout << "GOING TO TRY TO ROLL BACK FURTHER\n";
+              doRollback=true;
+              rollbackTime -= attotime(0,ATTOSECONDS_PER_SECOND/10);
+            }
+            retval.push_back(&(it->second));
+          } else {
+            if(it==itold)
+            {
+              //throw emu_fatalerror("OOPS");
+
+              // This can happen for a few frames after someone
+              // disconnects but before the server takes over.
+              retval.push_back(NULL);
+            } else {
+              retval.push_back(&(itold->second));
+            }
+          }
+          break;
+        } else {
+          //cout << "GOT INPUT BUT TOO NEW: " << it->first.seconds << "." << it->first.attoseconds << " " << curMachineTime.seconds << "." << curMachineTime.attoseconds << endl;
+        }
+      }
+
+      itold = it;
+      it++;
+    }
+  }
+
+  return retval;
+}
+
+void ioport_manager::store_local_port(ioport_port &port, nsm::InputPort *inputPort)
+{
+  // read the default value and the digital state
+  inputPort->set_defvalue(port.live().defvalue);
+  inputPort->set_digital(port.live().digital);
+
+  // loop over analog ports and save their data
+  for (analog_field *analog = port.live().analoglist.first(); analog != NULL; analog = analog->next())
+  {
+    nsm::AnalogPort *analogPort = inputPort->add_analogports();
+
+    analogPort->set_accum(analog->m_accum);
+    analogPort->set_previous(analog->m_previous);
+    analogPort->set_sensitivity(analog->m_sensitivity);
+    analogPort->set_reverse(analog->m_reverse);
+  }
+}
+
+void ioport_manager::merge_ports(ioport_port &port, const std::vector<nsm::InputState*> &remoteInputStates, int portIndex)
+{
+  // read the default value and the digital state
+  port.live().digital = 0;
+
+  // loop over analog ports and save their data
+  for (analog_field *analog = port.live().analoglist.first(); analog != NULL; analog = analog->next())
+  {
+    // reset current and previous values
+    analog->m_accum = 0;
+    analog->m_previous = 0;
+  }
+
+  if(remoteInputStates.size() > 0) {
+    if (remoteInputStates.size() != MAX_PLAYERS) {
+      throw "Invalid number of remote input states";
+    }
+
+    // The following settings must be based on a player
+    port.live().defvalue = 0;
+    for (analog_field *analog = port.live().analoglist.first(); analog != NULL; analog = analog->next())
+    {
+      analog->m_sensitivity = 0;
+      analog->m_reverse = 0;
+    }
+
+    for(int a=0;a<MAX_PLAYERS;a++) {
+      if(remoteInputStates[a] == NULL) {
+        continue;
+      }
+
+      const InputPort &inputPort = remoteInputStates[a]->ports(portIndex);
+
+      // read the default value and the digital state
+      port.live().defvalue |= inputPort.defvalue();
+      port.live().digital |= inputPort.digital();
+
+      // loop over analog ports and save their data
+      int analogIndex=0;
+      for (analog_field *analog = port.live().analoglist.first(); analog != NULL; analog = analog->next())
+      {
+        const AnalogPort &analogPort = inputPort.analogports(analogIndex);
+
+        // read current and previous values
+        analog->m_accum |= analogPort.accum();
+        analog->m_previous |= analogPort.previous();
+
+        // read configuration information
+        analog->m_sensitivity |= analogPort.sensitivity();
+        analog->m_reverse |= analogPort.reverse();
+
+        analogIndex++;
+      }
+    }
+  }
 }
 
 
@@ -2082,7 +2673,7 @@ s32 ioport_manager::frame_interpolate(s32 oldval, s32 newval)
 		return newval;
 
 	// otherwise, interpolate
-	attoseconds_t nsec_since_last = (machine().time() - m_last_frame_time).as_attoseconds() / ATTOSECONDS_PER_NANOSECOND;
+	attoseconds_t nsec_since_last = (machine().machine_time() - m_last_frame_time).as_attoseconds() / ATTOSECONDS_PER_NANOSECOND;
 	return oldval + (s64(newval - oldval) * nsec_since_last / m_last_delta_nsec);
 }
 
@@ -2416,7 +3007,7 @@ void ioport_manager::save_game_inputs(util::xml::data_node &parentnode)
 				// determine if we changed
 				bool changed = false;
 				for (input_seq_type seqtype = SEQ_TYPE_STANDARD; seqtype < SEQ_TYPE_TOTAL; ++seqtype)
-					changed |= (field.seq(seqtype) != field.defseq(seqtype));
+					changed |= (field.seq(false, seqtype) != field.defseq(seqtype));
 
 				// non-analog changes
 				if (!field.is_analog())
@@ -2449,8 +3040,8 @@ void ioport_manager::save_game_inputs(util::xml::data_node &parentnode)
 
 						// add sequences if changed
 						for (input_seq_type seqtype = SEQ_TYPE_STANDARD; seqtype < SEQ_TYPE_TOTAL; ++seqtype)
-							if (field.seq(seqtype) != field.defseq(seqtype))
-								save_sequence(*portnode, seqtype, field.type(), field.seq(seqtype));
+							if (field.seq(false, seqtype) != field.defseq(seqtype))
+								save_sequence(*portnode, seqtype, field.type(), field.seq(true, seqtype));
 
 						// write out non-analog changes
 						if (!field.is_analog())
@@ -3505,7 +4096,7 @@ void analog_field::frame_update(running_machine &machine)
 
 	// get the new raw analog value and its type
 	input_item_class itemclass;
-	s32 rawvalue = machine.input().seq_axis_value(m_field.seq(SEQ_TYPE_STANDARD), itemclass);
+  s32 rawvalue = machine.input().seq_axis_value(m_field.seq(true, SEQ_TYPE_STANDARD), itemclass);
 
 	// if we got an absolute input, it overrides everything else
 	if (itemclass == ITEM_CLASS_ABSOLUTE)
@@ -3565,7 +4156,7 @@ void analog_field::frame_update(running_machine &machine)
 	// if the decrement code sequence is pressed, add the key delta to
 	// the accumulated delta; also note that the last input was a digital one
 	bool keypressed = false;
-	if (machine.input().seq_pressed(m_field.seq(SEQ_TYPE_DECREMENT)))
+  if (machine.input().seq_pressed(m_field.seq(true, SEQ_TYPE_DECREMENT)))
 	{
 		keypressed = true;
 		if (m_delta != 0)
@@ -3577,7 +4168,7 @@ void analog_field::frame_update(running_machine &machine)
 	}
 
 	// same for the increment code sequence
-	if (machine.input().seq_pressed(m_field.seq(SEQ_TYPE_INCREMENT)))
+  if (machine.input().seq_pressed(m_field.seq(true, SEQ_TYPE_INCREMENT)))
 	{
 		keypressed = true;
 		if (m_delta)
@@ -3596,7 +4187,7 @@ void analog_field::frame_update(running_machine &machine)
 		m_accum = 0;
 
 	// apply the delta to the accumulated value
-	m_accum += delta;
+  m_accum = m_local_accum + delta;
 
 	// if our last movement was due to a digital input, and if this control
 	// type autocenters, and if neither the increment nor the decrement seq
@@ -3631,6 +4222,8 @@ void analog_field::frame_update(running_machine &machine)
 	}
 	else if (!keypressed)
 		m_lastdigital = false;
+
+  m_local_accum = m_accum;
 }
 
 

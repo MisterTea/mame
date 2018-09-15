@@ -196,7 +196,7 @@ void menu_input_specific::populate(float &customtop, float &custombottom)
 					item->seqtype = seqtype;
 					if(pollingitem && pollingref == item->ref && pollingseq == seqtype)
 						pollingitem = item;
-					item->seq = field.seq(seqtype);
+					item->seq = field.seq(false, seqtype);
 					item->defseq = &field.defseq(seqtype);
 					item->sortorder = sortorder + suborder[seqtype];
 					item->type = field.is_analog() ? (INPUT_TYPE_ANALOG + seqtype) : INPUT_TYPE_DIGITAL;

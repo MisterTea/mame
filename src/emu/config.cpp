@@ -10,7 +10,7 @@
 #include "emu.h"
 #include "emuopts.h"
 #include "drivenum.h"
-#include "config.h"
+#include "emuconfig.h"
 #include "xmlfile.h"
 
 #define DEBUG_CONFIG        0
@@ -204,8 +204,18 @@ int configuration_manager::load_xml(emu_file &file, config_type which_type)
 			osd_printf_debug("Entry: %s -- processing\n", name);
 
 		/* loop over all registrants and call their load function */
-		for (auto type : m_typelist)
+		for (auto type : m_typelist) {
+			//JJG: Only load input cfgs.
+      if(machine().options().server() || machine().options().client())
+      {
+        if(type.name != "input")
+        {
+          //printf("SKIPPING CFG TYPE %s\n",type->name);
+          continue;
+        }
+      }
 			type.load(which_type, systemnode->get_child(type.name.c_str()));
+    }
 		count++;
 	}
 

@@ -542,7 +542,7 @@ inline void construct_core_types_service(simple_list<input_type_entry> &typelist
 
 inline void construct_core_types_tilt(simple_list<input_type_entry> &typelist)
 {
-	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT1,               "Tilt 1",                 input_seq(KEYCODE_T) )
+	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT1,               "Tilt 1",                 input_seq() )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT2,               "Tilt 2",                 input_seq() )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT3,               "Tilt 3",                 input_seq() )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT4,               "Tilt 4",                 input_seq() )
@@ -553,7 +553,7 @@ inline void construct_core_types_other(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   POWER_ON,            "Power On",               input_seq(KEYCODE_F1) )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   POWER_OFF,           "Power Off",              input_seq(KEYCODE_F2) )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   SERVICE,             "Service",                input_seq(KEYCODE_F2) )
-	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT,                "Tilt",                   input_seq(KEYCODE_T) )
+	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT,                "Tilt",                   input_seq() )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   INTERLOCK,           "Door Interlock",         input_seq() )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   MEMORY_RESET,        "Memory Reset",           input_seq(KEYCODE_F1) )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   VOLUME_DOWN,         "Volume Down",            input_seq(KEYCODE_MINUS) )

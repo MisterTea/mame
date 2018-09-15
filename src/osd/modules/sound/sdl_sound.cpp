@@ -64,6 +64,7 @@ public:
 
 	virtual void update_audio_stream(bool is_throttled, const int16_t *buffer, int samples_this_frame) override;
 	virtual void set_mastervolume(int attenuation) override;
+  virtual void pauseAudio(bool pause) override;
 
 private:
 	int lock_buffer(bool is_throttled, long offset, long size, void **buffer1, long *length1, void **buffer2, long *length2);
@@ -340,6 +341,10 @@ void sound_sdl::set_mastervolume(int _attenuation)
 		else
 			SDL_PauseAudio(0);
 	}
+}
+
+void sound_sdl::pauseAudio(bool pause) {
+  SDL_PauseAudio((int)pause);
 }
 
 //============================================================

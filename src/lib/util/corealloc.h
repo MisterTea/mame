@@ -13,6 +13,15 @@
 #ifndef MAME_LIB_UTIL_COREALLOC_H
 #define MAME_LIB_UTIL_COREALLOC_H
 
+// JJG: Define some std libraries here so they are not affected by the
+// mem tracker
+#include <map>
+#include <vector>
+#include <list>
+#include <new>
+
+#include <stdlib.h>
+#include <new>
 #include "osdcore.h"
 
 #include <stdlib.h>
@@ -23,9 +32,6 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
-
-
-
 //**************************************************************************
 //  MACROS
 //**************************************************************************

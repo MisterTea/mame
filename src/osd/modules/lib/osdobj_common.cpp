@@ -553,6 +553,9 @@ void osd_common_t::set_mastervolume(int attenuation)
 		m_sound->set_mastervolume(attenuation);
 }
 
+void osd_common_t::pauseAudio(bool pause) {
+  // TODO: Implement later (maybe store attenuation)
+}
 
 //-------------------------------------------------
 //  customize_input_type_list - provide OSD

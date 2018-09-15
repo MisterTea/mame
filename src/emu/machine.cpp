@@ -68,10 +68,16 @@
 
 ***************************************************************************/
 
+#include "NSM_Common.h"
+#include "NSM_Server.h"
+#include "NSM_Client.h"
+
+#include <boost/circular_buffer.hpp>
+
 #include "emu.h"
 #include "emuopts.h"
 #include "osdepend.h"
-#include "config.h"
+#include "emuconfig.h"
 #include "debugger.h"
 #include "render.h"
 #include "uiinput.h"
@@ -93,6 +99,8 @@
 #endif
 
 
+using namespace std;
+using namespace nsm;
 
 //**************************************************************************
 //  RUNNING MACHINE
@@ -207,15 +215,29 @@ void running_machine::start()
 	m_video = std::make_unique<video_manager>(*this);
 	m_ui = manager().create_ui(*this);
 
+  if(options().server()||options().client())
+  {
+    // Make the base time a constant for MAMEHub consistency
+    m_base_time = 946080000ULL;
+  }
+  else
+  {
 	// initialize the base time (needed for doing record/playback)
 	::time(&m_base_time);
+  }
 
 	// initialize the input system and input ports for the game
 	// this must be done before memory_init in order to allow specifying
 	// callbacks based on input port tags
 	time_t newbase = m_ioport.initialize();
+  if(options().server() || options().client())
+  {
+  }
+  else
+  {
 	if (newbase != 0)
 		m_base_time = newbase;
+  }
 
 	// initialize the streams engine before the sound devices start
 	m_sound = std::make_unique<sound_manager>(*this);
@@ -264,6 +286,9 @@ void running_machine::start()
 	save().register_postload(save_prepost_delegate(FUNC(running_machine::postload_all_devices), this));
 	manager().load_cheatfiles(*this);
 
+  m_machine_time = attotime(0,0);
+  isRollback = false;
+
 	// if we're coming in with a savegame request, process it now
 	const char *savegame = options().state();
 	if (savegame[0] != 0)
@@ -277,17 +302,155 @@ void running_machine::start()
 }
 
 
+char CORE_SEARCH_PATH[4096];
+extern int doCatchup;
+bool catchingUp = false;
+
+bool doRollback = false;
+attotime rollbackTime;
+
 //-------------------------------------------------
 //  run - execute the machine
 //-------------------------------------------------
+
+extern list< ChatLog > chatLogs;
+extern boost::circular_buffer<std::pair<attotime,InputState> > playerInputData[MAX_PLAYERS];
+
+void running_machine::processNetworkBuffer(PeerInputData *inputData,int peerID)
+{
+  if(inputData != NULL)
+  {
+    if(inputData->inputtype() == PeerInputData::INPUT)
+    {
+      //printf("GOT INPUT\n");
+      attotime tmptime(inputData->time().seconds(), inputData->time().attoseconds());
+
+      for(int a=0;a<inputData->inputstate().players_size();a++) {
+        //int player = inputData->inputstate().players(a);
+        //cout << "Peer " << peerID << " has input for player " << inputData->inputstate().players(a) << " at time " << tmptime.seconds << "." << tmptime.attoseconds << endl;
+        boost::circular_buffer<pair<attotime,InputState> > &onePlayerInputData = playerInputData[inputData->inputstate().players(a)];
+        if(onePlayerInputData.empty()) {
+          onePlayerInputData.insert(onePlayerInputData.begin(),pair<attotime,InputState>(tmptime,inputData->inputstate()));
+        } else {
+          //TODO: Re-think this and clean it up
+          if (netCommon->isRollback()) {
+            boost::circular_buffer<pair<attotime,InputState> >::reverse_iterator it = onePlayerInputData.rbegin();
+            attotime lastInputTime = it->first;
+            if (lastInputTime == tmptime) {
+              return;
+            }
+            if (lastInputTime > tmptime) {
+              cout << "unexpected time " << lastInputTime << " " << tmptime << "\n";
+              exit(1);
+            }
+
+            // Check if the input states are equal.
+            std::string s1string;
+            std::string s2string;
+            //cout << "First serialize\n";
+            ::nsm::InputState s1 = inputData->inputstate();
+            ::nsm::InputState s2 = it->second;
+            s1.set_framecount(0);
+            s2.set_framecount(0);
+            s1.SerializeToString(&s1string);
+            //cout << "Second serialize\n";
+            s2.SerializeToString(&s2string);
+            if (s1string != s2string) {
+              attotime currentMachineTime = machine_time();
+              if (currentMachineTime > tmptime) {
+                if (doRollback) {
+                  if (rollbackTime > tmptime) {
+                    // Roll back further
+                    rollbackTime = tmptime;
+                    cout << "Rolling back further from " << currentMachineTime << " to " << tmptime << endl;
+                  }
+                } else {
+                  // Roll back
+                  cout << "Rolling back from " << currentMachineTime << " to " << tmptime << endl;
+                  rollbackTime = tmptime;
+                  doRollback=true;
+                }
+              }
+            }
+
+            onePlayerInputData.push_back(make_pair(tmptime,inputData->inputstate()));
+          } else { // no rollback
+            for(boost::circular_buffer<pair<attotime,InputState> >::reverse_iterator it = onePlayerInputData.rbegin();
+                it != onePlayerInputData.rend();
+                it++) {
+              //cout << "IN INPUT LOOP\n";
+              if(it->first < tmptime) {
+                onePlayerInputData.insert(
+                  it.base(), // NOTE: base() returns the iterator 1 position in the past
+                  pair<attotime,InputState>(tmptime,inputData->inputstate()));
+                break;
+              } else if(it->first == tmptime) {
+                //TODO: If two peers send inputs at the same time for the same player, break ties with peer id.
+                break;
+              } else if(it == onePlayerInputData.rend()) {
+                onePlayerInputData.insert(
+                  onePlayerInputData.begin(),
+                  pair<attotime,InputState>(tmptime,inputData->inputstate()));
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    else if(inputData->inputtype() == PeerInputData::CHAT)
+    {
+      string buffer = inputData->inputbuffer();
+      cout << "GOT CHAT " << buffer << endl;
+      char buf[4096];
+      sprintf(buf,"%s: %s",netCommon->getPeerNameFromID(peerID).c_str(),buffer.c_str());
+      std::string chatAString = std::string(buf);
+      //Figure out the index of who spoke and send that
+      chatLogs.push_back(ChatLog(peerID,::time(NULL),chatAString));
+    }
+    else if(inputData->inputtype() == PeerInputData::FORCE_VALUE)
+    {
+      const string &buffer = inputData->inputbuffer();
+      cout << "FORCING VALUE\n";
+      int blockIndex,memoryStart,memorySize,value;
+      unsigned char ramRegion,memoryMask;
+      memcpy(&ramRegion,&buffer[0]+1,sizeof(int));
+      memcpy(&blockIndex,&buffer[0]+2,sizeof(int));
+      memcpy(&memoryStart,&buffer[0]+6,sizeof(int));
+      memcpy(&memorySize,&buffer[0]+10,sizeof(int));
+      memcpy(&memoryMask,&buffer[0]+14,sizeof(unsigned char));
+      memcpy(&value,&buffer[0]+15,sizeof(int));
+      // New force
+      netCommon->forceLocation(BlockValueLocation(ramRegion,blockIndex,memoryStart,memorySize,memoryMask),value);
+      ui().popup_time(3, "Server created new cheat");
+    }
+    else
+    {
+      printf("UNKNOWN INPUT BUFFER PACKET!!!\n");
+    }
+  }
+  else
+  {
+    //break;
+  }
+}
+
+RakNet::Time emulationStartTime=0;
+u64 inputFrameNumber = 0;
 
 int running_machine::run(bool quiet)
 {
 	int error = EMU_ERR_NONE;
 
+  //JJG: Add media path to mess search path
+  strcpy(CORE_SEARCH_PATH,options().media_path());
+
+  vector<int> peerIDs;
+#if 0
 	// use try/catch for deep error recovery
 	try
 	{
+#endif
 		m_manager.http()->clear();
 
 		// move to the init phase
@@ -309,6 +472,62 @@ int running_machine::run(bool quiet)
 
 		// load the configuration settings
 		m_configuration->load_settings();
+
+    //After loading config but before loading nvram, initialize the network
+    if(netServer)
+    {
+      if((system().flags & MACHINE_SUPPORTS_SAVE) == 0)
+      {
+        ui().popup_time(10, "This game does not have complete save state support, desyncs may not be resolved correctly.");
+      }
+      //else //JJG: Even if save state support isn't complete, we should try to sync what we can.
+      {
+        netServer->setSecondsBetweenSync(options().secondsBetweenSync());
+      }
+    }
+    if(netClient)
+    {
+      if((system().flags & MACHINE_SUPPORTS_SAVE) == 0)
+      {
+        ui().popup_time(10, "This game does not have complete save state support, desyncs may not be resolved correctly.");
+      }
+      else
+      {
+        //Client gets their secondsBetweenSync from server
+      }
+    }
+
+    if(netServer)
+    {
+      if(!netServer->initializeConnection())
+      {
+        return EMU_ERR_FATALERROR;
+      }
+    }
+
+
+    if(netClient)
+    {
+      /* specify the filename to save or load */
+      //set_saveload_filename(machine, "1");
+      //handle_load(machine);
+      //if(netClient->getSecondsBetweenSync())
+      //doPreSave(this);
+      bool retval = netClient->initializeConnection(
+        (unsigned short)options().selfport(),
+        options().hostname(),
+        (unsigned short)options().port(),
+        this
+        );
+      printf("LOADED CLIENT\n");
+      cout << "RAND/TIME AT INITIAL SYNC: " << m_rand_seed << ' ' << m_base_time << endl;
+      if(!retval)
+      {
+        exit(EMU_ERR_FATALERROR);
+      }
+      //if(netClient->getSecondsBetweenSync())
+      //doPostLoad(this);
+    }
 
 		// disallow save state registrations starting here.
 		// Don't do it earlier, config load can create network
@@ -345,10 +564,27 @@ int running_machine::run(bool quiet)
 		emscripten_set_running_machine(this);
 #endif
 
+    printf("SOFT RESET FINISHED\n");
+
+    emulationStartTime = RakNet::GetTimeMS();
+
+    u64 trackFrameNumber=0;
+
+    attotime largestEmulationTime(0,0);
+
 		// run the CPUs until a reset or exit
 		while ((!m_hard_reset_pending && !m_exit_pending) || m_saveload_schedule != saveload_schedule::NONE)
 		{
+      //printf("IN MAIN LOOP\n");
 			g_profiler.start(PROFILER_EXTRA);
+
+#if defined(EMSCRIPTEN)
+			// break out to our async javascript loop and halt
+			js_set_main_loop(this);
+#endif
+
+      attotime timeBefore = m_scheduler.time();
+      attotime machineTimeBefore = machine_time();
 
 			// execute CPUs if not paused
 			if (!m_paused)
@@ -357,9 +593,194 @@ int running_machine::run(bool quiet)
 			else
 				m_video->frame_update();
 
+      attotime timeAfter = m_scheduler.time();
+      if (timeBefore > timeAfter) {
+        cout << "OOPS! WE WENT BACK IN TIME SOMEHOW\n";
+        exit(1);
+      }
+      if (timeAfter > largestEmulationTime) {
+        largestEmulationTime = timeAfter;
+        catchingUp = false;
+      }
+      bool timePassed = (timeBefore != timeAfter);
+      bool secondPassed = false;
+      bool tenthSecondPassed = false;
+
+      if (timePassed) {
+        //cout << "TIME MOVED FROM " << timeBefore << " TO " << timeAfter << endl;
+        m_machine_time += (timeAfter - timeBefore);
+        attotime machineTimeAfter = machine_time();
+        secondPassed = machineTimeBefore.seconds() != machineTimeAfter.seconds();
+        tenthSecondPassed = secondPassed || ((machineTimeBefore.attoseconds()/(ATTOSECONDS_PER_SECOND/10ULL)) != (machineTimeAfter.attoseconds()/(ATTOSECONDS_PER_SECOND/10ULL)));
+
+        if (netCommon) {
+          // Process any remaining packets.
+          if(!netCommon->update(this)) {
+            cout << "NETWORK FAILED\n";
+            ::exit(1);
+          }
+
+          netCommon->getPeerIDs(peerIDs);
+          for (int a=0;a<peerIDs.size();a++) {
+            while(true) {
+              nsm::PeerInputData input = netCommon->popInput(peerIDs[a]);
+              if (input.has_time()) {
+                processNetworkBuffer(&input, peerIDs[a]);
+              } else {
+                break;
+              }
+            }
+          }
+        }
+
+      }
+
+      static int lastSyncSecond = 0;
+      //printf("EMULATION FINSIHED\n");
+
+      static int firstTimeAtSecond=0;
+      if(m_machine_time.seconds()>0 && m_scheduler.can_save() && timePassed && !firstTimeAtSecond) {
+        firstTimeAtSecond = 1;
+        if (netServer) {
+          // Initial sync
+          netServer->sync(this);
+        }
+        if (netClient) {
+          // Load initial data
+          netClient->createInitialBlocks(this);
+        }
+      }
+      else if(m_machine_time.seconds()>0 && m_scheduler.can_save() && timePassed)
+      {
+        if(
+          netServer &&
+          lastSyncSecond != m_machine_time.seconds() &&
+          netServer->getSecondsBetweenSync()>0 &&
+          !netCommon->isRollback() &&
+          (m_machine_time.seconds()%netServer->getSecondsBetweenSync())==0
+          )
+        {
+          lastSyncSecond = m_machine_time.seconds();
+          printf("SERVER SYNC AT TIME: %d\n",int(::time(NULL)));
+          if (!m_scheduler.can_save())
+          {
+            printf("ANONYMOUS TIMER! COULD NOT DO FULL SYNC\n");
+          }
+          else
+          {
+            netServer->sync(this);
+            //nvram_save(*this);
+            cout << "RAND/TIME AT SYNC: " << m_rand_seed << ' ' << machine_time().seconds() << '.' << machine_time().attoseconds() << endl;
+          }
+        }
+
+        if(
+          netClient &&
+          lastSyncSecond != m_machine_time.seconds() &&
+          netClient->getSecondsBetweenSync()>0 &&
+          !netCommon->isRollback() &&
+          (m_machine_time.seconds()%netClient->getSecondsBetweenSync())==0
+          )
+        {
+          lastSyncSecond = m_machine_time.seconds();
+          if (!m_scheduler.can_save())
+          {
+            printf("ANONYMOUS TIMER! THIS COULD BE BAD (BUT HOPEFULLY ISN'T)\n");
+          }
+          else
+          {
+            //The client should update sync check just in case the server didn't have an anon timer
+            m_save.dispatch_presave();
+            netClient->updateSyncCheck();
+            cout << "RAND/TIME AT SYNC: " << m_rand_seed << ' ' << machine_time().seconds() << '.' << machine_time().attoseconds() << endl;
+            m_save.dispatch_postload();
+          }
+        }
+
+        static clock_t lastSyncTime=clock();
+        if(netCommon)
+        {
+          //printf("IN NET LOOP\n");
+          lastSyncTime = clock();
+          //TODO: Fix forces
+          //netCommon->updateForces(getRawMemoryRegions());
+          if(netServer)
+          {
+            netServer->update(this);
+
+
+          }
+          if(netClient)
+          {
+            //printf("IN CLIENT LOOP\n");
+            pair<bool,bool> survivedAndGotSync;
+            survivedAndGotSync.first = netClient->update(this);
+            //printf("CLIENT UPDATED\n");
+            if(survivedAndGotSync.first==false)
+            {
+              m_exit_pending = true;
+              break;
+            }
+
+            // Don't try to resync on the same frame that you created
+            // the sync check.
+            if (lastSyncSecond != m_machine_time.seconds()) {
+              bool gotSync = netClient->sync(this);
+              if(gotSync)
+              {
+                if (!m_scheduler.can_save())
+                {
+                  printf("ANONYMOUS TIMER! THIS COULD BE BAD (BUT HOPEFULLY ISN'T)\n");
+                }
+                cout << "GOT SYNC FROM SERVER\n";
+                cout << "RAND/TIME AT SYNC: " << m_rand_seed << ' ' << m_base_time << endl;
+              }
+            }
+          }
+        }
+      }
 			// handle save/load
-			if (m_saveload_schedule != saveload_schedule::NONE)
+			if (timePassed && m_saveload_schedule != saveload_schedule::NONE) {
 				handle_saveload();
+      } else if (timePassed && netCommon && netCommon->isRollback()) {
+        if (trackFrameNumber>0 && m_scheduler.can_save() && trackFrameNumber != inputFrameNumber) {
+          isRollback = true;
+          immediate_save("test");
+          cout << "SAVING AT TIME " << m_machine_time << endl;
+          isRollback = false;
+          trackFrameNumber=0;
+        }
+        if(m_machine_time.seconds()>0 && m_scheduler.can_save() && tenthSecondPassed) {
+          cout << "Tenth second passed: " << m_machine_time << endl;
+          if (secondPassed) {
+            cout << "Second passed" << endl;
+          }
+          trackFrameNumber = inputFrameNumber;
+
+          /*
+          static int biggestSecond=0;
+          if (time().seconds > biggestSecond) {
+            biggestSecond = time().seconds;
+            if (biggestSecond>10) {
+              cout << "Rolling back" << endl;
+              isRollback = true;
+              immediate_load("test");
+              isRollback = false;
+              catchingUp = true;
+            }
+          }
+          */
+        }
+        if(m_machine_time.seconds()>0 && m_scheduler.can_save()) {
+          if (doRollback) {
+            doRollback = false;
+            isRollback = true;
+            immediate_load("test");
+            isRollback = false;
+            catchingUp = true;
+          }
+        }
+      }
 
 			g_profiler.stop();
 		}
@@ -373,6 +794,7 @@ int running_machine::run(bool quiet)
 		if (options().nvram_save())
 			nvram_save();
 		m_configuration->save_settings();
+#if 0
 	}
 	catch (emu_fatalerror &fatal)
 	{
@@ -406,7 +828,7 @@ int running_machine::run(bool quiet)
 		osd_printf_error("Caught unhandled exception\n");
 		error = EMU_ERR_FATALERROR;
 	}
-
+#endif
 	// make sure our phase is set properly before cleaning up,
 	// in case we got here via exception
 	m_current_phase = machine_phase::EXIT;
@@ -720,6 +1142,11 @@ void running_machine::rewind_invalidate()
 
 void running_machine::pause()
 {
+  if(netCommon)
+  {
+    //Can't pause during netplay
+    return;
+  }
 	// ignore if nothing has changed
 	if (m_paused)
 		return;
@@ -890,8 +1317,19 @@ void running_machine::call_notifiers(machine_notification which)
 //  or load
 //-------------------------------------------------
 
+const int MAX_STATES = 10 * 5;
+pair<attotime, vector<unsigned char> > states[MAX_STATES];
+int onState = 0;
+
 void running_machine::handle_saveload()
 {
+  if (!m_scheduler.can_save()) {
+    throw emu_fatalerror("CANNOT SAVE!");
+  }
+
+  u32 const openflags = (m_saveload_schedule == saveload_schedule::LOAD) ? OPEN_FLAG_READ : (OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+	const char *opname = (m_saveload_schedule == saveload_schedule::LOAD) ? "load" : "save";
+
 	// if no name, bail
 	if (!m_saveload_pending_file.empty())
 	{
@@ -1148,16 +1586,42 @@ std::string running_machine::nvram_filename(device_t &device) const
 	return result.str();
 }
 
+extern Common *netCommon;
+
+int nvram_size(running_machine &machine) {
+	int retval=0;
+
+	nvram_interface_iterator iter(machine.root_device());
+	for (device_nvram_interface &nvram : nvram_interface_iterator(machine.root_device()))
+		{
+      std::string filename;
+			emu_file file(machine.options().nvram_directory(), OPEN_FLAG_READ);
+      if (file.open(machine.nvram_filename(nvram.device()).c_str()) == osd_file::error::NONE)
+			{
+				retval += file.size();
+			}
+		}
+	return retval;
+}
+
 /*-------------------------------------------------
     nvram_load - load a system's NVRAM
 -------------------------------------------------*/
 
 void running_machine::nvram_load()
 {
+	int overrideNVram = 0;
+	if(netCommon) {
+          if(nvram_size(*this)>=32*1024*1024) {
+            overrideNVram=1;
+            ui().popup_time(3, "The NVRAM for this game is too big, not loading NVRAM.");
+          }
+	}
+
 	for (device_nvram_interface &nvram : nvram_interface_iterator(root_device()))
 	{
 		emu_file file(options().nvram_directory(), OPEN_FLAG_READ);
-		if (file.open(nvram_filename(nvram.device())) == osd_file::error::NONE)
+		if (!overrideNVram && file.open(nvram_filename(nvram.device())) == osd_file::error::NONE)
 		{
 			nvram.nvram_load(file);
 			file.close();
@@ -1174,6 +1638,17 @@ void running_machine::nvram_load()
 
 void running_machine::nvram_save()
 {
+  static bool first=true;
+	if(netCommon) {
+          if(nvram_size(*this)>=32*1024*1024) {
+            if(first) {
+              ui().popup_time(3, "The NVRAM for this game is too big, not saving NVRAM.");
+              first = false;
+            }
+            return;
+          }
+	}
+
 	for (device_nvram_interface &nvram : nvram_interface_iterator(root_device()))
 	{
 		emu_file file(options().nvram_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
@@ -1292,6 +1767,21 @@ void system_time::set(time_t t)
 
 void system_time::full_time::set(struct tm &t)
 {
+  //JJG: Force clock to 1/1/2000.
+  if(netCommon)
+  {
+    second  = 0;
+    minute  = 0;
+    hour  = 0;
+    mday  = 0;
+    month = 0;
+    year  = 2000;
+    weekday = 6;
+    day   = 0;
+    is_dst  = 0;
+  }
+  else
+{
 	second  = t.tm_sec;
 	minute  = t.tm_min;
 	hour    = t.tm_hour;
@@ -1302,7 +1792,7 @@ void system_time::full_time::set(struct tm &t)
 	day  = t.tm_yday;
 	is_dst  = t.tm_isdst;
 }
-
+}
 
 
 //**************************************************************************

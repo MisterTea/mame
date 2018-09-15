@@ -2097,3 +2097,245 @@ links {
 }
 end
 
+project "protobuf"
+	uuid "ec51e7fd-6784-4526-9f68-3013c3c050bd"
+	kind "StaticLib"
+
+  defines {
+  }
+
+	configuration "Debug"
+		defines {
+			"verbose=-1",
+		}
+
+	configuration { "gmake or ninja" }
+		buildoptions_c {
+			"-Wno-strict-prototypes",
+		}
+
+	configuration { }
+		defines {
+		}
+
+	includedirs {
+		MAME_DIR .. "3rdparty",
+		MAME_DIR .. "3rdparty/protobuf",
+	}
+
+  files {
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/code_generator.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/command_line_interface.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_enum.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_enum_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_extension.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_file.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_generator.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_helpers.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_message.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_message_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_primitive_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_service.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/cpp/cpp_string_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/importer.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_context.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_doc_comment.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_enum.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_enum_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_extension.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_file.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_generator.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_generator_factory.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_helpers.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_lazy_message_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_message.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_message_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_name_resolver.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_primitive_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_service.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_shared_code_generator.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/java/java_string_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/main.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/parser.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/plugin.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/plugin.pb.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/python/python_generator.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/subprocess.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/test_plugin.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/compiler/zip_writer.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/descriptor.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/descriptor.pb.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/descriptor_database.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/dynamic_message.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/extension_set.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/extension_set_heavy.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/generated_message_reflection.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/generated_message_util.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/io/coded_stream.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/io/gzip_stream.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/io/lzma_protobuf_stream.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/io/printer.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/io/strtod.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/io/tokenizer.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/io/zero_copy_stream.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/io/zero_copy_stream_impl.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/io/zero_copy_stream_impl_lite.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/message.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/message_lite.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/reflection_ops.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/repeated_field.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/service.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/stubs/atomicops_internals_x86_gcc.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/stubs/atomicops_internals_x86_msvc.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/stubs/common.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/stubs/once.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/stubs/stringprintf.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/stubs/structurally_valid.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/stubs/strutil.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/stubs/substitute.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/text_format.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/unknown_field_set.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/wire_format.cc",
+    MAME_DIR .. "3rdparty/protobuf/google/protobuf/wire_format_lite.cc",
+	}
+
+project "raknet"
+	uuid "9ee43987-9a53-4fbd-9469-769d2b485359"
+	kind "StaticLib"
+
+  defines {
+  }
+
+	configuration "Debug"
+		defines {
+			"verbose=-1",
+		}
+
+	configuration { "gmake or ninja" }
+		buildoptions_c {
+			"-Wno-strict-prototypes",
+		}
+
+	configuration { }
+		defines {
+		}
+
+	includedirs {
+		MAME_DIR .. "3rdparty",
+		MAME_DIR .. "3rdparty/RakNet",
+	}
+
+  files {
+    MAME_DIR .. "3rdparty/RakNet/Base64Encoder.cpp",
+    MAME_DIR .. "3rdparty/RakNet/BitStream.cpp",
+    MAME_DIR .. "3rdparty/RakNet/CCRakNetSlidingWindow.cpp",
+    MAME_DIR .. "3rdparty/RakNet/CCRakNetUDT.cpp",
+    MAME_DIR .. "3rdparty/RakNet/CheckSum.cpp",
+    MAME_DIR .. "3rdparty/RakNet/CloudClient.cpp",
+    MAME_DIR .. "3rdparty/RakNet/CloudCommon.cpp",
+    MAME_DIR .. "3rdparty/RakNet/CloudServer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/CommandParserInterface.cpp",
+    MAME_DIR .. "3rdparty/RakNet/ConnectionGraph2.cpp",
+    MAME_DIR .. "3rdparty/RakNet/ConsoleServer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/DR_SHA1.cpp",
+    MAME_DIR .. "3rdparty/RakNet/DS_BytePool.cpp",
+    MAME_DIR .. "3rdparty/RakNet/DS_ByteQueue.cpp",
+    MAME_DIR .. "3rdparty/RakNet/DS_HuffmanEncodingTree.cpp",
+    MAME_DIR .. "3rdparty/RakNet/DS_Table.cpp",
+    MAME_DIR .. "3rdparty/RakNet/DataCompressor.cpp",
+    MAME_DIR .. "3rdparty/RakNet/DirectoryDeltaTransfer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/DynDNS.cpp",
+    MAME_DIR .. "3rdparty/RakNet/EmailSender.cpp",
+    MAME_DIR .. "3rdparty/RakNet/EpochTimeToString.cpp",
+    MAME_DIR .. "3rdparty/RakNet/FileList.cpp",
+    MAME_DIR .. "3rdparty/RakNet/FileListTransfer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/FileOperations.cpp",
+    MAME_DIR .. "3rdparty/RakNet/FormatString.cpp",
+    MAME_DIR .. "3rdparty/RakNet/FullyConnectedMesh2.cpp",
+    MAME_DIR .. "3rdparty/RakNet/GetTime.cpp",
+    MAME_DIR .. "3rdparty/RakNet/Getche.cpp",
+    MAME_DIR .. "3rdparty/RakNet/Gets.cpp",
+    MAME_DIR .. "3rdparty/RakNet/GridSectorizer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/HTTPConnection.cpp",
+    MAME_DIR .. "3rdparty/RakNet/HTTPConnection2.cpp",
+    MAME_DIR .. "3rdparty/RakNet/IncrementalReadInterface.cpp",
+    MAME_DIR .. "3rdparty/RakNet/Itoa.cpp",
+    MAME_DIR .. "3rdparty/RakNet/LinuxStrings.cpp",
+    MAME_DIR .. "3rdparty/RakNet/LocklessTypes.cpp",
+    MAME_DIR .. "3rdparty/RakNet/LogCommandParser.cpp",
+    MAME_DIR .. "3rdparty/RakNet/MessageFilter.cpp",
+    MAME_DIR .. "3rdparty/RakNet/NatPunchthroughClient.cpp",
+    MAME_DIR .. "3rdparty/RakNet/NatPunchthroughServer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/NatTypeDetectionClient.cpp",
+    MAME_DIR .. "3rdparty/RakNet/NatTypeDetectionCommon.cpp",
+    MAME_DIR .. "3rdparty/RakNet/NatTypeDetectionServer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/NetworkIDManager.cpp",
+    MAME_DIR .. "3rdparty/RakNet/NetworkIDObject.cpp",
+    MAME_DIR .. "3rdparty/RakNet/PS4Includes.cpp",
+    MAME_DIR .. "3rdparty/RakNet/PacketConsoleLogger.cpp",
+    MAME_DIR .. "3rdparty/RakNet/PacketFileLogger.cpp",
+    MAME_DIR .. "3rdparty/RakNet/PacketLogger.cpp",
+    MAME_DIR .. "3rdparty/RakNet/PacketOutputWindowLogger.cpp",
+    MAME_DIR .. "3rdparty/RakNet/PacketizedTCP.cpp",
+    MAME_DIR .. "3rdparty/RakNet/PluginInterface2.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RPC4Plugin.cpp",
+    MAME_DIR .. "3rdparty/RakNet/Rackspace.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakMemoryOverride.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetCommandParser.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_360_720.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_Berkley.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_Berkley_NativeClient.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_NativeClient.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_PS3_PS4.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_PS4.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_Vita.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_WindowsStore8.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_Windows_Linux.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetSocket2_Windows_Linux_360.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetStatistics.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetTransport2.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakNetTypes.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakPeer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakSleep.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakString.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakThread.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RakWString.cpp",
+    MAME_DIR .. "3rdparty/RakNet/Rand.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RandSync.cpp",
+    MAME_DIR .. "3rdparty/RakNet/ReadyEvent.cpp",
+    MAME_DIR .. "3rdparty/RakNet/RelayPlugin.cpp",
+    MAME_DIR .. "3rdparty/RakNet/ReliabilityLayer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/ReplicaManager3.cpp",
+    MAME_DIR .. "3rdparty/RakNet/Router2.cpp",
+    MAME_DIR .. "3rdparty/RakNet/SecureHandshake.cpp",
+    MAME_DIR .. "3rdparty/RakNet/SendToThread.cpp",
+    MAME_DIR .. "3rdparty/RakNet/SignaledEvent.cpp",
+    MAME_DIR .. "3rdparty/RakNet/SimpleMutex.cpp",
+    MAME_DIR .. "3rdparty/RakNet/SocketLayer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/StatisticsHistory.cpp",
+    MAME_DIR .. "3rdparty/RakNet/StringCompressor.cpp",
+    MAME_DIR .. "3rdparty/RakNet/StringTable.cpp",
+    MAME_DIR .. "3rdparty/RakNet/SuperFastHash.cpp",
+    MAME_DIR .. "3rdparty/RakNet/TCPInterface.cpp",
+    MAME_DIR .. "3rdparty/RakNet/TableSerializer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/TeamBalancer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/TeamManager.cpp",
+    MAME_DIR .. "3rdparty/RakNet/TelnetTransport.cpp",
+    MAME_DIR .. "3rdparty/RakNet/ThreadsafePacketLogger.cpp",
+    MAME_DIR .. "3rdparty/RakNet/TwoWayAuthentication.cpp",
+    MAME_DIR .. "3rdparty/RakNet/UDPForwarder.cpp",
+    MAME_DIR .. "3rdparty/RakNet/UDPProxyClient.cpp",
+    MAME_DIR .. "3rdparty/RakNet/UDPProxyCoordinator.cpp",
+    MAME_DIR .. "3rdparty/RakNet/UDPProxyServer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/VariableDeltaSerializer.cpp",
+    MAME_DIR .. "3rdparty/RakNet/VariableListDeltaTracker.cpp",
+    MAME_DIR .. "3rdparty/RakNet/VariadicSQLParser.cpp",
+    MAME_DIR .. "3rdparty/RakNet/VitaIncludes.cpp",
+    MAME_DIR .. "3rdparty/RakNet/WSAStartupSingleton.cpp",
+    MAME_DIR .. "3rdparty/RakNet/_FindFirst.cpp",
+    MAME_DIR .. "3rdparty/RakNet/gettimeofday.cpp",
+  }

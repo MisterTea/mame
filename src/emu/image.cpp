@@ -14,7 +14,7 @@
 #include "emu.h"
 #include "emuopts.h"
 #include "image.h"
-#include "config.h"
+#include "emuconfig.h"
 #include "xmlfile.h"
 #include "softlist.h"
 

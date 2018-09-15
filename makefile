@@ -14,7 +14,7 @@
 
 # REGENIE = 1
 # VERBOSE = 1
-# NOWERROR = 1
+NOWERROR = 1
 # IGNORE_GIT = 1
 
 # TARGET = mame
@@ -317,6 +317,9 @@ else
 ARCHITECTURE := _x86
 endif
 endif
+
+# uncomment for MXE builds
+# MXE = 1
 
 ifeq ($(OS),windows)
 ifndef MINGW64
@@ -723,6 +726,28 @@ ifdef NO_USE_XINPUT
 PARAMS += --NO_USE_XINPUT='$(NO_USE_XINPUT)'
 endif
 
+ifdef MXE
+DEFS += -DMXE
+
+# Set version of msvc for mxe
+DEFS += -D__MSVCRT_VERSION__=0x800 -D_WIN32_WINNT=0x0501
+endif
+
+#Define _USE_MATH_DEFINES for M_PI
+DEFS += -D_USE_MATH_DEFINES
+
+#Defines for boost
+DEFS += -DBOOST_THREAD_BUILD_LIB -DBOOST_ALL_NO_LIB
+
+#Define _RAKNET_LIB for RakNet
+DEFS += -D_RAKNET_LIB
+
+# define NO_MEM_TRACKING for csmame
+DEFS += -DNO_MEM_TRACKING
+
+# map the INLINE to something digestible by GCC
+DEFS += -DINLINE="static inline"
+
 ifdef SDL_LIBVER
 PARAMS += --SDL_LIBVER='$(SDL_LIBVER)'
 endif
@@ -872,6 +897,23 @@ EXE :=
 
 ifeq ($(OS),windows)
 EXE := .exe
+endif
+
+ifeq ($(TARGETOS),win32)
+ifndef MXE
+EXE = .exe
+endif
+ifeq ($(TARGETOS),os2)
+EXE = .exe
+endif
+endif
+
+# add an EXE suffix to get the final emulator name
+ifndef MXE
+EMULATOR = $(FULLNAME)$(EXE)
+else
+# For MXE, add the exe manually
+EMULATOR = $(FULLNAME).exe
 endif
 
 SHELLTYPE := msdos
@@ -1267,6 +1309,25 @@ ifndef EMSCRIPTEN
 endif
 	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-asmjs config=$(CONFIG) precompile
 	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR)/$(MAKETYPE)-asmjs config=$(CONFIG)
+
+# add protobuf library
+PROTOBUF = $(OBJ)/libprotobuf.a
+
+# add thrift library
+THRIFT = $(OBJ)/libthrift.a
+
+# add WebM library
+WEBM = $(OBJ)/libwebm.a
+
+# add RakNet library
+RAKNET = $(OBJ)/libraknet.a
+
+# add boost thread library
+ifeq ($(TARGETOS),win32)
+BOOST_THREAD = $(OBJ)/libboostthreadwindows.a $(OBJ)/libboostsystem.a
+else
+BOOST_THREAD = $(OBJ)/libboostthreadposix.a $(OBJ)/libboostsystem.a
+endif
 
 #-------------------------------------------------
 # gmake-linux
@@ -1690,6 +1751,9 @@ CPPCHECK_PARAMS += -I3rdparty/zlib
 endif
 CPPCHECK_PARAMS += -I3rdparty/bgfx/include
 CPPCHECK_PARAMS += -I3rdparty/bx/include
+CPPCHECK_PARAMS += -I3rdparty/thrift
+CPPCHECK_PARAMS += -I3rdparty/protobuf
+CPPCHECK_PARAMS += -I3rdparty/RakNet
 CPPCHECK_PARAMS += -I$(BUILDDIR)/generated/emu
 CPPCHECK_PARAMS += -I$(BUILDDIR)/generated/emu/layout
 CPPCHECK_PARAMS += -I$(BUILDDIR)/generated/mame/layout

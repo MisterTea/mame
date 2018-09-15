@@ -1013,9 +1013,14 @@ void renderer_ogl::loadGLExtensions()
 //  sdl_info::draw
 //============================================================
 
+extern bool SKIP_OSD;
+extern bool catchingUp;
 int renderer_ogl::draw(const int update)
 {
 	ogl_texture_info *texture=nullptr;
+  if (SKIP_OSD || catchingUp) {
+    return 0;
+  }
 	float vofs, hofs;
 	int  pendingPrimitive=GL_NO_PRIMITIVE, curPrimitive=GL_NO_PRIMITIVE;
 

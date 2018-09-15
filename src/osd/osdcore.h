@@ -19,6 +19,9 @@
 #ifndef MAME_OSD_OSDCORE_H
 #define MAME_OSD_OSDCORE_H
 
+// for va_list
+#include <stdarg.h>
+
 #include "osdcomm.h"
 
 #include <chrono>
@@ -48,6 +51,7 @@
 #define OPEN_FLAG_CREATE        0x0004      /* create & truncate file */
 #define OPEN_FLAG_CREATE_PATHS  0x0008      /* create paths as necessary */
 #define OPEN_FLAG_NO_PRELOAD    0x0010      /* do not decompress on open */
+#define OPEN_FLAG_MEMORY        0x0020      /* is an in-memory file */
 
 // osd_file is an interface which represents an open file/PTY/socket
 class osd_file
@@ -803,6 +807,8 @@ osd_file::error osd_get_full_path(std::string &dst, std::string const &path);
 /***************************************************************************
     MIDI I/O INTERFACES
 ***************************************************************************/
+
+#undef poll
 
 class osd_midi_device
 {

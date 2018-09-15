@@ -198,6 +198,7 @@ public:
 	virtual void update_audio_stream(const int16_t *buffer, int samples_this_frame) override;
 	virtual void set_mastervolume(int attenuation) override;
 	virtual bool no_sound() override;
+  virtual void pauseAudio(bool pause) override;
 
 	// input overridables
 	virtual void customize_input_type_list(simple_list<input_type_entry> &typelist) override;

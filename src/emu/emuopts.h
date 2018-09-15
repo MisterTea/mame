@@ -192,6 +192,17 @@
 #define OPTION_NO_PLUGIN            "noplugin"
 
 #define OPTION_LANGUAGE             "language"
+// core net options
+#define OPTION_USERNAME                "username"
+#define OPTION_SERVER                  "server"
+#define OPTION_CLIENT                  "client"
+#define OPTION_HOSTNAME                "hostname"
+#define OPTION_PORT                    "port"
+#define OPTION_SELFPORT                "selfport"
+#define OPTION_SECONDSBETWEENSYNC      "secondsbetweensync"
+#define OPTION_SYNCTRANSFERSECONDS     "synctransferseconds"
+#define OPTION_BASEDELAY               "basedelay"
+#define OPTION_ROLLBACK                "rollback"
 
 #define OPTION_HTTP                 "http"
 #define OPTION_HTTP_PORT            "http_port"
@@ -466,6 +477,18 @@ public:
 	const char *autoboot_command() const { return value(OPTION_AUTOBOOT_COMMAND); }
 	int autoboot_delay() const { return int_value(OPTION_AUTOBOOT_DELAY); }
 	const char *autoboot_script() const { return value(OPTION_AUTOBOOT_SCRIPT); }
+
+	// core net options
+	const char *username() const { return value(OPTION_USERNAME); }
+	const char *hostname() const { return value(OPTION_HOSTNAME); }
+	int port() const { return int_value(OPTION_PORT); }
+	int selfport() const { return int_value(OPTION_SELFPORT); }
+	bool server() const { return bool_value(OPTION_SERVER); }
+	bool client() const { return bool_value(OPTION_CLIENT); }
+	int secondsBetweenSync() const { return int_value(OPTION_SECONDSBETWEENSYNC); }
+	int syncTransferSeconds() const { return int_value(OPTION_SYNCTRANSFERSECONDS); }
+  int baseDelay() const { return int_value(OPTION_BASEDELAY); }
+  bool rollback() const { return bool_value(OPTION_ROLLBACK); }
 
 	bool console() const { return bool_value(OPTION_CONSOLE); }
 

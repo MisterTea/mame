@@ -21,6 +21,12 @@
 #include <cstring>
 #include <time.h>
 
+namespace nsm {
+	class PeerInput;
+	class InputState;
+	class InputPort;
+	class PeerInputData;
+}
 
 //**************************************************************************
 //  CONSTANTS
@@ -798,7 +804,7 @@ public:
 	const char *token() const { return m_token; }
 	const char *name() const { return m_name; }
 	input_seq &defseq(input_seq_type seqtype = SEQ_TYPE_STANDARD) { return m_defseq[seqtype]; }
-	const input_seq &seq(input_seq_type seqtype = SEQ_TYPE_STANDARD) const { return m_seq[seqtype]; }
+	const input_seq &seq(input_seq_type seqtype) const { return m_seq[seqtype]; }
 	void restore_default_seq();
 
 	// setters
@@ -1043,7 +1049,7 @@ public:
 	u8 impulse() const { return m_impulse; }
 	const char *name() const;
 	const char *specific_name() const { return m_name; }
-	const input_seq &seq(input_seq_type seqtype = SEQ_TYPE_STANDARD) const;
+  const input_seq &seq(bool checkMapping, input_seq_type seqtype /*= SEQ_TYPE_STANDARD*/) const;
 	const input_seq &defseq(input_seq_type seqtype = SEQ_TYPE_STANDARD) const;
 	const input_seq &defseq_unresolved(input_seq_type seqtype = SEQ_TYPE_STANDARD) const { return m_seq[seqtype]; }
 	void set_defseq(const input_seq &newseq) { set_defseq(SEQ_TYPE_STANDARD, newseq); }
@@ -1294,6 +1300,7 @@ private:
 
 	// live analog value tracking
 	s32                 m_accum;                // accumulated value (including relative adjustments)
+  s32                 m_local_accum;          // The local value (for handling relative analog in netplay)
 	s32                 m_previous;             // previous adjusted value
 	s32                 m_previousanalog;       // previous analog value
 
@@ -1411,6 +1418,13 @@ public:
 	int get_autofire_delay() { return m_autofire_delay; }
 	void set_autofire_delay(int delay) { m_autofire_delay = delay; }
 
+  void pollForDataAfter(int player, attotime curtime);
+  void pollForPeerCatchup(attotime curMachineTime);
+  std::vector<nsm::InputState*> fetch_remote_inputs(attotime curtime);
+  void store_local_port(ioport_port &port, nsm::InputPort *inputPort);
+  void merge_ports(ioport_port &port, const std::vector<nsm::InputState*> &remoteInputStates, int portIndex);
+
+  inline s64 framecount() { return m_framecount; }
 private:
 	// internal helpers
 	void init_port_types();
@@ -1480,6 +1494,7 @@ private:
 	// autofire
 	bool                    m_autofire_toggle;      // autofire toggle
 	int                     m_autofire_delay;       // autofire delay
+  s64                  m_framecount;
 };
 
 

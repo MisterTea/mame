@@ -39,6 +39,8 @@
 #include "xtal.h"
 
 #include <math.h>
+#include <iostream>
+#include <cstdio>
 #undef min
 #undef max
 
@@ -351,5 +353,8 @@ inline attotime attotime::from_double(double _time)
 	return attotime(secs, attos);
 }
 
+inline std::ostream &operator<<(std::ostream &os, attotime const &t) {
+  return os << t.seconds() << '.' << t.attoseconds();
+}
 
 #endif  // MAME_EMU_ATTOTIME_H
