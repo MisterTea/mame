@@ -28,7 +28,7 @@
 #include "RakString.h"
 #include "RakWString.h"
 #include "RakAssert.h"
-#include <math.h>
+#include <cmath>
 #include <float.h>
 
 #ifdef _MSC_VER
@@ -36,9 +36,9 @@
 #endif
 
 // MSWin uses _copysign, others use copysign...
-#ifndef _WIN32
-#define _copysign copysign
-#endif
+//#ifndef _WIN32
+//#define _copysign copysign
+//#endif
 
 namespace RakNet
 {
@@ -1855,9 +1855,9 @@ namespace RakNet
 		if (qx < 0.0) qx=0.0;
 		if (qy < 0.0) qy=0.0;
 		if (qz < 0.0) qz=0.0;
-		qx = _copysign( (double) qx, (double) (m21 - m12) );
-		qy = _copysign( (double) qy, (double) (m02 - m20) );
-		qz = _copysign( (double) qz, (double) (m10 - m01) );
+		qx = std::copysign( (double) qx, (double) (m21 - m12) );
+		qy = std::copysign( (double) qy, (double) (m02 - m20) );
+		qz = std::copysign( (double) qz, (double) (m10 - m01) );
 
 		WriteNormQuat(qw,qx,qy,qz);
 	}

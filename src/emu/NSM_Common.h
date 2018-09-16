@@ -26,6 +26,10 @@
 
 #include "zlib.h"
 
+#ifdef interface
+#undef interface
+#endif
+
 int zlibGetMaxCompressedSize(int origSize);
 int lzmaGetMaxCompressedSize(int origSize);
 
