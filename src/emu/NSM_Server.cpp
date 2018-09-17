@@ -508,9 +508,8 @@ nsm::PeerInputData Server::popInput(int peerID) {
   nsm::PeerInputData inputToPop = Common::popInput(peerID);
   if(peerData[peerID].oldInputs.size() > 10000) {
     if(!blockNewClients) {
-      //TODO: put a warning here.
+      cout << "INPUT BUFFER FULL.  NOT ACCEPTING NEW CLIENTS ANYMORE." << endl;
     }
-    throw std::runtime_error("Old Input buffer filled up");
     blockNewClients = true;
   }
   return inputToPop;
