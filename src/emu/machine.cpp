@@ -72,8 +72,6 @@
 #include "NSM_Server.h"
 #include "NSM_Client.h"
 
-#include <boost/circular_buffer.hpp>
-
 #include "emu.h"
 #include "emuopts.h"
 #include "osdepend.h"
@@ -314,7 +312,7 @@ attotime rollbackTime;
 //-------------------------------------------------
 
 extern list< ChatLog > chatLogs;
-extern boost::circular_buffer<std::pair<attotime,InputState> > playerInputData[MAX_PLAYERS];
+extern std::deque<std::pair<attotime,InputState> > playerInputData[MAX_PLAYERS];
 
 void running_machine::processNetworkBuffer(PeerInputData *inputData,int peerID)
 {
@@ -328,13 +326,13 @@ void running_machine::processNetworkBuffer(PeerInputData *inputData,int peerID)
       for(int a=0;a<inputData->inputstate().players_size();a++) {
         //int player = inputData->inputstate().players(a);
         //cout << "Peer " << peerID << " has input for player " << inputData->inputstate().players(a) << " at time " << tmptime.seconds << "." << tmptime.attoseconds << endl;
-        boost::circular_buffer<pair<attotime,InputState> > &onePlayerInputData = playerInputData[inputData->inputstate().players(a)];
+        std::deque<pair<attotime,InputState> > &onePlayerInputData = playerInputData[inputData->inputstate().players(a)];
         if(onePlayerInputData.empty()) {
           onePlayerInputData.insert(onePlayerInputData.begin(),pair<attotime,InputState>(tmptime,inputData->inputstate()));
         } else {
           //TODO: Re-think this and clean it up
           if (netCommon->isRollback()) {
-            boost::circular_buffer<pair<attotime,InputState> >::reverse_iterator it = onePlayerInputData.rbegin();
+            std::deque<pair<attotime,InputState> >::reverse_iterator it = onePlayerInputData.rbegin();
             attotime lastInputTime = it->first;
             if (lastInputTime == tmptime) {
               return;
@@ -375,7 +373,7 @@ void running_machine::processNetworkBuffer(PeerInputData *inputData,int peerID)
 
             onePlayerInputData.push_back(make_pair(tmptime,inputData->inputstate()));
           } else { // no rollback
-            for(boost::circular_buffer<pair<attotime,InputState> >::reverse_iterator it = onePlayerInputData.rbegin();
+            for(std::deque<pair<attotime,InputState> >::reverse_iterator it = onePlayerInputData.rbegin();
                 it != onePlayerInputData.rend();
                 it++) {
               //cout << "IN INPUT LOOP\n";
@@ -605,6 +603,12 @@ int running_machine::run(bool quiet)
       bool timePassed = (timeBefore != timeAfter);
       bool secondPassed = false;
       bool tenthSecondPassed = false;
+
+			for (int a=0;a<MAX_PLAYERS;a++) {
+				while(playerInputData[a].size() > 30000) {
+					playerInputData[a].pop_front();
+				}
+			}
 
       if (timePassed) {
         //cout << "TIME MOVED FROM " << timeBefore << " TO " << timeAfter << endl;

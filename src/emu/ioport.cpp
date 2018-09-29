@@ -96,12 +96,11 @@
 
 #include "nsm.pb.h"
 
-#include <boost/circular_buffer.hpp>
-
 #include <map>
 #include <vector>
 #include <string>
 #include <iomanip>
+#include <deque>
 
 #include "emu.h"
 #include "emuopts.h"
@@ -1759,7 +1758,7 @@ ioport_manager::ioport_manager(running_machine &machine)
 //  create live state information
 //-------------------------------------------------
 
-boost::circular_buffer<std::pair<attotime,InputState> > playerInputData[MAX_PLAYERS];
+std::deque<std::pair<attotime,InputState>> playerInputData[MAX_PLAYERS];
 attotime lastFutureInputTime(0,0);
 int baseDelayFromPing = 40;
 attotime mostRecentSentReport;
@@ -1768,10 +1767,6 @@ attotime inputStartTime(1,0);
 time_t ioport_manager::initialize()
 {
   machine().save().save_item(NULL, "ioport", "manager", 0, m_framecount, "framecount");
-
-  for(int a=0;a<MAX_PLAYERS;a++) {
-    playerInputData[a].set_capacity(30000);
-  }
 
 	// add an exit callback and a frame callback
 	machine().add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(&ioport_manager::exit, this));
@@ -2528,8 +2523,8 @@ std::vector<nsm::InputState*> ioport_manager::fetch_remote_inputs(attotime curMa
   }
 
   for(int player=0;player<MAX_PLAYERS;player++) {
-    boost::circular_buffer<std::pair<attotime,InputState> >::reverse_iterator it = playerInputData[player].rbegin();
-    boost::circular_buffer<std::pair<attotime,InputState> >::reverse_iterator itold = playerInputData[player].rbegin();
+    std::deque<std::pair<attotime,InputState> >::reverse_iterator it = playerInputData[player].rbegin();
+    std::deque<std::pair<attotime,InputState> >::reverse_iterator itold = playerInputData[player].rbegin();
 
     while(true)
     {
