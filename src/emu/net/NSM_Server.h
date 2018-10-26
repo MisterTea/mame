@@ -1,11 +1,9 @@
+#ifndef __NSM_SERVER_H__
+#define __NSM_SERVER_H__
+
 #include "NSM_Common.h"
 
 #include "zlib.h"
-
-Server *createGlobalServer(std::string _username,unsigned short _port, int _unmeasuredNoise,
-  bool _rollback);
-
-void deleteGlobalServer();
 
 class running_machine;
 
@@ -61,39 +59,41 @@ class Server : public Common
 
   virtual ~Server();
 
-  void shutdown();
+  virtual void shutdown();
 
-  void acceptPeer(RakNet::RakNetGUID guidToAccept,running_machine *machine);
+  virtual void acceptPeer(RakNet::RakNetGUID guidToAccept,running_machine *machine);
 
-  void removePeer(RakNet::RakNetGUID guid,running_machine *machine);
+  virtual void removePeer(RakNet::RakNetGUID guid,running_machine *machine);
 
-  bool initializeConnection();
+  virtual bool serve();
 
-  std::vector<std::shared_ptr<MemoryBlock> > createMemoryBlock(const std::string& name, unsigned char* ptr,int size);
+  virtual std::vector<std::shared_ptr<MemoryBlock> > createMemoryBlock(const std::string& name, unsigned char* ptr,int size);
 
-  void initialSync(const RakNet::RakNetGUID &sa,running_machine *machine);
+  virtual void initialSync(const RakNet::RakNetGUID &sa,running_machine *machine);
 
   virtual nsm::PeerInputData popInput(int peerID);
 
-  bool update(running_machine *machine);
+  virtual bool update(running_machine *machine);
 
-  void sync(running_machine *machine);
+  virtual bool sync(running_machine *machine);
 
-  void popSyncQueue();
+  virtual void popSyncQueue();
 
-  void setSyncTransferTime(int _syncTransferSeconds)
+  virtual void setSyncTransferTime(int _syncTransferSeconds)
   {
     syncTransferSeconds = _syncTransferSeconds;
   }
 
-  void sendBaseDelay(int baseDelay);
+  virtual void sendBaseDelay(int baseDelay);
 
-  inline void setBlockNewClients(bool blockNewClients) {
+  virtual inline void setBlockNewClients(bool blockNewClients) {
     this->blockNewClients = blockNewClients;
   }
 
-  inline bool isBlockNewClients() { return blockNewClients; }
+  virtual inline bool isBlockNewClients() { return blockNewClients; }
 
 private:
   void processPotentialCandidates(running_machine *machine);
 };
+
+#endif

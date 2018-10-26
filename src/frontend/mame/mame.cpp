@@ -8,9 +8,7 @@
 
 ***************************************************************************/
 
-#include "NSM_Common.h"
-#include "NSM_Server.h"
-#include "NSM_Client.h"
+#include "NSM_CommonInterface.h"
 
 #include "emu.h"
 #include "mame.h"

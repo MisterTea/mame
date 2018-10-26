@@ -12,7 +12,7 @@
 #include "laserdsc.h"
 #include "avhuff.h"
 #include "vbiparse.h"
-#include "emuconfig.h"
+#include "config.h"
 #include "render.h"
 #include "romload.h"
 #include "chd.h"

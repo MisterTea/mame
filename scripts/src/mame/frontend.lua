@@ -25,6 +25,7 @@ end
 includedirs {
 	MAME_DIR .. "src/osd",
 	MAME_DIR .. "src/emu",
+	MAME_DIR .. "src/emu/net",
 	MAME_DIR .. "src/frontend/mame",
 	MAME_DIR .. "src/devices", -- till deps are fixed
 	MAME_DIR .. "src/lib",

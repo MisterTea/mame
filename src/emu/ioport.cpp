@@ -90,21 +90,13 @@
 
 ***************************************************************************/
 
-#include "NSM_Common.h"
-#include "NSM_Server.h"
-#include "NSM_Client.h"
+#include "NSM_CommonInterface.h"
 
 #include "nsm.pb.h"
 
-#include <map>
-#include <vector>
-#include <string>
-#include <iomanip>
-#include <deque>
-
 #include "emu.h"
 #include "emuopts.h"
-#include "emuconfig.h"
+#include "config.h"
 #include "xmlfile.h"
 #include "profiler.h"
 #include "ui/uimain.h"
@@ -1719,8 +1711,8 @@ ioport_port_live::ioport_port_live(ioport_port &port)
 		field.init_live_state(analog);
 	}
 
-  port.machine().save().save_item(NULL, "ioport", port.tag(), 0, defvalue, "defvalue");
-  port.machine().save().save_item(NULL, "ioport", port.tag(), 1, digital, "digital");
+  //port.machine().save().save_item(NULL, "ioport", port.tag(), 0, defvalue, "defvalue");
+  //port.machine().save().save_item(NULL, "ioport", port.tag(), 1, digital, "digital");
 }
 
 
@@ -1752,17 +1744,16 @@ ioport_manager::ioport_manager(running_machine &machine)
 	memset(m_type_to_entry, 0, sizeof(m_type_to_entry));
 }
 
-
-//-------------------------------------------------
-//  initialize - walk the configured ports and
-//  create live state information
-//-------------------------------------------------
-
 std::deque<std::pair<attotime,InputState>> playerInputData[MAX_PLAYERS];
 attotime lastFutureInputTime(0,0);
 int baseDelayFromPing = 40;
 attotime mostRecentSentReport;
 attotime inputStartTime(1,0);
+
+//-------------------------------------------------
+//  initialize - walk the configured ports and
+//  create live state information
+//-------------------------------------------------
 
 time_t ioport_manager::initialize()
 {
@@ -2222,12 +2213,6 @@ void ioport_manager::frame_update()
 
   //cout << "UPDATING FRAME\n";
 g_profiler.start(PROFILER_INPUT);
-
-  if(netServer)
-  {
-    //This line is here because it needs to run at about 60hz
-    netServer->popSyncQueue();
-  }
 
 	// record/playback information about the current frame
 	attotime curtime = machine().machine_time();

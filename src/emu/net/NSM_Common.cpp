@@ -17,10 +17,12 @@
 #include "attotime.h"
 #include "osdcore.h"
 
+#include <chrono>
+
 using namespace std;
 using namespace nsm;
 
-Common *netCommon = NULL;
+CommonInterface *netCommon = NULL;
 
 SRes OnProgress(void *p, UInt64 inSize, UInt64 outSize)
 {
@@ -709,7 +711,7 @@ void Common::sendInputs(const nsm::Attotime &inputTime, PeerInputData::PeerInput
   sendInputs(peerInputData);
 }
 
-extern RakNet::Time emulationStartTime;
+extern std::chrono::time_point<std::chrono::system_clock> emulationStartTime;
 
 void Common::sendInputs(const PeerInputData& peerInputData) {
   //cout << "SENDING INPUTS AT TIME " << peerInputData.time().seconds() << "." << peerInputData.time().attoseconds() << endl;
@@ -746,7 +748,7 @@ void Common::sendInputs(const PeerInputData& peerInputData) {
   sCompress[0] = ID_MAMEHUB_TIMESTAMP;
   RakNet::BitStream timeBS( (unsigned char*)&(sCompress[1]), sizeof(RakNet::Time), false);
   timeBS.SetWriteOffset(0);
-  RakNet::Time t = RakNet::GetTimeMS() - emulationStartTime;
+  RakNet::Time t = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - emulationStartTime).count();
   timeBS.Write(t);
   timeBS.EndianSwapBytes(0,sizeof(RakNet::Time));
   memcpy(&sCompress[1],&t,sizeof(RakNet::Time));

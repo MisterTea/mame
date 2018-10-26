@@ -53,9 +53,6 @@
 #define DECLARE_WRITE_LINE_MEMBER(name)     void name(ATTR_UNUSED int state)
 #define WRITE_LINE_MEMBER(name)             void name(ATTR_UNUSED int state)
 
-#ifdef WIN32
-#undef interface
-#endif
 
 
 //**************************************************************************

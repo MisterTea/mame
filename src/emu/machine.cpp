@@ -68,14 +68,12 @@
 
 ***************************************************************************/
 
-#include "NSM_Common.h"
-#include "NSM_Server.h"
-#include "NSM_Client.h"
+#include "NSM_CommonInterface.h"
 
 #include "emu.h"
 #include "emuopts.h"
 #include "osdepend.h"
-#include "emuconfig.h"
+#include "config.h"
 #include "debugger.h"
 #include "render.h"
 #include "uiinput.h"
@@ -91,6 +89,7 @@
 #include <time.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
+#include <chrono>
 
 #if defined(EMSCRIPTEN)
 #include <emscripten.h>
@@ -433,7 +432,7 @@ void running_machine::processNetworkBuffer(PeerInputData *inputData,int peerID)
   }
 }
 
-RakNet::Time emulationStartTime=0;
+std::chrono::time_point<std::chrono::system_clock> emulationStartTime;
 u64 inputFrameNumber = 0;
 
 int running_machine::run(bool quiet)
@@ -497,7 +496,7 @@ int running_machine::run(bool quiet)
 
     if(netServer)
     {
-      if(!netServer->initializeConnection())
+      if(!netServer->serve())
       {
         return EMU_ERR_FATALERROR;
       }
@@ -511,7 +510,7 @@ int running_machine::run(bool quiet)
       //handle_load(machine);
       //if(netClient->getSecondsBetweenSync())
       //doPreSave(this);
-      bool retval = netClient->initializeConnection(
+      bool retval = netClient->connect(
         (unsigned short)options().selfport(),
         options().hostname(),
         (unsigned short)options().port(),
@@ -564,7 +563,7 @@ int running_machine::run(bool quiet)
 
     printf("SOFT RESET FINISHED\n");
 
-    emulationStartTime = RakNet::GetTimeMS();
+    emulationStartTime = std::chrono::system_clock::now();
 
     u64 trackFrameNumber=0;
 
@@ -1589,8 +1588,6 @@ std::string running_machine::nvram_filename(device_t &device) const
 	}
 	return result.str();
 }
-
-extern Common *netCommon;
 
 int nvram_size(running_machine &machine) {
 	int retval=0;

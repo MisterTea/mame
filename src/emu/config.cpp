@@ -10,7 +10,7 @@
 #include "emu.h"
 #include "emuopts.h"
 #include "drivenum.h"
-#include "emuconfig.h"
+#include "config.h"
 #include "xmlfile.h"
 
 #define DEBUG_CONFIG        0

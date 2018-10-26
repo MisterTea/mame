@@ -20,7 +20,7 @@
 #include <QtCore/QAbstractNativeEventFilter>
 
 #include "emu.h"
-#include "emuconfig.h"
+#include "config.h"
 #include "debugger.h"
 #include "modules/lib/osdobj_common.h"
 

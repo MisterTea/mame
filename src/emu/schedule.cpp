@@ -367,16 +367,6 @@ attotime device_scheduler::time() const
 	return (m_executing_device != nullptr) ? m_executing_device->local_time() : m_basetime;
 }
 
-attotime device_scheduler::first_device_time() const {
-	// build the execution list if we don't have one yet
-	device_execute_interface *first = m_execute_list;
-	if (first != NULL)
-	{
-    return first->m_localtime;
-  }
-  return m_basetime;
-}
-
 //-------------------------------------------------
 //  can_save - return true if it's safe to save
 //  (i.e., no temporary timers outstanding)

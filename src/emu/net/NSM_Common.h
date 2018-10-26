@@ -1,5 +1,7 @@
-#ifndef __NSM_COMMON__
-#define __NSM_COMMON__
+#ifndef __NSM_COMMON_H__
+#define __NSM_COMMON_H__
+
+#include "NSM_CommonInterface.h"
 
 //RAKNET MUST COME FIRST, OTHER LIBS TRY TO REPLACE new/delete/malloc/free WITH THEIR OWN SHIT
 //for ID_USER_PACKET_ENUM
@@ -71,111 +73,7 @@ enum CustomPacketType
     ID_END
   };
 
-class Client;
-class Server;
-class Common;
-
-extern Client *netClient;
-extern Server *netServer;
-extern Common *netCommon;
-
-class running_machine;
-
-class ChatLog
-{
- public:
-  int playerID;
-  time_t timeReceived;
-  std::string message;
-
-ChatLog(int _playerID,time_t _timeReceived,const std::string &_message)
-    :
-  playerID(_playerID),
-    timeReceived(_timeReceived),
-    message(_message)
-    {
-    }
-};
-
-class MemoryBlock
-{
-public:
-std::string name;
-unsigned char *data;
-int size;
-bool ownsMemory;
-
-MemoryBlock(const std::string& _name, int _size);
-MemoryBlock(const std::string& _name, unsigned char *_data,int _size);
-~MemoryBlock();
-
-private:
-MemoryBlock(MemoryBlock const&);
-    MemoryBlock& operator=(MemoryBlock const&);
-};
-
-class BlockValueLocation
-{
- public:
-  unsigned char ramRegion;
-  int blockIndex,memoryStart,memorySize;
-  unsigned char memoryMask;
-
- BlockValueLocation(unsigned char _ramRegion,int _blockIndex,int _memoryStart,int _memorySize,unsigned char _memoryMask)
-   :
-  ramRegion(_ramRegion),
-    blockIndex(_blockIndex),
-    memoryStart(_memoryStart),
-    memorySize(_memorySize),
-    memoryMask(_memoryMask)
-    {
-    }
-
-  bool operator <(const BlockValueLocation &other) const {
-    if(ramRegion<other.ramRegion) return true;
-    else if(ramRegion>other.ramRegion) return false;
-
-    if(blockIndex<other.blockIndex) return true;
-    else if(blockIndex>other.blockIndex) return false;
-
-    if(memoryStart<other.memoryStart) return true;
-    else if(memoryStart>other.memoryStart) return false;
-
-    if(memorySize<other.memorySize) return true;
-    else if(memorySize>other.memorySize) return false;
-
-    if(memoryMask<other.memoryMask) return true;
-    else if(memoryMask>other.memoryMask) return false;
-
-    return false;
-  }
-};
-
-class PeerData
-{
- public:
-  std::string name;
-  std::list<nsm::PeerInputData> availableInputs;
-  std::map<int, nsm::PeerInputData> delayedInputs;
-
-  std::list<nsm::PeerInputData> oldInputs;
-  nsm::Attotime startTime;
-  nsm::Attotime lastInputTime;
-  int nextGC;
-
-  PeerData() {}
-
- PeerData(std::string _name, nsm::Attotime _startTime)
-   :
-  name(_name),
-    startTime(_startTime),
-    lastInputTime(startTime),
-    nextGC(0)
-      {
-      }
-};
-
-class Common
+class Common : public CommonInterface
 {
  protected:
   RakNet::RakPeerInterface *rakInterface;
@@ -261,7 +159,7 @@ std::vector<std::shared_ptr<MemoryBlock> > blocks,staleBlocks;
     return selfPeerID;
   }
 
-  inline const std::string &getPeerNameFromID(int id)
+  inline std::string getPeerNameFromID(int id)
   {
     return peerData[id].name;
   }

@@ -21,6 +21,7 @@ options {
 includedirs {
 	MAME_DIR .. "src/osd",
 	MAME_DIR .. "src/emu",
+	MAME_DIR .. "src/emu/net",
 	MAME_DIR .. "src/lib",
 	MAME_DIR .. "src/lib/util",
 	MAME_DIR .. "3rdparty",
@@ -40,13 +41,14 @@ includedirs {
 }
 
 files {
-	MAME_DIR .. "src/emu/NSM_Common.cpp",
-	MAME_DIR .. "src/emu/NSM_Common.h",
-	MAME_DIR .. "src/emu/NSM_Server.cpp",
-	MAME_DIR .. "src/emu/NSM_Server.h",
-	MAME_DIR .. "src/emu/NSM_Client.cpp",
-	MAME_DIR .. "src/emu/NSM_Client.h",
-	MAME_DIR .. "src/emu/nsm.pb.cpp",
+	MAME_DIR .. "src/emu/net/NSM_Common.cpp",
+	MAME_DIR .. "src/emu/net/NSM_Common.h",
+	MAME_DIR .. "src/emu/net/NSM_CommonInterface.h",
+	MAME_DIR .. "src/emu/net/NSM_Server.cpp",
+	MAME_DIR .. "src/emu/net/NSM_Server.h",
+	MAME_DIR .. "src/emu/net/NSM_Client.cpp",
+	MAME_DIR .. "src/emu/net/NSM_Client.h",
+	MAME_DIR .. "src/emu/net/nsm.pb.cpp",
 
 	MAME_DIR .. "src/emu/emu.h",
 	MAME_DIR .. "src/emu/emufwd.h",

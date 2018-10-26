@@ -742,9 +742,6 @@ DEFS += -DBOOST_THREAD_BUILD_LIB -DBOOST_ALL_NO_LIB
 #Define _RAKNET_LIB for RakNet
 DEFS += -D_RAKNET_LIB
 
-# define NO_MEM_TRACKING for csmame
-DEFS += -DNO_MEM_TRACKING
-
 # map the INLINE to something digestible by GCC
 DEFS += -DINLINE="static inline"
 

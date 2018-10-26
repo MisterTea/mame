@@ -34,9 +34,9 @@ using namespace std;
 using namespace nsm;
 using namespace google::protobuf::io;
 
-Client *netClient=NULL;
+CommonInterface *netClient=NULL;
 
-Client *createGlobalClient(string _username)
+CommonInterface *createGlobalClient(string _username)
 {
   netClient = new Client(_username);
   netCommon = netClient;
@@ -180,7 +180,7 @@ int doCatchup=0;
 RakNet::RakNetGUID masterGuid;
 RakNet::Time largestPacketTime=0;
 
-bool Client::initializeConnection(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine)
+bool Client::connect(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine)
 {
 
   RakNet::SocketDescriptor socketDescriptor(0,0);
@@ -464,9 +464,9 @@ void Client::loadInitialData(unsigned char *data,int size,running_machine *machi
     nvram_interface_iterator iter(machine->root_device());
     for (device_nvram_interface &nvram : nvram_interface_iterator(machine->root_device()))
     {
-      std::string filename;
-      emu_file file(machine->options().nvram_directory(), OPEN_FLAG_WRITE);
-      if (file.open(machine->nvram_filename(nvram.device()).c_str()) == osd_file::error::NONE)
+      cout << "WRITING NVRAM TO " << machine->options().nvram_directory() << " " << machine->nvram_filename(nvram.device());
+      emu_file file(machine->options().nvram_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+      if (file.open(machine->nvram_filename(nvram.device())) == osd_file::error::NONE)
       {
         cout << "SAVING NVRAM OF SIZE: " << initial_sync.nvram(nvram_index).length() << endl;
         file.write(initial_sync.nvram(nvram_index).c_str(),initial_sync.nvram(nvram_index).length());
@@ -991,7 +991,7 @@ int Client::getNumSessions()
   return rakInterface->NumberOfConnections();
 }
 
-unsigned long long Client::getCurrentServerTime() {
+int64_t Client::getCurrentServerTime() {
   //cout << "LAST PING: " << largestPacketTime << " " << (rakInterface->GetLastPing(masterGuid)/2) << endl;
   return largestPacketTime + (rakInterface->GetLastPing(masterGuid)/2);
 }
