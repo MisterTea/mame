@@ -2346,5 +2346,5 @@ project "wga"
     MAME_DIR .. "3rdparty/wga/peer/src/base/PortMultiplexer.cpp",
     MAME_DIR .. "3rdparty/wga/peer/src/base/TimeHandler.cpp",
 
-		MAME_DIR .. "3rdparty/wga/peer/external/easylogging++.cc",
+	MAME_DIR .. "3rdparty/wga/peer/external/easylogging++.cc",
   }

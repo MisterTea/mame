@@ -80,11 +80,6 @@ end
 function addprojectflags()
 	local version = str_to_version(_OPTIONS["gcc_version"])
 	if _OPTIONS["gcc"]~=nil and string.find(_OPTIONS["gcc"], "gcc") then
-		if version >= 50100 then
-			buildoptions_cpp {
-				"-Wsuggest-override",
-			}
-		end
 		if version >= 60000 then
 			buildoptions_cpp {
 				"-flifetime-dse=1",

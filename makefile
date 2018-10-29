@@ -726,25 +726,6 @@ ifdef NO_USE_XINPUT
 PARAMS += --NO_USE_XINPUT='$(NO_USE_XINPUT)'
 endif
 
-ifdef MXE
-DEFS += -DMXE
-
-# Set version of msvc for mxe
-DEFS += -D__MSVCRT_VERSION__=0x800 -D_WIN32_WINNT=0x0501
-endif
-
-#Define _USE_MATH_DEFINES for M_PI
-DEFS += -D_USE_MATH_DEFINES
-
-#Defines for boost
-DEFS += -DBOOST_THREAD_BUILD_LIB -DBOOST_ALL_NO_LIB
-
-#Define _RAKNET_LIB for RakNet
-DEFS += -D_RAKNET_LIB
-
-# map the INLINE to something digestible by GCC
-DEFS += -DINLINE="static inline"
-
 ifdef SDL_LIBVER
 PARAMS += --SDL_LIBVER='$(SDL_LIBVER)'
 endif

@@ -1,6 +1,16 @@
 #ifndef __NSM_COMMON_INTERFACE__
 #define __NSM_COMMON_INTERFACE__
 
+#define ASIO_STANDALONE 1
+#define WGA_VERSION "0.0.1"
+#define ELPP_NO_DEFAULT_LOG_FILE 1
+#define ELPP_FEATURE_CRASH_LOG 1
+#define ELPP_THREAD_SAFE 1
+#define ELPP_HANDLE_SIGABRT 1
+#define _RAKNET_LIB 1
+
+#include "ChronoMap.hpp"
+
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -27,6 +37,10 @@ inline bool operator==(const google::protobuf::MessageLite& msg_a,
 }
 
 #include "zlib.h"
+
+#ifdef interface
+#undef interface
+#endif
 
 class ClientInterface;
 class ServerInterface;
