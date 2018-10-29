@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+#include "ChronoMap.hpp"
+
 #include "RakNet/RakPeerInterface.h"
 #include "RakNet/RakNetStatistics.h"
 #include "RakNet/RakNetTypes.h"
@@ -201,8 +203,6 @@ Common::Common(string _username, int _unmeasuredNoise) :
 Common::~Common() {
 }
 
-extern int baseDelayFromPing;
-
 RakNet::SystemAddress Common::ConnectBlocking(const char *defaultAddress, unsigned short defaultPort,bool newClient)
 {
   char ipAddr[64];
@@ -236,12 +236,6 @@ RakNet::SystemAddress Common::ConnectBlocking(const char *defaultAddress, unsign
         PeerInputDataList inputDataList;
         inputDataList.ParseFromString(s);
         receiveInputs(&inputDataList);
-      }
-      else if(packetID == ID_BASE_DELAY)
-      {
-        cout << "Changing base delay from " << baseDelayFromPing;
-        memcpy(&baseDelayFromPing,GetPacketData(packet),sizeof(int));
-        cout << " to " << baseDelayFromPing << endl;
       }
       else
       {
@@ -285,6 +279,8 @@ std::string Common::doInflate(const unsigned char *inputString, int length) {
   return s;
 }
 
+extern std::unordered_map<int, wga::ChronoMap<int,InputState>> playerInputData;
+
 void Common::upsertPeer(RakNet::RakNetGUID guid,int peerID,string name,nsm::Attotime startTime)
 {
   if(startTime.seconds()<1) {
@@ -292,6 +288,7 @@ void Common::upsertPeer(RakNet::RakNetGUID guid,int peerID,string name,nsm::Atto
   }
   cout << "UPSERTING PEER WITH ID: " << peerID << " AND NAME: " << name << endl;
   peerIDs[guid] = peerID;
+  playerInputData[peerID] = wga::ChronoMap<int, nsm::InputState>(int64_t(startTime.seconds())*1000 + startTime.attoseconds()/ATTOSECONDS_PER_MILLISECOND);
   cout << "UPSERTING PEER WITH ID: " << peerID << " AND NAME: " << name << endl;
   cout << "PEER DATA SIZE: " << peerData.size() << endl;
   if(peerData.find(peerID)==peerData.end()) {

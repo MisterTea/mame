@@ -91,6 +91,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <chrono>
 
+#include "ChronoMap.hpp"
+
 #if defined(EMSCRIPTEN)
 #include <emscripten.h>
 #endif
@@ -311,7 +313,7 @@ attotime rollbackTime;
 //-------------------------------------------------
 
 extern list< ChatLog > chatLogs;
-extern std::deque<std::pair<attotime,InputState> > playerInputData[MAX_PLAYERS];
+extern std::unordered_map<int, wga::ChronoMap<int,InputState>> playerInputData;
 
 void running_machine::processNetworkBuffer(PeerInputData *inputData,int peerID)
 {
@@ -320,80 +322,23 @@ void running_machine::processNetworkBuffer(PeerInputData *inputData,int peerID)
     if(inputData->inputtype() == PeerInputData::INPUT)
     {
       //printf("GOT INPUT\n");
-      attotime tmptime(inputData->time().seconds(), inputData->time().attoseconds());
+      int64_t inputTime = attotime(inputData->time().seconds(), inputData->time().attoseconds()).to_msec();
 
       for(int a=0;a<inputData->inputstate().players_size();a++) {
         //int player = inputData->inputstate().players(a);
-        //cout << "Peer " << peerID << " has input for player " << inputData->inputstate().players(a) << " at time " << tmptime.seconds << "." << tmptime.attoseconds << endl;
-        std::deque<pair<attotime,InputState> > &onePlayerInputData = playerInputData[inputData->inputstate().players(a)];
-        if(onePlayerInputData.empty()) {
-          onePlayerInputData.insert(onePlayerInputData.begin(),pair<attotime,InputState>(tmptime,inputData->inputstate()));
-        } else {
-          //TODO: Re-think this and clean it up
-          if (netCommon->isRollback()) {
-            std::deque<pair<attotime,InputState> >::reverse_iterator it = onePlayerInputData.rbegin();
-            attotime lastInputTime = it->first;
-            if (lastInputTime == tmptime) {
-              return;
-            }
-            if (lastInputTime > tmptime) {
-              cout << "unexpected time " << lastInputTime << " " << tmptime << "\n";
-              exit(1);
-            }
-
-            // Check if the input states are equal.
-            std::string s1string;
-            std::string s2string;
-            //cout << "First serialize\n";
-            ::nsm::InputState s1 = inputData->inputstate();
-            ::nsm::InputState s2 = it->second;
-            s1.set_framecount(0);
-            s2.set_framecount(0);
-            s1.SerializeToString(&s1string);
-            //cout << "Second serialize\n";
-            s2.SerializeToString(&s2string);
-            if (s1string != s2string) {
-              attotime currentMachineTime = machine_time();
-              if (currentMachineTime > tmptime) {
-                if (doRollback) {
-                  if (rollbackTime > tmptime) {
-                    // Roll back further
-                    rollbackTime = tmptime;
-                    cout << "Rolling back further from " << currentMachineTime << " to " << tmptime << endl;
-                  }
-                } else {
-                  // Roll back
-                  cout << "Rolling back from " << currentMachineTime << " to " << tmptime << endl;
-                  rollbackTime = tmptime;
-                  doRollback=true;
-                }
-              }
-            }
-
-            onePlayerInputData.push_back(make_pair(tmptime,inputData->inputstate()));
-          } else { // no rollback
-            for(std::deque<pair<attotime,InputState> >::reverse_iterator it = onePlayerInputData.rbegin();
-                it != onePlayerInputData.rend();
-                it++) {
-              //cout << "IN INPUT LOOP\n";
-              if(it->first < tmptime) {
-                onePlayerInputData.insert(
-                  it.base(), // NOTE: base() returns the iterator 1 position in the past
-                  pair<attotime,InputState>(tmptime,inputData->inputstate()));
-                break;
-              } else if(it->first == tmptime) {
-                //TODO: If two peers send inputs at the same time for the same player, break ties with peer id.
-                break;
-              } else if(it == onePlayerInputData.rend()) {
-                onePlayerInputData.insert(
-                  onePlayerInputData.begin(),
-                  pair<attotime,InputState>(tmptime,inputData->inputstate()));
-                break;
-              }
-            }
-          }
-        }
-      }
+        cout << "Peer " << peerID << " has input for player " << inputData->inputstate().players(a) << " at time " << inputTime << endl;
+			}
+			if (playerInputData.find(peerID) == playerInputData.end()) {
+				cout << "MISSING PLAYERINPUTDATA" << endl;
+				exit(1);
+			}
+			auto &onePlayerInputData = playerInputData[peerID];
+			int64_t currentTime = onePlayerInputData.getCurrentTime();
+			if (currentTime >= inputTime) {
+						cout << "unexpected time " << currentTime << " " << inputTime << " " << peerID << "\n";
+						exit(1);
+			}
+			onePlayerInputData.put(currentTime, inputTime, {{0, inputData->inputstate()}});
     }
     else if(inputData->inputtype() == PeerInputData::CHAT)
     {
@@ -433,7 +378,6 @@ void running_machine::processNetworkBuffer(PeerInputData *inputData,int peerID)
 }
 
 std::chrono::time_point<std::chrono::system_clock> emulationStartTime;
-u64 inputFrameNumber = 0;
 
 int running_machine::run(bool quiet)
 {
@@ -603,12 +547,6 @@ int running_machine::run(bool quiet)
       bool secondPassed = false;
       bool tenthSecondPassed = false;
 
-			for (int a=0;a<MAX_PLAYERS;a++) {
-				while(playerInputData[a].size() > 30000) {
-					playerInputData[a].pop_front();
-				}
-			}
-
       if (timePassed) {
         //cout << "TIME MOVED FROM " << timeBefore << " TO " << timeAfter << endl;
         m_machine_time += (timeAfter - timeBefore);
@@ -746,6 +684,8 @@ int running_machine::run(bool quiet)
 			if (timePassed && m_saveload_schedule != saveload_schedule::NONE) {
 				handle_saveload();
       } else if (timePassed && netCommon && netCommon->isRollback()) {
+				/*
+				We need to implement rollback without frame counts
         if (trackFrameNumber>0 && m_scheduler.can_save() && trackFrameNumber != inputFrameNumber) {
           isRollback = true;
           immediate_save("test");
@@ -759,20 +699,6 @@ int running_machine::run(bool quiet)
             cout << "Second passed" << endl;
           }
           trackFrameNumber = inputFrameNumber;
-
-          /*
-          static int biggestSecond=0;
-          if (time().seconds > biggestSecond) {
-            biggestSecond = time().seconds;
-            if (biggestSecond>10) {
-              cout << "Rolling back" << endl;
-              isRollback = true;
-              immediate_load("test");
-              isRollback = false;
-              catchingUp = true;
-            }
-          }
-          */
         }
         if(m_machine_time.seconds()>0 && m_scheduler.can_save()) {
           if (doRollback) {
@@ -783,6 +709,7 @@ int running_machine::run(bool quiet)
             catchingUp = true;
           }
         }
+				*/
       }
 
 			g_profiler.stop();

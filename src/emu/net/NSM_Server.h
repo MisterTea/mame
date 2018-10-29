@@ -84,8 +84,6 @@ class Server : public Common
     syncTransferSeconds = _syncTransferSeconds;
   }
 
-  virtual void sendBaseDelay(int baseDelay);
-
   virtual inline void setBlockNewClients(bool blockNewClients) {
     this->blockNewClients = blockNewClients;
   }

@@ -258,7 +258,8 @@ end
 		ext_lib("jpeg"),
 		"7z",
     "protobuf",
-    "raknet",
+		"raknet",
+		"wga",
 	}
 if (STANDALONE~=true) then
 	links {

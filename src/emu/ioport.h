@@ -1034,6 +1034,7 @@ public:
 	ioport_condition const &condition() const { return m_condition; }
 	ioport_type type() const { return m_type; }
 	u8 player() const { return m_player; }
+	u8 mamehub_player() const;
 	bool digital_value() const { return m_digital_value; }
 	void set_value(ioport_value value);
 
@@ -1418,13 +1419,11 @@ public:
 	int get_autofire_delay() { return m_autofire_delay; }
 	void set_autofire_delay(int delay) { m_autofire_delay = delay; }
 
-  void pollForDataAfter(int player, attotime curtime);
+  void pollForPeersAfter(attotime curtime);
   void pollForPeerCatchup(attotime curMachineTime);
-  std::vector<nsm::InputState*> fetch_remote_inputs(attotime curtime);
+  std::vector<nsm::InputState> fetch_remote_inputs(attotime curtime);
   void store_local_port(ioport_port &port, nsm::InputPort *inputPort);
-  void merge_ports(ioport_port &port, const std::vector<nsm::InputState*> &remoteInputStates, int portIndex);
-
-  inline s64 framecount() { return m_framecount; }
+  void merge_ports(ioport_port &port, const std::vector<nsm::InputState> &remoteInputStates, int portIndex);
 private:
 	// internal helpers
 	void init_port_types();

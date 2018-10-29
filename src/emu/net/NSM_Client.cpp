@@ -1,5 +1,7 @@
 #include <stdexcept>
 
+#include "ChronoMap.hpp"
+
 #include "RakNet/RakPeerInterface.h"
 #include "RakNet/RakNetStatistics.h"
 #include "RakNet/RakNetTypes.h"
@@ -174,11 +176,10 @@ int GetPacketSize(RakNet::Packet *p)
 
 int initialSyncPercentComplete=0;
 extern bool waitingForClientCatchup;
-extern int baseDelayFromPing;
-extern attotime mostRecentSentReport;
 int doCatchup=0;
 RakNet::RakNetGUID masterGuid;
 RakNet::Time largestPacketTime=0;
+extern std::unordered_map<int, wga::ChronoMap<int,InputState>> playerInputData;
 
 bool Client::connect(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine)
 {
@@ -216,6 +217,7 @@ bool Client::connect(unsigned short selfPort,const char *hostname,unsigned short
   }
 
   peerIDs[guid] = 1;
+  playerInputData[1] = wga::ChronoMap<int, nsm::InputState>();
 
   while(initComplete==false)
   {
@@ -319,7 +321,6 @@ bool Client::connect(unsigned short selfPort,const char *hostname,unsigned short
         selfPeerID = peerID;
         // Default player index is in order of join.
         player = selfPeerID - 1;
-        mostRecentSentReport = attotime(startTime.seconds(), startTime.attoseconds());
         cout << "CLIENT STARTED AT TIME: " << startTime.seconds() << "." << startTime.attoseconds() << endl;
       }
       else
@@ -396,13 +397,6 @@ bool Client::connect(unsigned short selfPort,const char *hostname,unsigned short
       receiveInputs(&inputDataList);
       break;
     }
-    case ID_BASE_DELAY:
-    {
-      cout << "Changing base delay from " << baseDelayFromPing;
-      memcpy(&baseDelayFromPing,GetPacketData(p),sizeof(int));
-      cout << " to " << baseDelayFromPing << endl;
-    }
-    break;
     case ID_SETTINGS:
     {
       if(p->data[1]) {
@@ -738,7 +732,6 @@ bool Client::update(running_machine *machine)
       {
         //This is me, set my own ID and name
         selfPeerID = peerID;
-        mostRecentSentReport = attotime(startTime.seconds(), startTime.attoseconds());
         cout << "CLIENT STARTED AT TIME: " << startTime.seconds() << "." << startTime.attoseconds() << endl;
       }
       else
@@ -827,13 +820,6 @@ bool Client::update(running_machine *machine)
       receiveInputs(&inputDataList);
       break;
     }
-    case ID_BASE_DELAY:
-    {
-      cout << "Changing base delay from " << baseDelayFromPing;
-      memcpy(&baseDelayFromPing,GetPacketData(p),sizeof(int));
-      cout << " to " << baseDelayFromPing << endl;
-    }
-    break;
     case ID_SETTINGS:
       memcpy(&secondsBetweenSync,p->data+1,sizeof(int));
       break;

@@ -26,6 +26,16 @@ includedirs {
 	MAME_DIR .. "src/lib/util",
 	MAME_DIR .. "3rdparty",
 	MAME_DIR .. "3rdparty/protobuf",
+
+	MAME_DIR .. "3rdparty/wga/src/base",
+	MAME_DIR .. "3rdparty/wga/src/peer",
+	MAME_DIR .. "3rdparty/wga/external",
+	MAME_DIR .. "3rdparty/wga/external/Optional",
+	MAME_DIR .. "3rdparty/wga/external/asio/asio/include",
+	MAME_DIR .. "3rdparty/wga/external/msgpack-c/include",
+	MAME_DIR .. "3rdparty/wga/external/curlpp/include",
+	MAME_DIR .. "3rdparty/wga/external/Catch2/single_include",
+
 	GEN_DIR  .. "emu",
 	GEN_DIR  .. "emu/layout",
 }

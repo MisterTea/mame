@@ -20,14 +20,20 @@
 
 #include "nsm.pb.h"
 
+inline bool operator==(const google::protobuf::MessageLite& msg_a,
+                const google::protobuf::MessageLite& msg_b) {
+  return (msg_a.GetTypeName() == msg_b.GetTypeName()) &&
+      (msg_a.SerializeAsString() == msg_b.SerializeAsString());
+}
+
 #include "zlib.h"
 
 class ClientInterface;
 class ServerInterface;
 class CommonInterface;
 
-CommonInterface *createGlobalServer(std::string _username, unsigned short _port,
-                           int _unmeasuredNoise, bool _rollback);
+CommonInterface *createGlobalServer(std::string _username, unsigned short _port, int _unmeasuredNoise,
+                           bool _rollback);
 void deleteGlobalServer();
 
 CommonInterface *createGlobalClient(std::string _username);
@@ -198,9 +204,6 @@ class CommonInterface {
   virtual void setPlayer(int newPlayer) = 0;
 
   virtual bool isRollback() = 0;
-
-  virtual void sendBaseDelay(int baseDelay) {
-  }
 
   virtual bool connect(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine) {
     return false;
