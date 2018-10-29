@@ -8,8 +8,8 @@
 
 ***************************************************************************/
 
-#include "NSM_Server.h"
-#include "NSM_Client.h"
+#include "NSM_CommonInterface.h"
+
 #include "emu.h"
 #include "emuopts.h"
 #include "debugger.h"
@@ -23,6 +23,8 @@
 #include "xmlfile.h"
 
 #include "osdepend.h"
+
+#include <chrono>
 
 
 //**************************************************************************
@@ -911,7 +913,7 @@ bool video_manager::finish_screen_updates()
 //-------------------------------------------------
 
 s64 realtimeEmulationShift = 0;
-extern RakNet::Time emulationStartTime;
+extern std::chrono::time_point<std::chrono::system_clock> emulationStartTime;
 
 void video_manager::update_throttle(attotime emutime)
 {
@@ -921,7 +923,7 @@ void video_manager::update_throttle(attotime emutime)
 
     while(true) {
       // Get current ticks
-      RakNet::Time curTime = RakNet::GetTimeMS() - emulationStartTime;
+		  int64_t curTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - emulationStartTime).count();
       if (netClient) {
         curTime = netClient->getCurrentServerTime();
       }

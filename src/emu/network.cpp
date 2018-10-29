@@ -10,7 +10,7 @@
 
 #include "emu.h"
 #include "network.h"
-#include "emuconfig.h"
+#include "config.h"
 #include "xmlfile.h"
 
 //**************************************************************************

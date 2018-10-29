@@ -12,10 +12,10 @@
 #include "speaker.h"
 #include "emuopts.h"
 #include "osdepend.h"
-#include "emuconfig.h"
+#include "config.h"
 #include "wavwrite.h"
 
-
+#include "NSM_CommonInterface.h"
 
 //**************************************************************************
 //  DEBUGGING

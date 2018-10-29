@@ -258,7 +258,8 @@ end
 		ext_lib("jpeg"),
 		"7z",
     "protobuf",
-    "raknet",
+		"raknet",
+		"wga",
 	}
 if (STANDALONE~=true) then
 	links {
@@ -311,6 +312,7 @@ end
 	includedirs {
 		MAME_DIR .. "src/osd",
 		MAME_DIR .. "src/emu",
+		MAME_DIR .. "src/emu/net",
 		MAME_DIR .. "src/devices",
 		MAME_DIR .. "src/" .. _target,
 		MAME_DIR .. "src/lib",

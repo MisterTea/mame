@@ -25,12 +25,23 @@ end
 includedirs {
 	MAME_DIR .. "src/osd",
 	MAME_DIR .. "src/emu",
+	MAME_DIR .. "src/emu/net",
 	MAME_DIR .. "src/frontend/mame",
 	MAME_DIR .. "src/devices", -- till deps are fixed
 	MAME_DIR .. "src/lib",
 	MAME_DIR .. "src/lib/util",
 	MAME_DIR .. "3rdparty",
 	MAME_DIR .. "3rdparty/protobuf",
+
+	MAME_DIR .. "3rdparty/wga/peer/src/base",
+	MAME_DIR .. "3rdparty/wga/peer/src/peer",
+	MAME_DIR .. "3rdparty/wga/peer/external",
+	MAME_DIR .. "3rdparty/wga/peer/external/Optional",
+	MAME_DIR .. "3rdparty/wga/peer/external/asio/asio/include",
+	MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
+	MAME_DIR .. "3rdparty/wga/peer/external/curlpp/include",
+	MAME_DIR .. "3rdparty/wga/peer/external/Catch2/single_include",
+	
 	GEN_DIR  .. "emu",
 	GEN_DIR  .. "emu/layout",
 }

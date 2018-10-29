@@ -42,7 +42,7 @@
 #include "rendfont.h"
 #include "rendlay.h"
 #include "rendutil.h"
-#include "emuconfig.h"
+#include "config.h"
 #include "drivenum.h"
 #include "xmlfile.h"
 #include "ui/uimain.h"

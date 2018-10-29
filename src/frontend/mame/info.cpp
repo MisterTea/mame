@@ -16,7 +16,7 @@
 #include "machine/ram.h"
 #include "sound/samples.h"
 
-#include "emuconfig.h"
+#include "config.h"
 #include "drivenum.h"
 #include "romload.h"
 #include "screen.h"

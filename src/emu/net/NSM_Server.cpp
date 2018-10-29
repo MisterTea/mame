@@ -34,9 +34,9 @@ using namespace std;
 using namespace nsm;
 using namespace google::protobuf::io;
 
-Server *netServer=NULL;
+CommonInterface *netServer=NULL;
 
-Server *createGlobalServer(string _username,unsigned short _port, int _unmeasuredNoise,
+CommonInterface *createGlobalServer(string _username,unsigned short _port, int _unmeasuredNoise,
   bool _rollback)
 {
   cout << "Creating server on port " << _port << endl;
@@ -104,7 +104,7 @@ void Server::shutdown()
   RakNet::RakPeerInterface::DestroyInstance(rakInterface);
 }
 
-extern RakNet::Time emulationStartTime;
+extern std::chrono::time_point<std::chrono::system_clock> emulationStartTime;
 
 void Server::acceptPeer(RakNet::RakNetGUID guidToAccept,running_machine *machine)
 {
@@ -199,7 +199,7 @@ void Server::acceptPeer(RakNet::RakNetGUID guidToAccept,running_machine *machine
   memcpy(tmpbuf,&rollback,sizeof(bool));
   tmpbuf += sizeof(bool);
 
-  RakNet::Time t = RakNet::GetTimeMS() - emulationStartTime;
+  RakNet::Time t = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - emulationStartTime).count();
   memcpy(tmpbuf,&t,sizeof(RakNet::Time));
   tmpbuf += sizeof(RakNet::Time);
 
@@ -290,7 +290,7 @@ void Server::removePeer(RakNet::RakNetGUID guid,running_machine *machine)
   }
 }
 
-bool Server::initializeConnection()
+bool Server::serve()
 {
   RakNet::SocketDescriptor sd(0,0);
   printf("PORT: %d\n",port);
@@ -733,7 +733,7 @@ public:
     int compressedSize = (int)compressedSync.length();
     printf("SYNC SIZE: %d\n",compressedSize);
     if(compressedSize > 16*1024*1024) { // If bigger than 16MB, don't even bother.
-      netServer->syncOverride = true;
+      ((Server*)netServer)->syncOverride = true;
       return;
     }
 
@@ -818,7 +818,7 @@ public:
   }
 };
 
-void Server::sync(running_machine *machine)
+bool Server::sync(running_machine *machine)
 {
   // Finish any old sync thread
   if (syncThread) {
@@ -833,7 +833,7 @@ void Server::sync(running_machine *machine)
     //}
 
   if(syncOverride)
-    return;
+    return true;
 
   syncProto.set_generation(generation);
   nsm::Attotime* global_time = syncProto.mutable_global_time();
@@ -951,6 +951,7 @@ void Server::sync(running_machine *machine)
   }
 
   syncCount++;
+  return true;
 }
 
 long long lastSyncQueueMs = -1;
@@ -959,7 +960,8 @@ void Server::popSyncQueue()
 {
   if(!syncReady)
     return;
-  long long curRealTime = RakNet::GetTimeMS() - emulationStartTime;
+  long long curRealTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - emulationStartTime).count();
+
 
   //cout << "SYNC TIMES: " << (curRealTime/100) << " " << (lastSyncQueueMs/100) << endl;
   if (lastSyncQueueMs/100 == curRealTime/100) {
@@ -987,22 +989,4 @@ void Server::popSyncQueue()
       true
       );
   }
-}
-
-void Server::sendBaseDelay(int baseDelay)
-{
-  char* dataToSend = (char*)malloc(5);
-  dataToSend[0] = ID_BASE_DELAY;
-  memcpy(dataToSend+1,&baseDelay,sizeof(int));
-  //cout << "SENDING MESSAGE WITH LENGTH: " << intSize << endl;
-  rakInterface->Send(
-    dataToSend,
-    5,
-    IMMEDIATE_PRIORITY,
-    RELIABLE_ORDERED,
-    ORDERING_CHANNEL_BASE_DELAY,
-    RakNet::UNASSIGNED_SYSTEM_ADDRESS,
-    true
-    );
-  free(dataToSend);
 }

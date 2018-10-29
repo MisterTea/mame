@@ -33,7 +33,7 @@
 #include "ui/viewgfx.h"
 #include "imagedev/cassette.h"
 
-#include "NSM_Common.h"
+#include "NSM_CommonInterface.h"
 
 /***************************************************************************
     CONSTANTS

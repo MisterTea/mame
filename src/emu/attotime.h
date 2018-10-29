@@ -143,6 +143,8 @@ public:
 	static attotime from_hz(int frequency) { return from_hz(double(frequency)); }
 	static attotime from_hz(const XTAL &xtal) { return from_hz(xtal.dvalue()); }
 
+	s64 to_msec() const { return attoseconds_t(m_seconds)*1000 + (m_attoseconds/ (ATTOSECONDS_PER_SECOND / 1000)); }
+
 	// math
 	attotime &operator+=(const attotime &right);
 	attotime &operator-=(const attotime &right);

@@ -2298,3 +2298,53 @@ project "raknet"
     MAME_DIR .. "3rdparty/RakNet/_FindFirst.cpp",
     MAME_DIR .. "3rdparty/RakNet/gettimeofday.cpp",
   }
+
+project "wga"
+	uuid "9ee43987-9a53-4fbd-9469-769d2b485379"
+	kind "StaticLib"
+
+  defines {
+		"WGA_VERSION=\"0.0.1\"",
+		"ELPP_NO_DEFAULT_LOG_FILE",
+		"ELPP_FEATURE_CRASH_LOG",
+		"ELPP_THREAD_SAFE",
+		"ELPP_HANDLE_SIGABRT",
+		"ASIO_STANDALONE",
+  }
+
+	configuration "Debug"
+		defines {
+			"verbose=-1",
+		}
+
+	configuration { "gmake or ninja" }
+		buildoptions_c {
+			"-Wno-strict-prototypes",
+			"-std=c++11",
+		}
+
+	configuration { }
+		defines {
+		}
+
+	includedirs {
+		MAME_DIR .. "3rdparty/wga/peer/src/base",
+		MAME_DIR .. "3rdparty/wga/peer/src/peer",
+		MAME_DIR .. "3rdparty/wga/peer/external",
+		MAME_DIR .. "3rdparty/wga/peer/external/Optional",
+		MAME_DIR .. "3rdparty/wga/peer/external/asio/asio/include",
+		MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
+		MAME_DIR .. "3rdparty/wga/peer/external/curlpp/include",
+		MAME_DIR .. "3rdparty/wga/peer/external/Catch2/single_include",
+	}
+
+  files {
+    MAME_DIR .. "3rdparty/wga/peer/src/base/BiDirectionalRpc.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/CryptoHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/LogHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/MultiEndpointHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/PortMultiplexer.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/TimeHandler.cpp",
+
+		MAME_DIR .. "3rdparty/wga/peer/external/easylogging++.cc",
+  }

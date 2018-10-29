@@ -32,7 +32,7 @@ project "utils"
 		MAME_DIR .. "src/lib/util/avhuff.h",
 		MAME_DIR .. "src/lib/util/aviio.cpp",
 		MAME_DIR .. "src/lib/util/aviio.h",
-		MAME_DIR .. "src/lib/util/base64.hpp",
+		MAME_DIR .. "src/lib/util/emubase64.hpp",
 		MAME_DIR .. "src/lib/util/bitmap.cpp",
 		MAME_DIR .. "src/lib/util/bitmap.h",
 		MAME_DIR .. "src/lib/util/cdrom.cpp",

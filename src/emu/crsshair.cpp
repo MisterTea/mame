@@ -10,7 +10,7 @@
 #include "emu.h"
 #include "emuopts.h"
 #include "rendutil.h"
-#include "emuconfig.h"
+#include "config.h"
 #include "xmlfile.h"
 #include "crsshair.h"
 

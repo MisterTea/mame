@@ -3,7 +3,7 @@
 #ifndef CRYPTO_HPP
 #define CRYPTO_HPP
 
-#include "base64.hpp"
+#include "emubase64.hpp"
 #include "sha1.hpp"
 
 inline std::string sha1_encode(const std::string& input)

@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+#include "ChronoMap.hpp"
+
 #include "RakNet/RakPeerInterface.h"
 #include "RakNet/RakNetStatistics.h"
 #include "RakNet/RakNetTypes.h"
@@ -17,10 +19,12 @@
 #include "attotime.h"
 #include "osdcore.h"
 
+#include <chrono>
+
 using namespace std;
 using namespace nsm;
 
-Common *netCommon = NULL;
+CommonInterface *netCommon = NULL;
 
 SRes OnProgress(void *p, UInt64 inSize, UInt64 outSize)
 {
@@ -199,8 +203,6 @@ Common::Common(string _username, int _unmeasuredNoise) :
 Common::~Common() {
 }
 
-extern int baseDelayFromPing;
-
 RakNet::SystemAddress Common::ConnectBlocking(const char *defaultAddress, unsigned short defaultPort,bool newClient)
 {
   char ipAddr[64];
@@ -234,12 +236,6 @@ RakNet::SystemAddress Common::ConnectBlocking(const char *defaultAddress, unsign
         PeerInputDataList inputDataList;
         inputDataList.ParseFromString(s);
         receiveInputs(&inputDataList);
-      }
-      else if(packetID == ID_BASE_DELAY)
-      {
-        cout << "Changing base delay from " << baseDelayFromPing;
-        memcpy(&baseDelayFromPing,GetPacketData(packet),sizeof(int));
-        cout << " to " << baseDelayFromPing << endl;
       }
       else
       {
@@ -283,6 +279,8 @@ std::string Common::doInflate(const unsigned char *inputString, int length) {
   return s;
 }
 
+extern std::unordered_map<int, wga::ChronoMap<int,InputState>> playerInputData;
+
 void Common::upsertPeer(RakNet::RakNetGUID guid,int peerID,string name,nsm::Attotime startTime)
 {
   if(startTime.seconds()<1) {
@@ -290,6 +288,7 @@ void Common::upsertPeer(RakNet::RakNetGUID guid,int peerID,string name,nsm::Atto
   }
   cout << "UPSERTING PEER WITH ID: " << peerID << " AND NAME: " << name << endl;
   peerIDs[guid] = peerID;
+  playerInputData[peerID] = wga::ChronoMap<int, nsm::InputState>(int64_t(startTime.seconds())*1000 + startTime.attoseconds()/ATTOSECONDS_PER_MILLISECOND);
   cout << "UPSERTING PEER WITH ID: " << peerID << " AND NAME: " << name << endl;
   cout << "PEER DATA SIZE: " << peerData.size() << endl;
   if(peerData.find(peerID)==peerData.end()) {
@@ -709,7 +708,7 @@ void Common::sendInputs(const nsm::Attotime &inputTime, PeerInputData::PeerInput
   sendInputs(peerInputData);
 }
 
-extern RakNet::Time emulationStartTime;
+extern std::chrono::time_point<std::chrono::system_clock> emulationStartTime;
 
 void Common::sendInputs(const PeerInputData& peerInputData) {
   //cout << "SENDING INPUTS AT TIME " << peerInputData.time().seconds() << "." << peerInputData.time().attoseconds() << endl;
@@ -746,7 +745,7 @@ void Common::sendInputs(const PeerInputData& peerInputData) {
   sCompress[0] = ID_MAMEHUB_TIMESTAMP;
   RakNet::BitStream timeBS( (unsigned char*)&(sCompress[1]), sizeof(RakNet::Time), false);
   timeBS.SetWriteOffset(0);
-  RakNet::Time t = RakNet::GetTimeMS() - emulationStartTime;
+  RakNet::Time t = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - emulationStartTime).count();
   timeBS.Write(t);
   timeBS.EndianSwapBytes(0,sizeof(RakNet::Time));
   memcpy(&sCompress[1],&t,sizeof(RakNet::Time));

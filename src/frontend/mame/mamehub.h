@@ -4,8 +4,6 @@
 #include "ui/ui.h"
 #include "uiinput.h"
 
-#include "NSM_Common.h"
-
 class mamehub_manager {
 	DISABLE_COPYING(mamehub_manager);
 private:

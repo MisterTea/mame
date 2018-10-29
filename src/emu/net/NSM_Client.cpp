@@ -1,5 +1,7 @@
 #include <stdexcept>
 
+#include "ChronoMap.hpp"
+
 #include "RakNet/RakPeerInterface.h"
 #include "RakNet/RakNetStatistics.h"
 #include "RakNet/RakNetTypes.h"
@@ -34,9 +36,9 @@ using namespace std;
 using namespace nsm;
 using namespace google::protobuf::io;
 
-Client *netClient=NULL;
+CommonInterface *netClient=NULL;
 
-Client *createGlobalClient(string _username)
+CommonInterface *createGlobalClient(string _username)
 {
   netClient = new Client(_username);
   netCommon = netClient;
@@ -174,13 +176,12 @@ int GetPacketSize(RakNet::Packet *p)
 
 int initialSyncPercentComplete=0;
 extern bool waitingForClientCatchup;
-extern int baseDelayFromPing;
-extern attotime mostRecentSentReport;
 int doCatchup=0;
 RakNet::RakNetGUID masterGuid;
 RakNet::Time largestPacketTime=0;
+extern std::unordered_map<int, wga::ChronoMap<int,InputState>> playerInputData;
 
-bool Client::initializeConnection(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine)
+bool Client::connect(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine)
 {
 
   RakNet::SocketDescriptor socketDescriptor(0,0);
@@ -216,6 +217,7 @@ bool Client::initializeConnection(unsigned short selfPort,const char *hostname,u
   }
 
   peerIDs[guid] = 1;
+  playerInputData[1] = wga::ChronoMap<int, nsm::InputState>();
 
   while(initComplete==false)
   {
@@ -319,7 +321,6 @@ bool Client::initializeConnection(unsigned short selfPort,const char *hostname,u
         selfPeerID = peerID;
         // Default player index is in order of join.
         player = selfPeerID - 1;
-        mostRecentSentReport = attotime(startTime.seconds(), startTime.attoseconds());
         cout << "CLIENT STARTED AT TIME: " << startTime.seconds() << "." << startTime.attoseconds() << endl;
       }
       else
@@ -396,13 +397,6 @@ bool Client::initializeConnection(unsigned short selfPort,const char *hostname,u
       receiveInputs(&inputDataList);
       break;
     }
-    case ID_BASE_DELAY:
-    {
-      cout << "Changing base delay from " << baseDelayFromPing;
-      memcpy(&baseDelayFromPing,GetPacketData(p),sizeof(int));
-      cout << " to " << baseDelayFromPing << endl;
-    }
-    break;
     case ID_SETTINGS:
     {
       if(p->data[1]) {
@@ -464,9 +458,9 @@ void Client::loadInitialData(unsigned char *data,int size,running_machine *machi
     nvram_interface_iterator iter(machine->root_device());
     for (device_nvram_interface &nvram : nvram_interface_iterator(machine->root_device()))
     {
-      std::string filename;
-      emu_file file(machine->options().nvram_directory(), OPEN_FLAG_WRITE);
-      if (file.open(machine->nvram_filename(nvram.device()).c_str()) == osd_file::error::NONE)
+      cout << "WRITING NVRAM TO " << machine->options().nvram_directory() << " " << machine->nvram_filename(nvram.device());
+      emu_file file(machine->options().nvram_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+      if (file.open(machine->nvram_filename(nvram.device())) == osd_file::error::NONE)
       {
         cout << "SAVING NVRAM OF SIZE: " << initial_sync.nvram(nvram_index).length() << endl;
         file.write(initial_sync.nvram(nvram_index).c_str(),initial_sync.nvram(nvram_index).length());
@@ -738,7 +732,6 @@ bool Client::update(running_machine *machine)
       {
         //This is me, set my own ID and name
         selfPeerID = peerID;
-        mostRecentSentReport = attotime(startTime.seconds(), startTime.attoseconds());
         cout << "CLIENT STARTED AT TIME: " << startTime.seconds() << "." << startTime.attoseconds() << endl;
       }
       else
@@ -827,13 +820,6 @@ bool Client::update(running_machine *machine)
       receiveInputs(&inputDataList);
       break;
     }
-    case ID_BASE_DELAY:
-    {
-      cout << "Changing base delay from " << baseDelayFromPing;
-      memcpy(&baseDelayFromPing,GetPacketData(p),sizeof(int));
-      cout << " to " << baseDelayFromPing << endl;
-    }
-    break;
     case ID_SETTINGS:
       memcpy(&secondsBetweenSync,p->data+1,sizeof(int));
       break;
@@ -991,7 +977,7 @@ int Client::getNumSessions()
   return rakInterface->NumberOfConnections();
 }
 
-unsigned long long Client::getCurrentServerTime() {
+int64_t Client::getCurrentServerTime() {
   //cout << "LAST PING: " << largestPacketTime << " " << (rakInterface->GetLastPing(masterGuid)/2) << endl;
   return largestPacketTime + (rakInterface->GetLastPing(masterGuid)/2);
 }
