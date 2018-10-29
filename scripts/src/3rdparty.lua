@@ -2328,23 +2328,23 @@ project "wga"
 		}
 
 	includedirs {
-		MAME_DIR .. "3rdparty/wga/src/base",
-		MAME_DIR .. "3rdparty/wga/src/peer",
-		MAME_DIR .. "3rdparty/wga/external",
-		MAME_DIR .. "3rdparty/wga/external/Optional",
-		MAME_DIR .. "3rdparty/wga/external/asio/asio/include",
-		MAME_DIR .. "3rdparty/wga/external/msgpack-c/include",
-		MAME_DIR .. "3rdparty/wga/external/curlpp/include",
-		MAME_DIR .. "3rdparty/wga/external/Catch2/single_include",
+		MAME_DIR .. "3rdparty/wga/peer/src/base",
+		MAME_DIR .. "3rdparty/wga/peer/src/peer",
+		MAME_DIR .. "3rdparty/wga/peer/external",
+		MAME_DIR .. "3rdparty/wga/peer/external/Optional",
+		MAME_DIR .. "3rdparty/wga/peer/external/asio/asio/include",
+		MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
+		MAME_DIR .. "3rdparty/wga/peer/external/curlpp/include",
+		MAME_DIR .. "3rdparty/wga/peer/external/Catch2/single_include",
 	}
 
   files {
-    MAME_DIR .. "3rdparty/wga/src/base/BiDirectionalRpc.cpp",
-    MAME_DIR .. "3rdparty/wga/src/base/CryptoHandler.cpp",
-    MAME_DIR .. "3rdparty/wga/src/base/LogHandler.cpp",
-    MAME_DIR .. "3rdparty/wga/src/base/MultiEndpointHandler.cpp",
-    MAME_DIR .. "3rdparty/wga/src/base/PortMultiplexer.cpp",
-    MAME_DIR .. "3rdparty/wga/src/base/TimeHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/BiDirectionalRpc.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/CryptoHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/LogHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/MultiEndpointHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/PortMultiplexer.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/TimeHandler.cpp",
 
-		MAME_DIR .. "3rdparty/wga/external/easylogging++.cc",
+		MAME_DIR .. "3rdparty/wga/peer/external/easylogging++.cc",
   }
