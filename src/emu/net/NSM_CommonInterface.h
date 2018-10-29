@@ -4,10 +4,18 @@
 #define ASIO_STANDALONE 1
 #define WGA_VERSION "0.0.1"
 #define ELPP_NO_DEFAULT_LOG_FILE 1
-#define ELPP_FEATURE_CRASH_LOG 1
+//#define ELPP_FEATURE_CRASH_LOG 1
 #define ELPP_THREAD_SAFE 1
-#define ELPP_HANDLE_SIGABRT 1
+//#define ELPP_HANDLE_SIGABRT 1
 #define _RAKNET_LIB 1
+
+#include "nsm.pb.h"
+
+inline bool operator==(const google::protobuf::MessageLite& msg_a,
+                const google::protobuf::MessageLite& msg_b) {
+  return (msg_a.GetTypeName() == msg_b.GetTypeName()) &&
+      (msg_a.SerializeAsString() == msg_b.SerializeAsString());
+}
 
 #include "ChronoMap.hpp"
 
@@ -27,14 +35,6 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
-
-#include "nsm.pb.h"
-
-inline bool operator==(const google::protobuf::MessageLite& msg_a,
-                const google::protobuf::MessageLite& msg_b) {
-  return (msg_a.GetTypeName() == msg_b.GetTypeName()) &&
-      (msg_a.SerializeAsString() == msg_b.SerializeAsString());
-}
 
 #include "zlib.h"
 

@@ -1,4 +1,4 @@
-#include <stdexcept>
+#include "NSM_Server.h"
 
 #include "RakNet/RakPeerInterface.h"
 #include "RakNet/RakNetStatistics.h"
@@ -8,8 +8,6 @@
 #include "RakNet/RakNetTypes.h"
 #include "RakNet/GetTime.h"
 #include "RakNet/RakSleep.h"
-
-#include "NSM_Server.h"
 
 #include <assert.h>
 #include <cstdio>
