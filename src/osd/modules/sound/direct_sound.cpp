@@ -68,6 +68,7 @@ public:
 	// sound_module
 	virtual void update_audio_stream(bool is_throttled, int16_t const *buffer, int samples_this_frame) override;
 	virtual void set_mastervolume(int attenuation) override;
+	virtual void pauseAudio(bool pause) override {}
 
 private:
 	class buffer

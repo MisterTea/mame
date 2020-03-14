@@ -2,7 +2,7 @@
 // detail/impl/epoll_reactor.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2016 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -38,7 +38,7 @@ epoll_reactor::epoll_reactor(asio::execution_context& ctx)
   : execution_context_service_base<epoll_reactor>(ctx),
     scheduler_(use_service<scheduler>(ctx)),
     mutex_(ASIO_CONCURRENCY_HINT_IS_LOCKING(
-          SCHEDULER, scheduler_.concurrency_hint())),
+          REACTOR_REGISTRATION, scheduler_.concurrency_hint())),
     interrupter_(),
     epoll_fd_(do_epoll_create()),
     timer_fd_(do_timerfd_create()),
@@ -383,10 +383,16 @@ void epoll_reactor::deregister_descriptor(socket_type descriptor,
           context(), static_cast<uintmax_t>(descriptor),
           reinterpret_cast<uintmax_t>(descriptor_data)));
 
-    free_descriptor_state(descriptor_data);
-    descriptor_data = 0;
-
     scheduler_.post_deferred_completions(ops);
+
+    // Leave descriptor_data set so that it will be freed by the subsequent
+    // call to cleanup_descriptor_data.
+  }
+  else
+  {
+    // We are shutting down, so prevent cleanup_descriptor_data from freeing
+    // the descriptor_data object and let the destructor free it instead.
+    descriptor_data = 0;
   }
 }
 
@@ -416,6 +422,22 @@ void epoll_reactor::deregister_internal_descriptor(socket_type descriptor,
           context(), static_cast<uintmax_t>(descriptor),
           reinterpret_cast<uintmax_t>(descriptor_data)));
 
+    // Leave descriptor_data set so that it will be freed by the subsequent
+    // call to cleanup_descriptor_data.
+  }
+  else
+  {
+    // We are shutting down, so prevent cleanup_descriptor_data from freeing
+    // the descriptor_data object and let the destructor free it instead.
+    descriptor_data = 0;
+  }
+}
+
+void epoll_reactor::cleanup_descriptor_data(
+    per_descriptor_data& descriptor_data)
+{
+  if (descriptor_data)
+  {
     free_descriptor_state(descriptor_data);
     descriptor_data = 0;
   }
@@ -462,6 +484,7 @@ void epoll_reactor::run(long usec, op_queue<operation>& ops)
       // Ignore.
     }
 # endif // defined(ASIO_HAS_TIMERFD)
+    else
     {
       unsigned event_mask = 0;
       if ((events[i].events & EPOLLIN) != 0)
@@ -512,8 +535,15 @@ void epoll_reactor::run(long usec, op_queue<operation>& ops)
       // don't call work_started() here. This still allows the scheduler to
       // stop if the only remaining operations are descriptor operations.
       descriptor_state* descriptor_data = static_cast<descriptor_state*>(ptr);
-      descriptor_data->set_ready_events(events[i].events);
-      ops.push(descriptor_data);
+      if (!ops.is_enqueued(descriptor_data))
+      {
+        descriptor_data->set_ready_events(events[i].events);
+        ops.push(descriptor_data);
+      }
+      else
+      {
+        descriptor_data->add_ready_events(events[i].events);
+      }
     }
   }
 
@@ -594,7 +624,8 @@ int epoll_reactor::do_timerfd_create()
 epoll_reactor::descriptor_state* epoll_reactor::allocate_descriptor_state()
 {
   mutex::scoped_lock descriptors_lock(registered_descriptors_mutex_);
-  return registered_descriptors_.alloc(registered_descriptors_mutex_.enabled());
+  return registered_descriptors_.alloc(ASIO_CONCURRENCY_HINT_IS_LOCKING(
+        REACTOR_IO, scheduler_.concurrency_hint()));
 }
 
 void epoll_reactor::free_descriptor_state(epoll_reactor::descriptor_state* s)

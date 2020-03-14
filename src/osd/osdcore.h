@@ -12,6 +12,9 @@
 #pragma once
 
 
+// for va_list
+#include <stdarg.h>
+
 #include "osdcomm.h"
 
 #include "strformat.h"
@@ -742,6 +745,8 @@ osd_file::error osd_get_full_path(std::string &dst, std::string const &path);
 /***************************************************************************
     MIDI I/O INTERFACES
 ***************************************************************************/
+
+#undef poll
 
 class osd_midi_device
 {

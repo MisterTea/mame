@@ -14,7 +14,7 @@ newoption {
 premake.check_paths = true
 premake.make.override = { "TARGET" }
 
-premake.xcode.parameters = { 'CLANG_CXX_LANGUAGE_STANDARD = "c++14"', 'CLANG_CXX_LIBRARY = "libc++"' }
+premake.xcode.parameters = { 'CLANG_CXX_LANGUAGE_STANDARD = "c++17"', 'CLANG_CXX_LIBRARY = "libc++"' }
 
 MAME_DIR = (path.getabsolute("..") .. "/")
 --MAME_DIR = string.gsub(MAME_DIR, "(%s)", "\\%1")
@@ -432,6 +432,10 @@ if not _OPTIONS["BIGENDIAN"] then
 	_OPTIONS["BIGENDIAN"] = "0"
 end
 
+if not _OPTIONS["DEPRECATED"] then
+	_OPTIONS["DEPRECATED"] = "0"
+end
+
 if _OPTIONS["NOASM"]=="1" and not _OPTIONS["FORCE_DRC_C_BACKEND"] then
 	_OPTIONS["FORCE_DRC_C_BACKEND"] = "1"
 end
@@ -750,15 +754,15 @@ end
 local version = str_to_version(_OPTIONS["gcc_version"])
 if string.find(_OPTIONS["gcc"], "clang") and ((version < 30500) or (_OPTIONS["targetos"]=="macosx" and (version <= 60000))) then
 	buildoptions_cpp {
-		"-std=c++1y",
+		"-std=c++17",
 	}
 
 	buildoptions_objcpp {
-		"-std=c++1y",
+		"-std=c++14",
 	}
 else
 	buildoptions_cpp {
-		"-std=c++14",
+		"-std=c++17",
 	}
 
 	buildoptions_objcpp {
@@ -1155,7 +1159,8 @@ configuration { "asmjs" }
 		"-s USE_SDL_TTF=2",
 	}
 	buildoptions_cpp {
-		"-std=c++14",
+		"-x c++",
+		"-std=c++17",
 	}
 	linkoptions {
 		"-Wl,--start-group",
@@ -1170,7 +1175,7 @@ configuration { "android*" }
 		"-Wno-incompatible-ms-struct",
 	}
 	buildoptions_cpp {
-		"-std=c++14",
+		"-std=c++17",
 		"-Wno-extern-c-compat",
 		"-Wno-tautological-constant-out-of-range-compare",
 		"-Wno-tautological-pointer-compare",
@@ -1188,7 +1193,7 @@ configuration { "pnacl" }
 		"-Wno-inline-new-delete",
 	}
 	buildoptions_cpp {
-		"-std=c++14",
+		"-std=c++17",
 	}
 	archivesplit_size "20"
 
@@ -1317,7 +1322,6 @@ if _OPTIONS["vs"]==nil or not (string.startswith(_OPTIONS["vs"], "winstore8") or
 end
 
 		buildoptions {
-			"/WX",     -- Treats all compiler warnings as errors.
 			"/w45038", -- warning C5038: data member 'member1' will be initialized after data member 'member2'
 		}
 

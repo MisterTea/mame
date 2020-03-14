@@ -56,7 +56,7 @@ const options_entry osd_options::s_option_entries[] =
 // OS X can be trusted to have working hardware OpenGL, so default to it on for the best user experience
 	{ OSDOPTION_VIDEO,                        OSDOPTVAL_AUTO,   OPTION_STRING,    "video output method: " },
 	{ OSDOPTION_NUMSCREENS "(1-4)",           "1",              OPTION_INTEGER,   "number of output screens/windows to create; usually, you want just one" },
-	{ OSDOPTION_WINDOW ";w",                  "0",              OPTION_BOOLEAN,   "enable window mode; otherwise, full screen mode is assumed" },
+	{ OSDOPTION_WINDOW ";w",                  "1",              OPTION_BOOLEAN,   "enable window mode; otherwise, full screen mode is assumed" },
 	{ OSDOPTION_MAXIMIZE ";max",              "1",              OPTION_BOOLEAN,   "default to maximized windows" },
 	{ OSDOPTION_WAITVSYNC ";vs",              "0",              OPTION_BOOLEAN,   "enable waiting for the start of VBLANK before flipping screens (reduces tearing effects)" },
 	{ OSDOPTION_SYNCREFRESH ";srf",           "0",              OPTION_BOOLEAN,   "enable using the start of VBLANK for throttling instead of the game time" },
@@ -558,6 +558,9 @@ void osd_common_t::set_mastervolume(int attenuation)
 		m_sound->set_mastervolume(attenuation);
 }
 
+void osd_common_t::pauseAudio(bool pause) {
+  // TODO: Implement later (maybe store attenuation)
+}
 
 //-------------------------------------------------
 //  customize_input_type_list - provide OSD

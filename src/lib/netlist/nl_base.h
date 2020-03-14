@@ -659,7 +659,7 @@ namespace netlist
 		{
 		public:
 
-			enum class queue_status
+			enum queue_status
 			{
 				DELAYED_DUE_TO_INACTIVE = 0,
 				QUEUED,

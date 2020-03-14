@@ -207,6 +207,8 @@ public:
 	// additional helpers
 	emu_options &options() const { return m_config.options(); }
 	attotime time() const noexcept { return m_scheduler.time(); }
+  const attotime &machine_time() { return m_machine_time; }
+  void set_machine_time(const attotime& t) { m_machine_time = t; }
 	bool scheduled_event_pending() const { return m_exit_pending || m_hard_reset_pending; }
 	bool allow_logging() const { return !m_logerror_list.empty(); }
 
@@ -266,6 +268,8 @@ public:
 	// debugger-related information
 	u32                     debug_flags;        // the current debug flags
 
+  std::string nvram_filename(device_t &device) const;
+
 private:
 	class side_effects_disabler {
 		running_machine *m_machine;
@@ -296,7 +300,6 @@ private:
 	void set_saveload_filename(std::string &&filename);
 	void handle_saveload();
 	void soft_reset(void *ptr = nullptr, s32 param = 0);
-	std::string nvram_filename(device_t &device) const;
 	void nvram_load();
 	void nvram_save();
 	void popup_clear() const;
@@ -413,6 +416,8 @@ public:
 	static void emscripten_save(const char *name);
 	static void emscripten_load(const char *name);
 #endif
+  // strictly-increasing machine time
+  attotime m_machine_time;
 };
 
 

@@ -377,7 +377,6 @@ attotime device_scheduler::time() const noexcept
 	return (m_executing_device != nullptr) ? m_executing_device->local_time() : m_basetime;
 }
 
-
 //-------------------------------------------------
 //  can_save - return true if it's safe to save
 //  (i.e., no temporary timers outstanding)
@@ -389,8 +388,9 @@ bool device_scheduler::can_save() const
 	for (emu_timer *timer = m_timer_list; timer != nullptr; timer = timer->next())
 		if (timer->m_temporary && !timer->expire().is_never())
 		{
-			machine().logerror("Failed save state attempt due to anonymous timers:\n");
-			dump_timers();
+      // With mamehub sometimes we can't save.  Don't dump (cpu-intense) for every check.
+			//machine().logerror("Failed save state attempt due to anonymous timers:\n");
+			//dump_timers();
 			return false;
 		}
 

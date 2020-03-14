@@ -75,6 +75,7 @@ public:
 	virtual void update_audio_stream(const int16_t *buffer, int samples_this_frame) = 0;
 	virtual void set_mastervolume(int attenuation) = 0;
 	virtual bool no_sound() = 0;
+  virtual void pauseAudio(bool pause) = 0;
 
 	// input overridables
 	virtual void customize_input_type_list(std::vector<input_type_entry> &typelist) = 0;

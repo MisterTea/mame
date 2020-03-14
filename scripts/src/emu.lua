@@ -19,11 +19,19 @@ options {
 	"ArchiveSplit",
 }
 includedirs {
+	MAME_DIR .. "3rdparty/wga/peer/src/base",
+	MAME_DIR .. "3rdparty/wga/peer/src/peer",
+	MAME_DIR .. "3rdparty/wga/peer/external",
+	MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
+	MAME_DIR .. "3rdparty/wga/peer/external/json/include",
+
 	MAME_DIR .. "src/osd",
 	MAME_DIR .. "src/emu",
+	MAME_DIR .. "src/emu/net",
 	MAME_DIR .. "src/lib",
 	MAME_DIR .. "src/lib/util",
 	MAME_DIR .. "3rdparty",
+
 	GEN_DIR  .. "emu",
 	GEN_DIR  .. "emu/layout",
 }
@@ -38,7 +46,16 @@ includedirs {
 	ext_includedir("pugixml"),
 }
 
+configuration { "vs*" }
+flags {
+	"Symbols",
+}
+
 files {
+	MAME_DIR .. "src/emu/net/NSM_Common.cpp",
+	MAME_DIR .. "src/emu/net/NSM_Common.h",
+	MAME_DIR .. "src/emu/net/NSM_CommonInterface.h",
+
 	MAME_DIR .. "src/emu/emu.h",
 	MAME_DIR .. "src/emu/emufwd.h",
 	MAME_DIR .. "src/emu/main.h",
@@ -318,5 +335,3 @@ pchsource(MAME_DIR .. "src/emu/drivers/empty.cpp")
 dependency {
 	{ "$(OBJDIR)/src/emu/drivers/empty.o", "$(GCH)", true  },
 }
-
-

@@ -27,6 +27,8 @@
 #include "coreutil.h"
 
 
+#include "NSM_CommonInterface.h"
+
 //**************************************************************************
 //  DEBUGGING
 //**************************************************************************
@@ -196,7 +198,13 @@ void save_manager::save_memory(device_t *device, const char *module, const char 
 		totalname = string_format("%s/%X/%s", module, index, name);
 
 	// insert us into the list
+<<<<<<< HEAD
 	m_entry_list.emplace_back(std::make_unique<state_entry>(val, totalname.c_str(), device, module, tag ? tag : "", index, valsize, valcount, blockcount, stride));
+=======
+	m_entry_list.emplace_back(std::make_unique<state_entry>(val, totalname.c_str(), device, module, tag ? tag : "", index, valsize, valcount));
+
+	if(netCommon) netCommon->createMemoryBlock(totalname, (unsigned char*)val,valsize*valcount);
+>>>>>>> mamehub commit
 }
 
 

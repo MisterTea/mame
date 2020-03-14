@@ -2,7 +2,7 @@
 // buffer.hpp
 // ~~~~~~~~~~
 //
-// Copyright (c) 2003-2016 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -28,13 +28,13 @@
 #include "asio/detail/throw_exception.hpp"
 #include "asio/detail/type_traits.hpp"
 
-#if defined(ASIO_MSVC)
+#if defined(ASIO_MSVC) && (ASIO_MSVC >= 1700)
 # if defined(_HAS_ITERATOR_DEBUGGING) && (_HAS_ITERATOR_DEBUGGING != 0)
 #  if !defined(ASIO_DISABLE_BUFFER_DEBUGGING)
 #   define ASIO_ENABLE_BUFFER_DEBUGGING
 #  endif // !defined(ASIO_DISABLE_BUFFER_DEBUGGING)
 # endif // defined(_HAS_ITERATOR_DEBUGGING)
-#endif // defined(ASIO_MSVC)
+#endif // defined(ASIO_MSVC) && (ASIO_MSVC >= 1700)
 
 #if defined(__GNUC__)
 # if defined(_GLIBCXX_DEBUG)
@@ -1475,7 +1475,7 @@ inline ASIO_CONST_BUFFER buffer(
       );
 }
 
-#if defined(ASIO_HAS_STD_STRING_VIEW) \
+#if defined(ASIO_HAS_STRING_VIEW) \
   || defined(GENERATING_DOCUMENTATION)
 
 /// Create a new modifiable buffer that represents the given string_view.
@@ -1520,7 +1520,7 @@ inline ASIO_CONST_BUFFER buffer(
       );
 }
 
-#endif // defined(ASIO_HAS_STD_STRING_VIEW)
+#endif // defined(ASIO_HAS_STRING_VIEW)
        //  || defined(GENERATING_DOCUMENTATION)
 
 /*@}*/
@@ -1920,7 +1920,8 @@ inline std::size_t buffer_copy_1(const mutable_buffer& target,
   std::size_t target_size = target.size();
   std::size_t source_size = source.size();
   std::size_t n = target_size < source_size ? target_size : source_size;
-  memcpy(target.data(), source.data(), n);
+  if (n > 0)
+    memcpy(target.data(), source.data(), n);
   return n;
 }
 

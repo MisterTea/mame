@@ -32,8 +32,9 @@ end
 		targetextension ".so"
 		linkoptions {
 			"-shared",
-			"-Wl,-soname,libmain.so"
-		}
+			"-Wl,-soname,libmain.so",
+      "$(shell pkg-config --libs-only-L libsodium)",
+    }
 		links {
 			"EGL",
 			"GLESv1_CM",
@@ -260,6 +261,7 @@ end
 		"softfloat3",
 		ext_lib("jpeg"),
 		"7z",
+    "wga",
 	}
 if (STANDALONE~=true) then
 	links {
@@ -312,6 +314,7 @@ end
 	includedirs {
 		MAME_DIR .. "src/osd",
 		MAME_DIR .. "src/emu",
+		MAME_DIR .. "src/emu/net",
 		MAME_DIR .. "src/devices",
 		MAME_DIR .. "src/" .. _target,
 		MAME_DIR .. "src/lib",

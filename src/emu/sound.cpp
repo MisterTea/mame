@@ -15,7 +15,7 @@
 #include "config.h"
 #include "wavwrite.h"
 
-
+#include "NSM_CommonInterface.h"
 
 //**************************************************************************
 //  DEBUGGING

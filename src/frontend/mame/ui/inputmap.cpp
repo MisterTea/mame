@@ -214,7 +214,7 @@ void menu_input_specific::populate(float &customtop, float &custombottom)
 		for (input_item_data &item : data)
 		{
 			const ioport_field &field(*reinterpret_cast<const ioport_field *>(item.ref));
-			item.seq = field.seq(item.seqtype);
+			item.seq = field.seq_real(false, item.seqtype);
 		}
 	}
 
