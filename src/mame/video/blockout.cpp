@@ -51,17 +51,11 @@ void blockout_state::frontcolor_w(offs_t offset, u16 data, u16 mem_mask)
 void blockout_state::video_start()
 {
 	/* Allocate temporary bitmaps */
-<<<<<<< HEAD
 	m_tmpbitmap.allocate(512, 256);
 	const rectangle clip(0, 511, 0, 255);
 	m_tmpbitmap.fill(0x100, clip);
-	save_item(NAME(m_tmpbitmap));
-=======
-	m_screen->register_screen_bitmap(m_tmpbitmap);
-
 	// JJG: Don't save resolution-dependent items
 	//save_item(NAME(m_tmpbitmap));
->>>>>>> mamehub commit
 }
 
 u8 blockout_state::videoram_r(offs_t offset)
