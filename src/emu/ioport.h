@@ -1406,6 +1406,14 @@ public:
 	ioport_type token_to_input_type(const char *string, int &player) const;
 	std::string input_type_to_token(ioport_type type, int player);
 
+private:
+       // internal helpers
+       void init_port_types();
+       void init_autoselect_devices(int type1, int type2, int type3, const char *option, const char *ananame);
+
+       void frame_update_callback();
+       void frame_update();
+
 	ioport_port *port(const char *tag) const { if (tag) { auto search = m_portlist.find(tag); if (search != m_portlist.end()) return search->second.get(); else return nullptr; } else return nullptr; }
 	void exit();
 	input_seq_type token_to_seq_type(const char *string);

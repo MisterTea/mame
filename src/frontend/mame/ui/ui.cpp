@@ -850,7 +850,7 @@ void mame_ui_manager::process_natural_keyboard()
 		// if this was a UI_EVENT_CHAR event, post it
 		if (event.event_type == ui_event::IME_CHAR) {
 			if (!mamehub_manager::instance()->handleChat(machine(), event)) {
-				machine().ioport().natkeyboard().post(event.ch);
+				machine().ioport().natkeyboard().post_char(event.ch);
 			}
 		}
 	}

@@ -462,13 +462,8 @@ void digital_joystick::frame_update()
 	for (direction_t direction = JOYDIR_UP; direction < JOYDIR_COUNT; ++direction)
 		for (const std::reference_wrapper<ioport_field> &i : m_field[direction])
 		{
-<<<<<<< HEAD
 			machine = &i.get().machine();
-			if (machine->input().seq_pressed(i.get().seq(SEQ_TYPE_STANDARD)))
-=======
-			machine = &i.object()->machine();
-      if (machine->input().seq_pressed(i.object()->seq_peers(SEQ_TYPE_STANDARD)))
->>>>>>> mamehub commit
+			if (machine->input().seq_pressed(i.get().seq_peers(SEQ_TYPE_STANDARD)))
 				m_current |= 1 << direction;
 		}
 
@@ -695,9 +690,6 @@ const char *ioport_field::name() const
 //  given input field
 //-------------------------------------------------
 
-<<<<<<< HEAD
-const input_seq &ioport_field::seq(input_seq_type seqtype) const noexcept
-=======
 // playerFieldMap maps inputs for players onto their player 1
 // equivalent.
 map<const ioport_field*,const ioport_field*> playerFieldMap;
@@ -722,8 +714,7 @@ u8 ioport_field::mamehub_player() const {
 	return p;
 }
 
-const input_seq &ioport_field::seq_real(bool checkMapping, input_seq_type seqtype) const
->>>>>>> mamehub commit
+const input_seq &ioport_field::seq_real(bool checkMapping, input_seq_type seqtype) const noexcept
 {
   if(checkMapping && netCommon) {
     set<int> players = netCommon->getMyPlayers();
@@ -1172,24 +1163,7 @@ void ioport_field::frame_update(ioport_value &result)
 	}
 
 	// if the state changed, look for switch down/switch up
-<<<<<<< HEAD
-	bool curstate = m_digital_value || machine().input().seq_pressed(seq());
-=======
 	bool curstate = m_digital_value || machine().input().seq_pressed(seq_peers(SEQ_TYPE_STANDARD));
-	if (m_live->autofire && !machine().ioport().get_autofire_toggle())
-	{
-		if (curstate)
-		{
-			if (m_live->autopressed > machine().ioport().get_autofire_delay())
-				m_live->autopressed = 0;
-			else if (m_live->autopressed > machine().ioport().get_autofire_delay() / 2)
-				curstate = false;
-			m_live->autopressed++;
-		}
-		else
-			m_live->autopressed = 0;
-	}
->>>>>>> mamehub commit
 	bool changed = false;
 	if (curstate != m_live->last)
 	{
@@ -2203,15 +2177,9 @@ void ioport_manager::frame_update_callback()
 //  per-frame input port updating
 //-------------------------------------------------
 
-<<<<<<< HEAD
 void ioport_manager::frame_update()
 {
 	g_profiler.start(PROFILER_INPUT);
-=======
-void ioport_manager::frame_update() {
-  //LOG(INFO) << "UPDATING FRAME\n";
-g_profiler.start(PROFILER_INPUT);
->>>>>>> mamehub commit
 
 	// record/playback information about the current frame
 	attotime curtime = machine().machine_time();
@@ -2297,13 +2265,8 @@ g_profiler.start(PROFILER_INPUT);
 			if (dynfield.field().type() != IPT_OUTPUT)
 				dynfield.write(newvalue);
 
-<<<<<<< HEAD
-	g_profiler.stop();
-}
-=======
     portIndex++;
-  }
->>>>>>> mamehub commit
+}
 
   g_profiler.stop();
 }

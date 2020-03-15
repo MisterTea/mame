@@ -46,11 +46,6 @@ includedirs {
 	ext_includedir("pugixml"),
 }
 
-configuration { "vs*" }
-flags {
-	"Symbols",
-}
-
 files {
 	MAME_DIR .. "src/emu/net/NSM_Common.cpp",
 	MAME_DIR .. "src/emu/net/NSM_Common.h",

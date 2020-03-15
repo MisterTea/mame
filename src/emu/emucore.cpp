@@ -19,71 +19,15 @@ const char *const endianness_names[2] = { "little", "big" };
 emu_fatalerror::emu_fatalerror(util::format_argument_pack<std::ostream> const &args)
 	: emu_fatalerror(0, args)
 {
-<<<<<<< HEAD
-	osd_break_into_debugger(m_text.c_str());
-=======
-	if (format == nullptr)
-	{
-		text[0] = '\0';
-	}
-	else
-	{
-		va_list ap;
-		va_start(ap, format);
-		vsnprintf(text, sizeof(text), format, ap);
-		va_end(ap);
-	}
   std::cout << ust::generate() << std::endl;
-	osd_break_into_debugger(text);
->>>>>>> mamehub commit
+	osd_break_into_debugger(m_text.c_str());
 }
 
 emu_fatalerror::emu_fatalerror(int _exitcode, util::format_argument_pack<std::ostream> const &args)
 	: m_text(util::string_format(args))
 	, m_code(_exitcode)
 {
-<<<<<<< HEAD
-=======
-	if (format == nullptr)
-	{
-		text[0] = '\0';
-	}
-	else
-	{
-		vsnprintf(text, sizeof(text), format, ap);
-	}
   std::cout << ust::generate() << std::endl;
-	osd_break_into_debugger(text);
-}
-
-emu_fatalerror::emu_fatalerror(int _exitcode, const char *format, ...) : code(_exitcode)
-{
-	if (format == nullptr)
-	{
-		text[0] = '\0';
-	}
-	else
-	{
-		va_list ap;
-		va_start(ap, format);
-		vsnprintf(text, sizeof(text), format, ap);
-		va_end(ap);
-	}
-  std::cout << ust::generate() << std::endl;
-}
-
-emu_fatalerror::emu_fatalerror(int _exitcode, const char *format, va_list ap) : code(_exitcode)
-{
-	if (format == nullptr)
-	{
-		text[0] = '\0';
-	}
-	else
-	{
-		vsnprintf(text, sizeof(text), format, ap);
-	}
-  std::cout << ust::generate() << std::endl;
->>>>>>> mamehub commit
 }
 
 

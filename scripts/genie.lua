@@ -432,10 +432,6 @@ if not _OPTIONS["BIGENDIAN"] then
 	_OPTIONS["BIGENDIAN"] = "0"
 end
 
-if not _OPTIONS["DEPRECATED"] then
-	_OPTIONS["DEPRECATED"] = "0"
-end
-
 if _OPTIONS["NOASM"]=="1" and not _OPTIONS["FORCE_DRC_C_BACKEND"] then
 	_OPTIONS["FORCE_DRC_C_BACKEND"] = "1"
 end
@@ -1159,7 +1155,6 @@ configuration { "asmjs" }
 		"-s USE_SDL_TTF=2",
 	}
 	buildoptions_cpp {
-		"-x c++",
 		"-std=c++17",
 	}
 	linkoptions {

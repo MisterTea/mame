@@ -436,7 +436,7 @@ public:
 	// construction/destruction
 	input_seq() noexcept : input_seq(std::make_index_sequence<std::tuple_size<decltype(m_code)>::value>()) { }
 	template <typename... T> input_seq(input_code code_0, T... code_n) noexcept : input_seq(std::make_index_sequence<std::tuple_size<decltype(m_code)>::value - sizeof...(T) - 1>(), code_0, code_n...) { }
-	explicit input_seq(const input_seq &rhs) = default;
+	input_seq(const input_seq &rhs) = default;
   explicit input_seq(const std::string& _mamehub_input_key) noexcept : m_mamehub_input_key(_mamehub_input_key) {}
 
 	// operators

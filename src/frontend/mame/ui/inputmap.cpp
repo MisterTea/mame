@@ -158,7 +158,7 @@ void menu_input_specific::populate(float &customtop, float &custombottom)
 						input_item_data &item(*data.emplace(data.end()));
 						item.ref = &field;
 						item.seqtype = seqtype;
-						item.seq = field.seq(seqtype);
+						item.seq = field.seq_real(false, seqtype);
 						item.defseq = &field.defseq(seqtype);
 						item.group = machine().ioport().type_group(field.type(), field.player());
 						item.type = field.is_analog() ? (INPUT_TYPE_ANALOG + seqtype) : INPUT_TYPE_DIGITAL;

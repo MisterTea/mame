@@ -1221,14 +1221,8 @@ void video_manager::create_snapshot_bitmap(screen_device *screen)
 	}
 
 	// get the minimum width/height and set it on the target
-<<<<<<< HEAD
 	s32 width, height;
 	compute_snapshot_size(width, height);
-=======
-	s32 width = m_snap_width;
-	s32 height = m_snap_height;
-	if (width == 0 || height == 0)
-		m_snap_target->compute_minimum_size(width, height);
 
 	while(width<400 || height<300) {
 	    width <<= 1;
@@ -1244,7 +1238,6 @@ void video_manager::create_snapshot_bitmap(screen_device *screen)
 
 	//LOG(INFO) << "WIDTH: " << width << " HEIGHT: " << height << endl;
 
->>>>>>> mamehub commit
 	m_snap_target->set_bounds(width, height);
 
 	// if we don't have a bitmap, or if it's not the right size, allocate a new one

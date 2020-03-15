@@ -1184,7 +1184,7 @@ void lua_engine::initialize()
 
 	auto core_options_type = sol().registry().create_simple_usertype<core_options>("new", sol::no_constructor);
 	core_options_type.set("help", &core_options::output_help);
-	core_options_type.set("command", &core_options::command);
+	//core_options_type.set("command", &core_options::command);
 	core_options_type.set("entries", sol::property([this](core_options &options) {
 			sol::table table = sol().create_table();
 			int unadorned_index = 0;
@@ -1262,12 +1262,12 @@ void lua_engine::initialize()
 					return sol::make_object(sol(), e.value());
 			}
 		}));
-	core_options_entry_type.set("description", &core_options::entry::description);
-	core_options_entry_type.set("default_value", &core_options::entry::default_value);
-	core_options_entry_type.set("minimum", &core_options::entry::minimum);
-	core_options_entry_type.set("maximum", &core_options::entry::maximum);
-	core_options_entry_type.set("has_range", &core_options::entry::has_range);
-	sol().registry().set_usertype("core_options_entry", core_options_entry_type);
+	//core_options_entry_type.set("description", &core_options::entry::description);
+	//core_options_entry_type.set("default_value", &core_options::entry::default_value);
+	//core_options_entry_type.set("minimum", &core_options::entry::minimum);
+	//core_options_entry_type.set("maximum", &core_options::entry::maximum);
+	//core_options_entry_type.set("has_range", &core_options::entry::has_range);
+	//sol().registry().set_usertype("core_options_entry", core_options_entry_type);
 
 
 /*  running_machine library
@@ -1851,8 +1851,8 @@ void lua_engine::initialize()
  */
 
 	auto ioport_manager_type = sol().registry().create_simple_usertype<ioport_manager>("new", sol::no_constructor);
-	ioport_manager_type.set("count_players", &ioport_manager::count_players);
-	ioport_manager_type.set("natkeyboard", &ioport_manager::natkeyboard);
+	//ioport_manager_type.set("count_players", &ioport_manager::count_players);
+	//ioport_manager_type.set("natkeyboard", &ioport_manager::natkeyboard);
 	ioport_manager_type.set("type_group", [](ioport_manager &im, ioport_type type, int player) {
 			return im.type_group(type, player);
 		});
@@ -1981,7 +1981,7 @@ void lua_engine::initialize()
 		});
 	ioport_field_type.set("input_seq", [](ioport_field &f, const std::string &seq_type_string) {
 			input_seq_type seq_type = parse_seq_type(seq_type_string);
-			return sol::make_user(f.seq(seq_type));
+			return sol::make_user(f.seq_real(true, seq_type));
 		});
 	ioport_field_type.set("set_default_input_seq", [](ioport_field &f, const std::string &seq_type_string, sol::user<input_seq> seq) {
 			input_seq_type seq_type = parse_seq_type(seq_type_string);
@@ -2007,8 +2007,8 @@ void lua_engine::initialize()
 	ioport_field_type.set("player", sol::property(&ioport_field::player, &ioport_field::set_player));
 	ioport_field_type.set("mask", sol::property(&ioport_field::mask));
 	ioport_field_type.set("defvalue", sol::property(&ioport_field::defvalue));
-	ioport_field_type.set("sensitivity", sol::property(&ioport_field::sensitivity));
-	ioport_field_type.set("way", sol::property(&ioport_field::way));
+	//ioport_field_type.set("sensitivity", sol::property(&ioport_field::sensitivity));
+	//ioport_field_type.set("way", sol::property(&ioport_field::way));
 	ioport_field_type.set("type_class", sol::property([](ioport_field &f) {
 			switch (f.type_class())
 			{
@@ -2021,8 +2021,8 @@ void lua_engine::initialize()
 			}
 			throw false;
 		}));
-	ioport_field_type.set("is_analog", sol::property(&ioport_field::is_analog));
-	ioport_field_type.set("is_digital_joystick", sol::property(&ioport_field::is_digital_joystick));
+	//ioport_field_type.set("is_analog", sol::property(&ioport_field::is_analog));
+	//ioport_field_type.set("is_digital_joystick", sol::property(&ioport_field::is_digital_joystick));
 	ioport_field_type.set("enabled", sol::property(&ioport_field::enabled));
 	ioport_field_type.set("optional", sol::property(&ioport_field::optional));
 	ioport_field_type.set("cocktail", sol::property(&ioport_field::cocktail));
@@ -2032,11 +2032,11 @@ void lua_engine::initialize()
 	ioport_field_type.set("analog_reset", sol::property(&ioport_field::analog_reset));
 	ioport_field_type.set("analog_wraps", sol::property(&ioport_field::analog_wraps));
 	ioport_field_type.set("analog_invert", sol::property(&ioport_field::analog_invert));
-	ioport_field_type.set("impulse", sol::property(&ioport_field::impulse));
+	//ioport_field_type.set("impulse", sol::property(&ioport_field::impulse));
 	ioport_field_type.set("type", sol::property(&ioport_field::type));
 	ioport_field_type.set("live", sol::property(&ioport_field::live));
-	ioport_field_type.set("crosshair_scale", sol::property(&ioport_field::crosshair_scale, &ioport_field::set_crosshair_scale));
-	ioport_field_type.set("crosshair_offset", sol::property(&ioport_field::crosshair_offset, &ioport_field::set_crosshair_offset));
+	//ioport_field_type.set("crosshair_scale", sol::property(&ioport_field::crosshair_scale, &ioport_field::set_crosshair_scale));
+	//ioport_field_type.set("crosshair_offset", sol::property(&ioport_field::crosshair_offset, &ioport_field::set_crosshair_offset));
 	ioport_field_type.set("user_value", sol::property(
 		[](ioport_field &f) {
 			ioport_field::user_settings settings;
@@ -2823,30 +2823,30 @@ void lua_engine::initialize()
  */
 
 	auto image_type = sol().registry().create_simple_usertype<device_image_interface>("new", sol::no_constructor);
-	image_type.set("exists", &device_image_interface::exists);
-	image_type.set("filename", &device_image_interface::filename);
-	image_type.set("longname", &device_image_interface::longname);
-	image_type.set("manufacturer", &device_image_interface::manufacturer);
-	image_type.set("year", &device_image_interface::year);
-	image_type.set("software_list_name", &device_image_interface::software_list_name);
+	//image_type.set("exists", &device_image_interface::exists);
+	//image_type.set("filename", &device_image_interface::filename);
+	//image_type.set("longname", &device_image_interface::longname);
+	//image_type.set("manufacturer", &device_image_interface::manufacturer);
+	//image_type.set("year", &device_image_interface::year);
+	//image_type.set("software_list_name", &device_image_interface::software_list_name);
 	image_type.set("software_parent", sol::property([](device_image_interface &di) {
 			const software_info *si = di.software_entry();
 			return si ? si->parentname() : "";
 		}));
-	image_type.set("image_type_name", &device_image_interface::image_type_name);
-	image_type.set("load", &device_image_interface::load);
-	image_type.set("unload", &device_image_interface::unload);
-	image_type.set("create", [](device_image_interface &di, const std::string &filename) { return di.create(filename); });
-	image_type.set("crc", &device_image_interface::crc);
-	image_type.set("display", [](device_image_interface &di) { return di.call_display(); });
-	image_type.set("device", sol::property(static_cast<const device_t &(device_image_interface::*)() const>(&device_image_interface::device)));
-	image_type.set("instance_name", sol::property(&device_image_interface::instance_name));
-	image_type.set("brief_instance_name", sol::property(&device_image_interface::brief_instance_name));
-	image_type.set("is_readable", sol::property(&device_image_interface::is_readable));
-	image_type.set("is_writeable", sol::property(&device_image_interface::is_writeable));
-	image_type.set("is_creatable", sol::property(&device_image_interface::is_creatable));
-	image_type.set("is_reset_on_load", sol::property(&device_image_interface::is_reset_on_load));
-	image_type.set("must_be_loaded", sol::property(&device_image_interface::must_be_loaded));
+	//image_type.set("image_type_name", &device_image_interface::image_type_name);
+	//image_type.set("load", &device_image_interface::load);
+	//image_type.set("unload", &device_image_interface::unload);
+	//image_type.set("create", [](device_image_interface &di, const std::string &filename) { return di.create(filename); });
+	//image_type.set("crc", &device_image_interface::crc);
+	//image_type.set("display", [](device_image_interface &di) { return di.call_display(); });
+	//image_type.set("device", sol::property(static_cast<const device_t &(device_image_interface::*)() const>(&device_image_interface::device)));
+	//image_type.set("instance_name", sol::property(&device_image_interface::instance_name));
+	//image_type.set("brief_instance_name", sol::property(&device_image_interface::brief_instance_name));
+	//image_type.set("is_readable", sol::property(&device_image_interface::is_readable));
+	//image_type.set("is_writeable", sol::property(&device_image_interface::is_writeable));
+	//image_type.set("is_creatable", sol::property(&device_image_interface::is_creatable));
+	//image_type.set("is_reset_on_load", sol::property(&device_image_interface::is_reset_on_load));
+	//image_type.set("must_be_loaded", sol::property(&device_image_interface::must_be_loaded));
 	sol().registry().set_usertype("image", image_type);
 
 
