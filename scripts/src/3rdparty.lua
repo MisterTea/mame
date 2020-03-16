@@ -2173,9 +2173,10 @@ project "wga"
 	configuration { "gmake or ninja" }
 		buildoptions_cpp {
 			"-Wno-strict-prototypes",
+            "-fsanitize=thread"
 		}
 
-		configuration { "vs*" }
+    configuration { "vs*" }
 		flags {
 			"Symbols",
 		}

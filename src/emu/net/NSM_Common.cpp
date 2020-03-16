@@ -6,6 +6,7 @@
 
 #include "ChronoMap.hpp"
 #include "TimeHandler.hpp"
+#include "LogHandler.hpp"
 
 #include "lzma/C/LzmaDec.h"
 #include "lzma/C/LzmaEnc.h"
@@ -152,14 +153,14 @@ Common::Common(const string &_userId, const string &privateKeyString,
     : userId(_userId),
       lastSendTime(0),
       unmeasuredNoise(_unmeasuredNoise) {
-  //wga::GlobalClock::addNoise();
-  //wga::ALL_RPC_FLAKY = true;
+  wga::GlobalClock::addNoise();
+  wga::ALL_RPC_FLAKY = true;
 
   netEngine.reset(new wga::NetEngine());
   privateKey = wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString + "/" + userId);
   publicKey = wga::CryptoHandler::makePublicFromPrivate(privateKey);
 
-  bool localLobby = (lobbyHostname == "");
+  bool localLobby = (lobbyHostname == "self");
   if (localLobby) {
     LOG(INFO) << "Running local lobby";
     server.reset(new wga::SingleGameServer(netEngine, lobbyPort, userId,
@@ -169,7 +170,7 @@ Common::Common(const string &_userId, const string &privateKeyString,
   }
 
   myPeer.reset(new wga::MyPeer(netEngine, userId, privateKey, _port,
-                               lobbyHostname, lobbyPort, userId));
+                               localLobby?"":lobbyHostname, lobbyPort, userId));
   if (myPeer->isHosting()) {
     if (!gameName.length()) {
       LOG(FATAL) << "Hosting but didn't choose a game";

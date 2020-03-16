@@ -1020,10 +1020,11 @@ end
 		"-Woverloaded-virtual",
 	}
 
-if _OPTIONS["SANITIZE"] then
-	buildoptions {
-		"-fsanitize=".. _OPTIONS["SANITIZE"]
+-- JJG: Force tsan linking
+	linkoptions {
+		"-fsanitize=thread"
 	}
+if _OPTIONS["SANITIZE"] then
 	linkoptions {
 		"-fsanitize=".. _OPTIONS["SANITIZE"]
 	}
