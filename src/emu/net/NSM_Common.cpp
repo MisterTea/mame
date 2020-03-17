@@ -153,8 +153,8 @@ Common::Common(const string &_userId, const string &privateKeyString,
     : userId(_userId),
       lastSendTime(0),
       unmeasuredNoise(_unmeasuredNoise) {
-  wga::GlobalClock::addNoise();
-  wga::ALL_RPC_FLAKY = true;
+  //wga::GlobalClock::addNoise();
+  //wga::ALL_RPC_FLAKY = true;
 
   netEngine.reset(new wga::NetEngine());
   privateKey = wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString + "/" + userId);
