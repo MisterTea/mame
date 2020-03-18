@@ -2202,6 +2202,7 @@ project "wga"
     MAME_DIR .. "3rdparty/wga/peer/src/base/EncryptedMultiEndpointHandler.cpp",
     MAME_DIR .. "3rdparty/wga/peer/src/base/LocalIpFetcher.cpp",
     MAME_DIR .. "3rdparty/wga/peer/src/base/LogHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/RpcServer.cpp",
     MAME_DIR .. "3rdparty/wga/peer/src/base/MultiEndpointHandler.cpp",
     MAME_DIR .. "3rdparty/wga/peer/src/base/PortMappingHandler.cpp",
     MAME_DIR .. "3rdparty/wga/peer/src/base/PortMultiplexer.cpp",

@@ -529,6 +529,10 @@ int running_machine::run(bool quiet)
 
 void running_machine::schedule_exit()
 {
+    if (m_exit_pending) {
+        return;
+    }
+
 	m_exit_pending = true;
 
 	// if we're executing, abort out immediately
