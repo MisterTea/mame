@@ -2216,7 +2216,6 @@ project "wga"
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/minisoap.c",
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/portlistingparse.c",
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/connecthostport.c",
-    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/listdevices.c",
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/upnpreplyparse.c",
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/receivedata.c",
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/miniwget.c",
