@@ -169,7 +169,7 @@ Common::Common(const string &_userId, const string &privateKeyString,
         new wga::PeerConnectionServer(netEngine, lobbyPort, server));
   }
 
-  myPeer.reset(new wga::MyPeer(netEngine, userId, privateKey, _port,
+  myPeer.reset(new wga::MyPeer(userId, privateKey, _port,
                                localLobby?"":lobbyHostname, lobbyPort, userId));
   if (myPeer->isHosting()) {
     if (!gameName.length()) {
@@ -196,6 +196,8 @@ set<int> Common::getMyPlayers() { return myPlayers; }
 
 Common::~Common() {
   myPeer->shutdown();
+  server.reset();
+  peerConnectionServer.reset();
   netEngine->shutdown();
 }
 
@@ -513,7 +515,12 @@ vector<uint8_t> Common::computeChecksum(running_machine *machine) {
 
 std::vector<std::string> Common::getAllInputValues(int64_t ts,
                                                    const string &key) {
-  return myPeer->getAllInputValues(ts, key);
+  auto retval = myPeer->getAllInputValues(ts, key);
+  int livingPeerCount = myPeer->getLivingPeerCount();
+  if(livingPeerCount == 0) {
+      return {};
+  }
+  return retval;
 }
 
 bool Common::isHosting() {

@@ -1216,6 +1216,10 @@ bool input_manager::seq_pressed(const input_seq &seq)
     std::vector<std::string> values = netCommon->getAllInputValues(
       timestamp,
       std::string("INPUT/") + seq.mamehub_input_key());
+    if (values.empty()) {
+        std::cout << "All peers have left, exiting" << std::endl;
+        machine().schedule_exit();
+    }
     for (const auto& s : values) {
       if (s == std::string("1")) {
         return true;
