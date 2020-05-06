@@ -2229,10 +2229,13 @@ void ioport_manager::frame_update()
     attotime futureInputTime = curMachineTime + attotime(0,attosecondsToLead);
     auto sendTime = futureInputTime.to_msec();
 
-
     // If we were going to send inputs much before where we should be now, just send it at the expected current time
     int64_t curTime = netCommon->getCurrentTime() / 1000;
     sendTime = max(sendTime, curTime - 1000);
+
+	// Align on boundary
+	sendTime = (sendTime - (sendTime%100)) + 100;
+
     LOG_EVERY_N(60, INFO) << "SEND TIME: " << sendTime << " " << curTime;
 
 		if (sendTime < inputStartTime.to_msec()) {
@@ -2242,7 +2245,7 @@ void ioport_manager::frame_update()
       // This input would occur in the past or be a duplicate, ignore it.
     } else {
       VLOG(1) << "SENDING INPUTS AT TIME " << sendTime << endl;
-			VLOG(1) << "Last send time: " << netCommon->getLastSendTime() << endl;
+	  VLOG(1) << "Last send time: " << netCommon->getLastSendTime() << endl;
       netCommon->sendInputs(sendTime, inputData);
     }
 	}

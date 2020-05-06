@@ -1,17 +1,16 @@
 #include "emu.h"
 
-#include "NSM_Common.h"
+// Don't reorder emu.h
 
+#include <chrono>
 #include <stdexcept>
 
 #include "ChronoMap.hpp"
-#include "TimeHandler.hpp"
 #include "LogHandler.hpp"
-
+#include "NSM_Common.h"
+#include "TimeHandler.hpp"
 #include "lzma/C/LzmaDec.h"
 #include "lzma/C/LzmaEnc.h"
-
-#include <chrono>
 
 using namespace std;
 
@@ -21,7 +20,7 @@ CommonInterface *createNetCommon(const string &userId,
                                  unsigned short _port,
                                  const string &lobbyHostname,
                                  unsigned short lobbyPort, int _unmeasuredNoise,
-                                 const string& gameName) {
+                                 const string &gameName) {
   netCommon = new Common(userId, privateKeyString, _port, lobbyHostname,
                          lobbyPort, _unmeasuredNoise, gameName);
   return netCommon;
@@ -149,15 +148,14 @@ extern volatile bool memoryBlocksLocked;
 Common::Common(const string &_userId, const string &privateKeyString,
                unsigned short _port, const string &lobbyHostname,
                unsigned short lobbyPort, int _unmeasuredNoise,
-               const string& gameName)
-    : userId(_userId),
-      lastSendTime(0),
-      unmeasuredNoise(_unmeasuredNoise) {
+               const string &gameName)
+    : userId(_userId), lastSendTime(0), unmeasuredNoise(_unmeasuredNoise) {
   //wga::GlobalClock::addNoise();
   //wga::ALL_RPC_FLAKY = true;
 
   netEngine.reset(new wga::NetEngine());
-  privateKey = wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString + "/" + userId);
+  privateKey = wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString +
+                                                              "/" + userId);
   publicKey = wga::CryptoHandler::makePublicFromPrivate(privateKey);
 
   bool localLobby = (lobbyHostname == "self");
@@ -170,7 +168,8 @@ Common::Common(const string &_userId, const string &privateKeyString,
   }
 
   myPeer.reset(new wga::MyPeer(userId, privateKey, _port,
-                               localLobby?"":lobbyHostname, lobbyPort, userId));
+                               localLobby ? "" : lobbyHostname, lobbyPort,
+                               userId));
   if (myPeer->isHosting()) {
     if (!gameName.length()) {
       LOG(FATAL) << "Hosting but didn't choose a game";
@@ -479,6 +478,7 @@ void Common::sendInputs(int64_t inputTimeMs,
                         const unordered_map<string, string> &inputMap) {
   if (myPeer->getLivingPeerCount() == 0) {
     LOG(INFO) << "Finished!";
+    cout << "FINISHED" << endl;
     myPeer->shutdown();
     exit(0);
   }
@@ -517,12 +517,10 @@ std::vector<std::string> Common::getAllInputValues(int64_t ts,
                                                    const string &key) {
   auto retval = myPeer->getAllInputValues(ts, key);
   int livingPeerCount = myPeer->getLivingPeerCount();
-  if(livingPeerCount == 0) {
-      return {};
+  if (livingPeerCount == 0) {
+    return {};
   }
   return retval;
 }
 
-bool Common::isHosting() {
-  return myPeer->isHosting();
-}
+bool Common::isHosting() { return myPeer->isHosting(); }
