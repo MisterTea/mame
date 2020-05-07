@@ -1150,8 +1150,9 @@ void ioport_field::frame_update(ioport_value &result)
 	}
 
 	// if UI is active, ignore digital inputs
-	if (machine().ui().is_menu_active())
-		return;
+	// JJG: Don't do this for mamehub because it causes desyncs
+	//if (machine().ui().is_menu_active())
+		//return;
 
 	// if user input is locked out here, bail
 	if (m_live->lockout)
@@ -2222,8 +2223,7 @@ void ioport_manager::frame_update()
 
   if(netCommon) {
     // Calculate the time that the new inputs will take effect
-    int delayFromPing=50;
-    delayFromPing = max(delayFromPing,min(600,netCommon->getLargestPing()));
+    int delayFromPing = max(33,min(600,netCommon->getLargestPing()));
     attoseconds_t attosecondsToLead = 0;
     attosecondsToLead = ATTOSECONDS_PER_MILLISECOND*delayFromPing;
     attotime futureInputTime = curMachineTime + attotime(0,attosecondsToLead);
@@ -2233,8 +2233,16 @@ void ioport_manager::frame_update()
     int64_t curTime = netCommon->getCurrentTime() / 1000;
     sendTime = max(sendTime, curTime - 1000);
 
-	// Align on boundary
-	sendTime = (sendTime - (sendTime%100)) + 100;
+		auto stateChanges = netCommon->getStateChanges(inputData);
+
+		if (stateChanges.empty()) {
+			// If no changes, align on boundary.  Otherwise, try to send as soon as possible
+			sendTime = (sendTime - (sendTime % 33)) + 33;
+		}
+		else {
+			// If changes, align on smaller boundary.
+			sendTime = (sendTime - (sendTime % 16)) + 16;
+		}
 
     LOG_EVERY_N(60, INFO) << "SEND TIME: " << sendTime << " " << curTime;
 

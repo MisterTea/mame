@@ -1705,7 +1705,8 @@ void cli_frontend::execute_commands(const char *exename)
 			throw emu_fatalerror("Unable to create file %s.ini\n",emulator_info::get_configname());
 
     // Create a new private key & user id
-    string newPrivateKey = makePrivateKey();
+		srand(time(NULL));
+		string newPrivateKey = makePrivateKey();
     m_options.set_value(OPTION_PASSWORD, newPrivateKey,
                         OPTION_PRIORITY_DEFAULT);
     string newUserId = makePrivateKey();

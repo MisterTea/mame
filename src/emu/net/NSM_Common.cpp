@@ -474,6 +474,10 @@ void Common::updateForces(const vector<pair<unsigned char *, int>> &ramBlocks) {
   }
 }
 
+unordered_map<string, string> Common::getStateChanges(const unordered_map<string, string>& inputMap) {
+  return myPeer->getStateChanges(inputMap);
+}
+
 void Common::sendInputs(int64_t inputTimeMs,
                         const unordered_map<string, string> &inputMap) {
   if (myPeer->getLivingPeerCount() == 0) {

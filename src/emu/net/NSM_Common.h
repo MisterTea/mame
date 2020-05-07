@@ -130,6 +130,7 @@ class Common : public CommonInterface {
         std::pair<BlockValueLocation, int>(location, value));
   }
 
+  virtual unordered_map<string, string> getStateChanges(const unordered_map<string, string>& inputMap);
   virtual void sendInputs(int64_t inputTimeMs,
                   const unordered_map<string, string> &inputMap);
 

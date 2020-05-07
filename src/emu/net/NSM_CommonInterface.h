@@ -150,6 +150,7 @@ class BlockValueLocation {
 
   virtual std::vector<std::string> getAllInputValues(int64_t ts, const string& key) = 0;
 
+  virtual unordered_map<string, string> getStateChanges(const unordered_map<string, string>& inputMap) = 0;
   virtual void sendInputs(int64_t inputTimeMs,
                   const unordered_map<string, string> &inputMap) = 0;
 
