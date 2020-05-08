@@ -177,12 +177,11 @@ Common::Common(const string &_userId, const string &privateKeyString,
     }
     LOG(INFO) << "Hosting game: " << gameName;
     myPeer->host(gameName);
-    myPlayers = {0};
   } else {
     LOG(INFO) << "Joining game: ";
     myPeer->join();
-    myPlayers = {1};
   }
+  myPlayers = { myPeer->getPosition() };
 
   netEngine->start();
   myPeer->start();
