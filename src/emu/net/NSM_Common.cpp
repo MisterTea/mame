@@ -157,6 +157,7 @@ Common::Common(const string &_userId, const string &privateKeyString,
   privateKey = wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString +
                                                               "/" + userId);
   publicKey = wga::CryptoHandler::makePublicFromPrivate(privateKey);
+  LOG(INFO) << "Using public key: " << wga::CryptoHandler::keyToString(publicKey);
 
   bool localLobby = (lobbyHostname == "self");
   if (localLobby) {

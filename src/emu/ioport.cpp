@@ -2235,14 +2235,14 @@ void ioport_manager::frame_update()
 
 		auto stateChanges = netCommon->getStateChanges(inputData);
 
-		if (stateChanges.empty()) {
+		//if (stateChanges.empty()) {
 			// If no changes, align on boundary.  Otherwise, try to send as soon as possible
 			sendTime = (sendTime - (sendTime % 33)) + 33;
-		}
-		else {
+		//}
+		//else {
 			// If changes, align on smaller boundary.
-			sendTime = (sendTime - (sendTime % 16)) + 16;
-		}
+			//sendTime = (sendTime - (sendTime % 16)) + 16;
+		//}
 
     LOG_EVERY_N(60, INFO) << "SEND TIME: " << sendTime << " " << curTime;
 
