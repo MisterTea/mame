@@ -84,7 +84,7 @@ class Common : public CommonInterface {
   std::unordered_map<std::string, std::string> dataToAttach;
 
  public:
-  Common(const string& userId, const string &privateKeyString, unsigned short _port, const string& lobbyHostname, unsigned short lobbyPort, int _unmeasuredNoise, const string& gameName);
+  Common(const string& userId, const string &privateKeyString, unsigned short _port, const string& lobbyHostname, unsigned short lobbyPort, int _unmeasuredNoise, const string& gameName, bool fakeLag);
 
   virtual ~Common();
 

@@ -274,7 +274,8 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
       m_options.lobby_host(),
       (unsigned short)m_options.lobby_port(),
       50,
-      string(m_options.system_name()) + ";" + m_options.software_name());
+      string(m_options.system_name()) + ";" + m_options.software_name(),
+	  m_options.fake_lag());
     if (!netCommon->isHosting()) {
       LOG(INFO) << "NOT SERVER";
       string gameName = netCommon->getGameName();

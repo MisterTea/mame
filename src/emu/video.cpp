@@ -216,9 +216,11 @@ void video_manager::set_frameskip(int frameskip)
 //-------------------------------------------------
 
 bool SKIP_OSD = false;
+int64_t video_tick = 0;
 
 void video_manager::frame_update(bool from_debugger)
 {
+	video_tick++;
 	// only render sound and video if we're in the running phase
 	machine_phase const phase = machine().phase();
 	bool skipped_it = m_skipping_this_frame;
@@ -250,7 +252,7 @@ void video_manager::frame_update(bool from_debugger)
 
 	// ask the OSD to update
 	g_profiler.start(PROFILER_BLIT);
-	machine().osd().update(SKIP_OSD || (!from_debugger && skipped_it));
+	machine().osd().update((SKIP_OSD && video_tick%2==0) || (!from_debugger && skipped_it));
 	g_profiler.stop();
 
 	// we synchronize after rendering instead of before, if low latency mode is enabled

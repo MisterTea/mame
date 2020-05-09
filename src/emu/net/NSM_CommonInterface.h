@@ -33,7 +33,7 @@ using namespace std;
 class CommonInterface;
 
 CommonInterface *createNetCommon(const string& userId,
-const string &privateKeyString, unsigned short _port, const string& lobbyHostname, unsigned short lobbyPort, int _unmeasuredNoise, const string& gameName);
+const string &privateKeyString, unsigned short _port, const string& lobbyHostname, unsigned short lobbyPort, int _unmeasuredNoise, const string& gameName, bool fakeLag);
 void deleteNetCommon();
 string makePrivateKey();
 

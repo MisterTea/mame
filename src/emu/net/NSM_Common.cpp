@@ -20,9 +20,10 @@ CommonInterface *createNetCommon(const string &userId,
                                  unsigned short _port,
                                  const string &lobbyHostname,
                                  unsigned short lobbyPort, int _unmeasuredNoise,
-                                 const string &gameName) {
+                                 const string &gameName,
+                                 bool fakeLag) {
   netCommon = new Common(userId, privateKeyString, _port, lobbyHostname,
-                         lobbyPort, _unmeasuredNoise, gameName);
+                         lobbyPort, _unmeasuredNoise, gameName, fakeLag);
   return netCommon;
 }
 
@@ -148,10 +149,12 @@ extern volatile bool memoryBlocksLocked;
 Common::Common(const string &_userId, const string &privateKeyString,
                unsigned short _port, const string &lobbyHostname,
                unsigned short lobbyPort, int _unmeasuredNoise,
-               const string &gameName)
+               const string &gameName, bool fakeLag)
     : userId(_userId), lastSendTime(0), unmeasuredNoise(_unmeasuredNoise) {
-  //wga::GlobalClock::addNoise();
-  //wga::ALL_RPC_FLAKY = true;
+  if (fakeLag) {
+    wga::GlobalClock::addNoise();
+    wga::ALL_RPC_FLAKY = true;
+  }
 
   netEngine.reset(new wga::NetEngine());
   privateKey = wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString +

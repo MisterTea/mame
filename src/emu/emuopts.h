@@ -197,6 +197,7 @@
 #define OPTION_PORT                    "port"
 #define OPTION_LOBBY_HOST                    "lobby_host"
 #define OPTION_LOBBY_PORT                    "lobby_port"
+#define OPTION_FAKE_LAG                  "fake_lag"
 
 #define OPTION_HTTP                 "http"
 #define OPTION_HTTP_PORT            "http_port"
@@ -476,6 +477,7 @@ public:
 	bool mamehub() const { return bool_value(OPTION_MAMEHUB); }
 	const char *lobby_host() const { return value(OPTION_LOBBY_HOST); }
 	int lobby_port() const { return int_value(OPTION_LOBBY_PORT); }
+	bool fake_lag() const { return bool_value(OPTION_FAKE_LAG); }
 
 	bool console() const { return bool_value(OPTION_CONSOLE); }
 
