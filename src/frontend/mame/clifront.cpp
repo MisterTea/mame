@@ -268,13 +268,15 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
       }
     }
     deleteNetCommon();
+	string gameString = m_options.system_name();
+	gameString += ";" + m_options.software_name();
     createNetCommon(userId,
       m_options.password(),
       (unsigned short)m_options.port(),
       m_options.lobby_host(),
       (unsigned short)m_options.lobby_port(),
       50,
-      string(m_options.system_name()) + ";" + m_options.software_name(),
+      gameString,
 	  m_options.fake_lag());
     if (!netCommon->isHosting()) {
       LOG(INFO) << "NOT SERVER";

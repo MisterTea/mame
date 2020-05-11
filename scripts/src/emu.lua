@@ -12,6 +12,10 @@
 project ("emu")
 uuid ("e6fa15e4-a354-4526-acef-13c8e80fcacf")
 kind (LIBTYPE)
+configuration { "vs*" }
+flags {
+	"Symbols",
+}
 
 addprojectflags()
 precompiledheaders()
