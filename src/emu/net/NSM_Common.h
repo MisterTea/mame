@@ -139,7 +139,7 @@ class Common : public CommonInterface {
 
   vector<uint8_t> computeChecksum(running_machine *machine);
 
-  virtual std::vector<std::string> getAllInputValues(int64_t ts, const string& key);
+  virtual std::unordered_map<std::string, std::vector<std::string>> getAllInputValues(int64_t ts);
 
   virtual bool isHosting();
 
@@ -149,6 +149,7 @@ class Common : public CommonInterface {
   int64_t lastSendTime;
   int unmeasuredNoise;
   set<int> myPlayers;
+  pair<int64_t, std::unordered_map<std::string, std::vector<std::string>>> cachedInputValues;
 
   shared_ptr<wga::SingleGameServer> server;
   shared_ptr<wga::PeerConnectionServer> peerConnectionServer;

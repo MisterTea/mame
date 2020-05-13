@@ -150,7 +150,7 @@ Common::Common(const string &_userId, const string &privateKeyString,
                unsigned short _port, const string &lobbyHostname,
                unsigned short lobbyPort, int _unmeasuredNoise,
                const string &gameName, bool fakeLag)
-    : userId(_userId), lastSendTime(0), unmeasuredNoise(_unmeasuredNoise) {
+    : userId(_userId), lastSendTime(0), unmeasuredNoise(_unmeasuredNoise), cachedInputValues(-1,{}) {
   if (fakeLag) {
     wga::GlobalClock::addNoise();
     wga::ALL_RPC_FLAKY = true;
@@ -219,7 +219,7 @@ double predictedPingVariance = 10.0;
 int numPingSamples = 0;
 
 int Common::getLargestPing() {
-  return max(35, int(ceil(myPeer->getHalfPingUpperBound() / 1000.0)));
+  return max(35, 10 + int(ceil(myPeer->getHalfPingUpperBound() / 1000.0)));
 }
 
 string Common::getLatencyString() {
@@ -520,13 +520,16 @@ vector<uint8_t> Common::computeChecksum(running_machine *machine) {
   return blockChecksums;
 }
 
-std::vector<std::string> Common::getAllInputValues(int64_t ts,
-                                                   const string &key) {
-  auto retval = myPeer->getAllInputValues(ts, key);
+std::unordered_map<std::string, std::vector<std::string>> Common::getAllInputValues(int64_t ts) {
+  if (cachedInputValues.first == ts) {
+    return cachedInputValues.second;
+  }
+  auto retval = myPeer->getAllInputValues(ts);
   int livingPeerCount = myPeer->getLivingPeerCount();
   if (livingPeerCount == 0) {
     return {};
   }
+  cachedInputValues = make_pair(ts, retval);
   return retval;
 }
 

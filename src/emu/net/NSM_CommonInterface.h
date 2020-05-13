@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "zlib.h"
 
@@ -148,7 +149,7 @@ class BlockValueLocation {
 
   virtual void attachToNextInputs(const string& key, const string& value) = 0;
 
-  virtual std::vector<std::string> getAllInputValues(int64_t ts, const string& key) = 0;
+  virtual std::unordered_map<std::string, std::vector<std::string>> getAllInputValues(int64_t ts) = 0;
 
   virtual unordered_map<string, string> getStateChanges(const unordered_map<string, string>& inputMap) = 0;
   virtual void sendInputs(int64_t inputTimeMs,

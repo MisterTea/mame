@@ -2224,16 +2224,16 @@ void ioport_manager::frame_update()
   if(netCommon) {
     // Calculate the time that the new inputs will take effect
     int delayFromPing = max(50,min(600,netCommon->getLargestPing()));
-    attoseconds_t attosecondsToLead = 0;
-    attosecondsToLead = ATTOSECONDS_PER_MILLISECOND*delayFromPing;
-    attotime futureInputTime = curMachineTime + attotime(0,attosecondsToLead);
-    auto sendTime = futureInputTime.to_msec();
+    //attoseconds_t attosecondsToLead = 0;
+    //attosecondsToLead = ATTOSECONDS_PER_MILLISECOND*delayFromPing;
+    auto futureInputTime = netCommon->getCurrentTime()/1000 + delayFromPing;
+    auto sendTime = futureInputTime;
 
     // If we were going to send inputs much before where we should be now, just send it at the expected current time
-    int64_t curTime = netCommon->getCurrentTime() / 1000;
-    sendTime = max(sendTime, curTime - 1000);
+    int64_t curTime = curMachineTime.to_msec();
+    //sendTime = max(sendTime, curTime - 1000);
 
-		auto stateChanges = netCommon->getStateChanges(inputData);
+		//auto stateChanges = netCommon->getStateChanges(inputData);
 
 		//if (stateChanges.empty()) {
 			// If no changes, align on boundary.  Otherwise, try to send as soon as possible
@@ -2244,15 +2244,17 @@ void ioport_manager::frame_update()
 			//sendTime = (sendTime - (sendTime % 16)) + 16;
 		//}
 
-    LOG_EVERY_N(60, INFO) << "SEND TIME: " << sendTime << " " << curTime;
+    LOG_EVERY_N(600, INFO) << "SEND TIME: " << sendTime << " CUR TIME: " << curTime;
 
 		if (sendTime < inputStartTime.to_msec()) {
+			VLOG(1) << "SEND TIME BEFORE START TIME";
       // Inputs before the input start time are not valid.
     }
     else if (sendTime <= netCommon->getLastSendTime()) {
+		VLOG(1) << "SEND TIME BEFORE LAST SEND TIME: " << sendTime << " " << netCommon->getLastSendTime();
       // This input would occur in the past or be a duplicate, ignore it.
     } else {
-      VLOG(1) << "SENDING INPUTS AT TIME " << sendTime << endl;
+      VLOG(1) << "SENDING INPUTS AT TIME " << sendTime << " emu time: " << netCommon->getCurrentTime()/1000 << endl;
 	  VLOG(1) << "Last send time: " << netCommon->getLastSendTime() << endl;
       netCommon->sendInputs(sendTime, inputData);
     }

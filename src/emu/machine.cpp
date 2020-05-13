@@ -1284,6 +1284,10 @@ int nvram_size(running_machine &machine) {
 
 void running_machine::nvram_load()
 {
+	if(netCommon) {
+		// JJG: Disable nvram on mamehub for now
+		return;
+	}
 	int overrideNVram = 0;
 	if(netCommon) {
           if(nvram_size(*this)>=32*1024*1024) {
