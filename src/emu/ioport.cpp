@@ -2214,7 +2214,7 @@ void ioport_manager::frame_update()
 	{
 		for (auto& field : port.second->fields()) {
       bool pressed = machine().input().seq_pressed(field.seq_real(true, SEQ_TYPE_STANDARD));
-      inputData[std::string("INPUT/") + field.name()] = pressed?"1":"0";
+      inputData[std::string("INPUT/") + field.mamehub_id()] = pressed?"1":"0";
     }
   }
 

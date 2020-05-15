@@ -466,7 +466,7 @@ private:
 
 /* ----- Helpers ----- */
 
-std::unique_ptr<emu_file> common_process_file(emu_options &options, const char *location, bool has_crc, u32 crc, const rom_entry *romp, osd_file::error &filerr);
+std::unique_ptr<emu_file> common_process_file(emu_options &options, const char *location, bool has_crc, u32 crc, const rom_entry *romp, osd_file::error &filerr, bool candy=true);
 
 /* return pointer to the first ROM region within a source */
 const rom_entry *rom_first_region(const device_t &device);

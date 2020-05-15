@@ -225,6 +225,7 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_LOBBY_HOST,               "lobby.mamehub.com",         OPTION_STRING,    "Lobby hostname" },
 	{ OPTION_LOBBY_PORT,               "3000",         OPTION_INTEGER,    "Lobby port" },
 	{ OPTION_FAKE_LAG,               "0",         OPTION_BOOLEAN,    "Add fake lag and clock skew" },
+	{ OPTION_CANDY,               "0",         OPTION_BOOLEAN,    "Candy mode" },
 
 	{ nullptr }
 };

@@ -252,7 +252,7 @@ void video_manager::frame_update(bool from_debugger)
 
 	// ask the OSD to update
 	g_profiler.start(PROFILER_BLIT);
-	machine().osd().update((SKIP_OSD && video_tick%2==0) || (!from_debugger && skipped_it));
+	machine().osd().update((SKIP_OSD) || (!from_debugger && skipped_it));
 	g_profiler.stop();
 
 	// we synchronize after rendering instead of before, if low latency mode is enabled

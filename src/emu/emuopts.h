@@ -198,6 +198,7 @@
 #define OPTION_LOBBY_HOST                    "lobby_host"
 #define OPTION_LOBBY_PORT                    "lobby_port"
 #define OPTION_FAKE_LAG                  "fake_lag"
+#define OPTION_CANDY					"candy"
 
 #define OPTION_HTTP                 "http"
 #define OPTION_HTTP_PORT            "http_port"
@@ -475,6 +476,7 @@ public:
 	const char *hostname() const { return value(OPTION_HOSTNAME); }
 	int port() const { return int_value(OPTION_PORT); }
 	bool mamehub() const { return bool_value(OPTION_MAMEHUB); }
+	bool candy() const { return bool_value(OPTION_CANDY); }
 	const char *lobby_host() const { return value(OPTION_LOBBY_HOST); }
 	int lobby_port() const { return int_value(OPTION_LOBBY_PORT); }
 	bool fake_lag() const { return bool_value(OPTION_FAKE_LAG); }
