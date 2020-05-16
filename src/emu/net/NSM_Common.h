@@ -116,6 +116,8 @@ class Common : public CommonInterface {
 
   virtual std::set<int> getMyPlayers();
 
+  virtual void setMyPlayers(std::set<int> newPlayers);
+
   std::string getLatencyString();
 
   std::string getStatisticsString();

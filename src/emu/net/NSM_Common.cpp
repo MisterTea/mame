@@ -196,6 +196,10 @@ Common::Common(const string &_userId, const string &privateKeyString,
 
 set<int> Common::getMyPlayers() { return myPlayers; }
 
+void Common::setMyPlayers(std::set<int> newPlayers) {
+  myPlayers = newPlayers;
+}
+
 Common::~Common() {
   myPeer->shutdown();
   server.reset();

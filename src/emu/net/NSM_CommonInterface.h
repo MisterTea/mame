@@ -130,6 +130,8 @@ class BlockValueLocation {
 
   virtual std::set<int> getMyPlayers() = 0;
 
+  virtual void setMyPlayers(std::set<int> newPlayers) = 0;
+
   virtual int64_t getLastSendTime() = 0;
 
   virtual int64_t getCurrentTime() = 0;

@@ -1284,22 +1284,11 @@ int nvram_size(running_machine &machine) {
 
 void running_machine::nvram_load()
 {
-	if(netCommon) {
-		// JJG: Disable nvram on mamehub for now
-		return;
-	}
-	int overrideNVram = 0;
-	if(netCommon) {
-          if(nvram_size(*this)>=32*1024*1024) {
-            overrideNVram=1;
-            ui().popup_time(3, "The NVRAM for this game is too big, not loading NVRAM.");
-          }
-	}
-
 	for (device_nvram_interface &nvram : nvram_interface_iterator(root_device()))
 	{
 		emu_file file(options().nvram_directory(), OPEN_FLAG_READ);
-		if (!overrideNVram && file.open(nvram_filename(nvram.device())) == osd_file::error::NONE)
+		// JJG: Disable nvram on mamehub for now
+		if (!netCommon && file.open(nvram_filename(nvram.device())) == osd_file::error::NONE)
 		{
 			nvram.nvram_load(file);
 			file.close();

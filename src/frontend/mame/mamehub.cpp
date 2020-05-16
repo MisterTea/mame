@@ -103,7 +103,7 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
 }
 
 bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
-#if 0
+#if 1
   /* if this was a UI_EVENT_CHAR event, post it */
   if (!chatEnabled && (event.ch == 'N' || event.ch == 'n')) {
     statsVisible = !statsVisible;
@@ -123,24 +123,26 @@ bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
           if (chatString.size() > 1 && chatString[1] >= '1' &&
               chatString[1] <= '9') {
             // TODO: Player swap
-            netCommon->setPlayer(chatString[1] - '1');
-          } else if (netServer &&
+            netCommon->setMyPlayers({chatString[1] - '1'});
+            /*
+          } else if (netCommon &&
                      std::string(&chatString[0], chatString.size()) ==
                          std::string("/lock")) {
-            netServer->setBlockNewClients(!netServer->isBlockNewClients());
-            if (netServer->isBlockNewClients())
+            netCommon->setBlockNewClients(!netCommon->isBlockNewClients());
+            if (netCommon->isBlockNewClients())
               machine.ui().popup_time(
                   3, "Game is locked and new clients cannot join.");
             else
               machine.ui().popup_time(
                   3, "Game is unlocked, new clients can join.");
-          } else if (netServer &&
+                  */
+          } else if (netCommon &&
                      std::string(&chatString[0], 5) == std::string("/find")) {
             chatString.push_back(0);
             std::vector<BlockValueLocation> locations;
             // TODO: Fix forces
-            // if(netServer) locations =
-            // netServer->getLocationsWithValue(atoi(&chatString[6]),locationsToIntersect,machine.getRawMemoryRegions());
+            // if(netCommon) locations =
+            // netCommon->getLocationsWithValue(atoi(&chatString[6]),locationsToIntersect,machine.getRawMemoryRegions());
             for (int a = 0; a < locations.size() && a < 100; a++) {
               LOG(INFO) << locations[a].blockIndex << ' '
                         << locations[a].memoryStart << ' '
@@ -149,10 +151,10 @@ bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
             locationsToIntersect = locations;
             machine.ui().popup_time(3, "Captured %d locations",
                                     (int)locationsToIntersect.size());
-          } else if (netServer &&
+          } else if (netCommon &&
                      std::string(&chatString[0], 6) == std::string("/force")) {
             for (int a = 0; a < locationsToIntersect.size(); a++) {
-              // netServer->forceLocation(locationsToIntersect[a],atoi(&chatString[7]));
+              // netCommon->forceLocation(locationsToIntersect[a],atoi(&chatString[7]));
               std::string s = "00000000000000000";
               int value = atoi(&chatString[7]);
               s[0] = 2;  // TODO: Don't need to set this anymore
@@ -167,10 +169,10 @@ bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
               memcpy(&(s[14]), &(locationsToIntersect[a].memoryMask),
                      sizeof(unsigned char));
               memcpy(&(s[15]), &(value), sizeof(int));
-              netServer->attachToNextInputs(string("FORCE/") + s, "1");
+              netCommon->attachToNextInputs(string("FORCE/") + s, "1");
             }
             locationsToIntersect.clear();
-          } else if (netServer &&
+          } else if (netCommon &&
                      std::string(&chatString[0], 6) == std::string("/clear")) {
             locationsToIntersect.clear();
           }

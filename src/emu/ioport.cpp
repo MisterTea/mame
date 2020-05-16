@@ -733,7 +733,6 @@ const input_seq &ioport_field::seq_real(bool checkMapping, input_seq_type seqtyp
         // We shouldn't be controlling this player
         return input_seq::empty_seq;
       }
-      //LOG(INFO) << "MAPPING " << name() << " TO " << it->second->name() << endl;
       return it->second->seq_real(false, seqtype);
     } else if(name()) {
       ioport_type typeToMap = type();
@@ -2214,7 +2213,16 @@ void ioport_manager::frame_update()
 	{
 		for (auto& field : port.second->fields()) {
       bool pressed = machine().input().seq_pressed(field.seq_real(true, SEQ_TYPE_STANDARD));
-      inputData[std::string("INPUT/") + field.mamehub_id()] = pressed?"1":"0";
+	  string key = std::string("INPUT/") + field.mamehub_id();
+	  auto it = inputData.find(key);
+	  if (it != inputData.end()) {
+		  // Resolve conflicts by allowing any pressed input through
+		if(pressed) {
+			inputData[key] = "1";
+		}
+	  } else {
+      	inputData[key] = pressed?"1":"0";
+	  }
     }
   }
 
