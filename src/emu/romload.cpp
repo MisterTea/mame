@@ -774,21 +774,25 @@ std::unique_ptr<emu_file> rom_load_manager::open_rom_file(const std::vector<std:
 
 	if (osd_file::error::NONE != filerr && candy && machine().options().candy()) {
 		std::cout << "Candy mode! " << name << std::endl;
-		std::string locationString(name);
-		auto pathLocation = locationString.find(PATH_SEPARATOR);
-		if (pathLocation == std::string::npos) {
-			candy_mode(locationString, std::string(""), machine().options().media_path());
-		} else {
-			candy_mode(locationString.substr(0, pathLocation), locationString.substr(pathLocation + 1), machine().options().media_path());
-		}
+		for (auto path : paths) {
+			std::cout << "Path " << path << std::endl;
+			std::string locationString(path);
+			auto pathLocation = locationString.find(PATH_SEPARATOR);
+			if (pathLocation == std::string::npos) {
+				candy_mode(locationString, std::string(""), machine().options().media_path());
+			} else {
+				candy_mode(locationString.substr(0, pathLocation), locationString.substr(pathLocation + 1), machine().options().media_path());
+			}
 
-		if (has_crc)
-			filerr = result->open(name, crc);
-		else
-			filerr = result->open(name);
+			if (has_crc)
+				filerr = result->open(name, crc);
+			else
+				filerr = result->open(name);
 
-		if (osd_file::error::NONE == filerr) {
-			std::cout << "Candy mode worked!" << std::endl;
+			if (osd_file::error::NONE == filerr) {
+				std::cout << "Candy mode worked!" << std::endl;
+				break;
+			}
 		}
 	}
 
