@@ -74,6 +74,7 @@ links {
 }
 end
 
+
 --------------------------------------------------
 -- zlib library objects
 --------------------------------------------------
@@ -139,6 +140,7 @@ links {
 }
 end
 
+
 --------------------------------------------------
 -- SoftFloat library objects
 --------------------------------------------------
@@ -178,6 +180,7 @@ end
 		MAME_DIR .. "3rdparty/softfloat/fsincos.c",
 		MAME_DIR .. "3rdparty/softfloat/fyl2x.c",
 	}
+
 
 --------------------------------------------------
 -- SoftFloat 3 library objects
@@ -523,6 +526,7 @@ files {
 	MAME_DIR .. "3rdparty/softfloat3/source/f128M_lt_quiet.c",
 }
 
+
 -------------------------------------------------
 -- libJPEG library objects
 --------------------------------------------------
@@ -604,6 +608,7 @@ links {
 	ext_lib("jpeg"),
 }
 end
+
 
 --------------------------------------------------
 -- libflac library objects
@@ -698,6 +703,7 @@ links {
 }
 end
 
+
 --------------------------------------------------
 -- lib7z library objects
 --------------------------------------------------
@@ -711,6 +717,11 @@ project "7z"
 			"-Wno-undef",
 			"-Wno-strict-prototypes",
 		}
+if _OPTIONS["gcc"]~=nil and string.find(_OPTIONS["gcc"], "clang") and str_to_version(_OPTIONS["gcc_version"]) >= 100000 then
+		buildoptions_c {
+			"-Wno-misleading-indentation",
+		}
+end
 
 	configuration { "mingw*" }
 		buildoptions_c {
@@ -723,6 +734,11 @@ project "7z"
 			"/wd4456", -- warning C4456: declaration of 'xxx' hides previous local declaration
 			"/wd4457", -- warning C4457: declaration of 'xxx' hides function parameter
 		}
+if _OPTIONS["vs"]=="clangcl" then
+		buildoptions {
+			"-Wno-misleading-indentation",
+		}
+end
 if _OPTIONS["vs"]=="intel-15" then
 		buildoptions {
 			"/Qwd869",              -- remark #869: parameter "xxx" was never referenced
@@ -783,6 +799,7 @@ end
 			-- MAME_DIR .. "3rdparty/lzma/C/XzEnc.c",
 			-- MAME_DIR .. "3rdparty/lzma/C/XzIn.c",
 		}
+
 
 --------------------------------------------------
 -- LUA library objects
@@ -889,6 +906,7 @@ links {
 }
 end
 
+
 --------------------------------------------------
 -- small lua library objects
 --------------------------------------------------
@@ -972,6 +990,12 @@ if _OPTIONS["gcc"]~=nil and ((string.find(_OPTIONS["gcc"], "clang") or string.fi
 			"-Wno-incompatible-pointer-types-discards-qualifiers",
 		}
 end
+	configuration { "vs*" }
+if _OPTIONS["vs"]=="clangcl" then
+		buildoptions {
+			"-Wno-implicit-int-float-conversion",
+		}
+end
 	configuration { "winstore*" }
 		defines {
 			"SQLITE_OS_WINRT",
@@ -995,9 +1019,12 @@ links {
 end
 
 end
+
+
 --------------------------------------------------
 -- portmidi library objects
 --------------------------------------------------
+
 if _OPTIONS["NO_USE_MIDI"]~="1" then
 if not _OPTIONS["with-system-portmidi"] then
 project "portmidi"
@@ -1079,6 +1106,7 @@ links {
 end
 end
 
+
 --------------------------------------------------
 -- BX library objects
 --------------------------------------------------
@@ -1157,6 +1185,7 @@ project "bx"
 		MAME_DIR .. "3rdparty/bx/src/url.cpp",
 	}
 
+
 --------------------------------------------------
 -- BIMG library objects
 --------------------------------------------------
@@ -1231,6 +1260,7 @@ project "bimg"
 		MAME_DIR .. "3rdparty/bimg/3rdparty/astc-codec/src/decoder/quantization.cc",
 		MAME_DIR .. "3rdparty/bimg/3rdparty/astc-codec/src/decoder/weight_infill.cc",
 	}
+
 
 --------------------------------------------------
 -- BGFX library objects
@@ -1420,9 +1450,11 @@ end
 		}
 	end
 
+
 --------------------------------------------------
 -- PortAudio library objects
 --------------------------------------------------
+
 if _OPTIONS["NO_USE_PORTAUDIO"]~="1" then
 if not _OPTIONS["with-system-portaudio"] then
 project "portaudio"
@@ -1490,6 +1522,11 @@ project "portaudio"
 					"-Wno-incompatible-pointer-types-discards-qualifiers",
 				}
 			end
+		end
+		if string.find(_OPTIONS["gcc"], "clang") and version >= 100000 then
+			buildoptions_c {
+				"-Wno-misleading-indentation",
+			}
 		end
 	end
 	configuration { "vs*" }
@@ -1590,6 +1627,7 @@ links {
 }
 end
 end
+
 
 --------------------------------------------------
 -- SDL2 library
@@ -2101,9 +2139,11 @@ end
 
 end
 
+
 --------------------------------------------------
 -- linenoise library
 --------------------------------------------------
+
 if (_OPTIONS["osd"] ~= "uwp") then
 project "linenoise"
 	uuid "7320ffc8-2748-4add-8864-ae29b72a8511"
@@ -2138,9 +2178,9 @@ project "utf8proc"
 	uuid "1f881f09-0395-4483-ac37-2935fb092187"
 	kind "StaticLib"
 
-  defines {
-	"UTF8PROC_DLLEXPORT="
-  }
+	defines {
+		"UTF8PROC_DLLEXPORT="
+	}
 
 	configuration "Debug"
 		defines {
@@ -2165,6 +2205,26 @@ links {
 	ext_lib("utf8proc"),
 }
 end
+
+--------------------------------------------------
+-- wdlfft library objects (from Cockos WDL)
+--------------------------------------------------
+
+project "wdlfft"
+	uuid "74ca017e-fa0d-48b8-81d6-8081a37be14c"
+	kind "StaticLib"
+
+	configuration { "gmake or ninja" }
+		buildoptions_c {
+			"-Wno-strict-prototypes",
+		}
+
+	configuration { }
+
+	files {
+		MAME_DIR .. "3rdparty/wdlfft/fft.c",
+		MAME_DIR .. "3rdparty/wdlfft/fft.h"
+	}
 
 project "wga"
 	uuid "9ee43987-9a53-4fbd-9469-769d2b485379"
@@ -2228,3 +2288,4 @@ project "wga"
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/miniupnpc.c",
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/igd_desc_parse.c",
     }
+

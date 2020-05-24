@@ -235,11 +235,6 @@ if (STANDALONE~=true) then
 		"frontend",
 	}
 end
-if (MACHINES["NETLIST"]~=null) then
-	links {
-		"netlist",
-	}
-end
 	links {
 		"optional",
 		"emu",
@@ -254,11 +249,17 @@ if #disasm_files > 0 then
 		"dasm",
 	}
 end
+if (MACHINES["NETLIST"]~=null) then
+	links {
+		"netlist",
+	}
+end
 	links {
 		"utils",
 		ext_lib("expat"),
 		"softfloat",
 		"softfloat3",
+		"wdlfft",
 		ext_lib("jpeg"),
 		"7z",
     "wga",

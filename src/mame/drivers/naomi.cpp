@@ -3564,7 +3564,8 @@ Region byte encoding is as follows:
    First half is BIOS, second half is game settings and is blanked/reprogrammed by the BIOS if game cartridge exchange was detected
    area 0x1A000-0x1BFFF is write protected and contain 12 bytes of unit-specific unique information (probably serial number, manufacture date, etc),
    2 dumps included for reference
-   fpr-24363.ic48 - later Sega's boot ROM, have removed Sammy logo, only last 1/4 used (2 high address bits tied to Vcc).
+   fpr-24363.ic48 - BOOT ROM from Sega 837-14624R PCB, in comparison with Sammy's BOOT contain minor code change to keep video output disabled during Sammy logo display routine.
+                    Only last 128KB of whole 512KB ROM actually used (2 high address pins tied to Vcc).
 */
 #define AW_BIOS \
 	ROM_REGION64_LE( 0x200000, "awflash", 0) \
@@ -9498,7 +9499,7 @@ ROM_START( ngdup23a )
 	NAOMI_DEFAULT_EEPROM
 
 	DISK_REGION( "gdrom" )
-	DISK_IMAGE_READONLY( "gds-0023a", 0, SHA1(cfd49a1f56e4ddd198f2237a87d412d48c1251e1) )
+	DISK_IMAGE_READONLY( "gds-0023a", 0, SHA1(3a306c90ff2ecb9858578a96429097295cc3e284) )
 
 	ROM_REGION( 0x4000, "pic", ROMREGION_ERASEFF) // uses the vf4 pic
 	//PIC16C622A (317-0314-COM)

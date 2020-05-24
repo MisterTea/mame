@@ -223,6 +223,39 @@ static input_seq_type parse_seq_type(const std::string &s)
 
 
 //-------------------------------------------------
+//  parse_movie_format - processes a movie format
+//  string
+//-------------------------------------------------
+
+static movie_recording::format parse_movie_format(const std::string &s)
+{
+	movie_recording::format result = movie_recording::format::AVI;
+	if (s == "avi")
+		result = movie_recording::format::AVI;
+	else if (s == "mng")
+		result = movie_recording::format::MNG;
+	return result;
+}
+
+
+//-------------------------------------------------
+//  process_snapshot_filename - processes a snapshot
+//  filename
+//-------------------------------------------------
+
+static std::string process_snapshot_filename(running_machine &machine, const char *s)
+{
+	std::string result(s);
+	if (!osd_is_absolute_path(s))
+	{
+		strreplace(result, "/", PATH_SEPARATOR);
+		strreplace(result, "%g", machine.basename());
+	}
+	return result;
+}
+
+
+//-------------------------------------------------
 //  mem_read - templated memory readers for <sign>,<size>
 //  -> manager:machine().devices[":maincpu"].spaces["program"]:read_i8(0xC000)
 //-------------------------------------------------
@@ -1279,6 +1312,8 @@ void lua_engine::initialize()
  * machine:soft_reset() - soft reset emulation
  * machine:save(filename) - save state to filename
  * machine:load(filename) - load state from filename
+ * machine:buffer_save() - return save state buffer as binary string
+ * machine:buffer_load(str) - load state from binary string buffer. returns true on success, otherwise nil
  * machine:popmessage(str) - print str as popup
  * machine:popmessage() - clear displayed popup message
  * machine:logerror(str) - print str to log
@@ -1311,6 +1346,31 @@ void lua_engine::initialize()
 	machine_type.set("soft_reset", &running_machine::schedule_soft_reset);
 	machine_type.set("save", &running_machine::schedule_save);
 	machine_type.set("load", &running_machine::schedule_load);
+	machine_type.set("buffer_save", [](running_machine &m, sol::this_state s) {
+			lua_State *L = s;
+			luaL_Buffer buff;
+			int size = ram_state::get_size(m.save());
+			u8 *ptr = (u8 *)luaL_buffinitsize(L, &buff, size);
+			save_error error = m.save().write_buffer(ptr, size);
+			if (error == STATERR_NONE)
+			{
+				luaL_pushresultsize(&buff, size);
+				return sol::make_reference(L, sol::stack_reference(L, -1));
+			}
+			luaL_error(L, "State save error.");
+			return sol::make_reference(L, nullptr);
+		});
+	machine_type.set("buffer_load", [](running_machine &m, sol::this_state s, std::string str) {
+			lua_State *L = s;
+			save_error error = m.save().read_buffer((u8 *)str.data(), str.size());
+			if (error == STATERR_NONE)
+				return true;
+			else
+			{
+				luaL_error(L,"State load error.");
+				return false;
+			}
+		});
 	machine_type.set("system", &running_machine::system);
 	machine_type.set("video", &running_machine::video);
 	machine_type.set("sound", &running_machine::sound);
@@ -2080,7 +2140,7 @@ void lua_engine::initialize()
  *
  * manager:machine():video()
  *
- * video:begin_recording([opt] filename) - start AVI recording to filename if given or default
+ * video:begin_recording([opt] filename, [opt] format) - start AVI recording to filename if given or default
  * video:end_recording() - stop AVI recording
  * video:is_recording() - get recording status
  * video:snapshot() - save shot of all screens
@@ -2098,20 +2158,25 @@ void lua_engine::initialize()
 
 	auto video_type = sol().registry().create_simple_usertype<video_manager>("new", sol::no_constructor);
 	video_type.set("begin_recording", sol::overload(
-		[this](video_manager &vm, const char *filename) {
-			std::string fn = filename;
-			strreplace(fn, "/", PATH_SEPARATOR);
-			strreplace(fn, "%g", machine().basename());
-			vm.begin_recording(fn.c_str(), video_manager::MF_AVI);
+		[this](video_manager &vm, const char *filename, const char *format_string) {
+			std::string fn = process_snapshot_filename(machine(), filename);
+			movie_recording::format format = parse_movie_format(format_string);
+			vm.begin_recording(fn.c_str(), format);
 		},
-		[](video_manager &vm) { vm.begin_recording(nullptr, video_manager::MF_AVI); }));
+		[this](video_manager &vm, const char *filename) {
+			std::string fn = process_snapshot_filename(machine(), filename);
+			vm.begin_recording(fn.c_str(), movie_recording::format::AVI);
+		},
+		[](video_manager &vm) {
+			vm.begin_recording(nullptr, movie_recording::format::AVI);
+		}));
 	video_type.set("end_recording", [this](video_manager &vm) {
 			if(!vm.is_recording())
 			{
 				machine().logerror("[luaengine] No active recording to stop\n");
 				return;
 			}
-			vm.end_recording(video_manager::MF_AVI);
+			vm.end_recording();
 		});
 	video_type.set("snapshot", &video_manager::save_active_screen_snapshots);
 	video_type.set("is_recording", &video_manager::is_recording);
@@ -2553,13 +2618,8 @@ void lua_engine::initialize()
 			if (filename.is<const char *>())
 			{
 				// a filename was specified; if it isn't absolute postprocess it
-				snapstr = filename.as<const char *>();
+				snapstr = process_snapshot_filename(machine(), filename.as<const char *>());
 				is_absolute_path = osd_is_absolute_path(snapstr);
-				if (!is_absolute_path)
-				{
-					strreplace(snapstr, "/", PATH_SEPARATOR);
-					strreplace(snapstr, "%g", machine().basename());
-				}
 			}
 
 			// open the file
