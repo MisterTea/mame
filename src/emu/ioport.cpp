@@ -692,7 +692,7 @@ const char *ioport_field::name() const
 
 // playerFieldMap maps inputs for players onto their player 1
 // equivalent.
-map<const ioport_field*,const ioport_field*> playerFieldMap;
+unordered_map<const ioport_field*,vector<const ioport_field*>> playerFieldMap;
 
 u8 ioport_field::mamehub_player() const {
 	int p = player();
@@ -714,35 +714,44 @@ u8 ioport_field::mamehub_player() const {
 	return p;
 }
 
-const input_seq &ioport_field::seq_real(bool checkMapping, input_seq_type seqtype) const noexcept
+vector<input_seq> ioport_field::seq_mamehub(input_seq_type seqtype) const noexcept 
 {
-  if(checkMapping && netCommon) {
     set<int> players = netCommon->getMyPlayers();
 
     int playerToMap = this->mamehub_player();
 
     if (playerToMap < 0 || playerToMap >= MAX_PLAYERS) {
       // Invalid player
-      return input_seq::empty_seq;
+      return {input_seq::empty_seq};
     }
 
-    map<const ioport_field*,const ioport_field*>::iterator it = playerFieldMap.find(this);
+    auto it = playerFieldMap.find(this);
 
     if(it != playerFieldMap.end()) {
       if(players.find(playerToMap) == players.end()) {
         // We shouldn't be controlling this player
-        return input_seq::empty_seq;
+        return {input_seq::empty_seq};
       }
-      return it->second->seq_real(false, seqtype);
+      vector<input_seq> retval;
+	  for (auto it2 : it->second) {
+		  retval.push_back(it2->seq_real(false, seqtype));
+	  }
+	  return retval;
     } else if(name()) {
       ioport_type typeToMap = type();
-      VLOG(1) << "FOUND NO MAP FOR " << name() << " " << typeToMap << " " << playerToMap << endl;
+      LOG(INFO) << "FOUND NO MAP FOR " << name() << " " << typeToMap << " " << playerToMap << endl;
 			//exit(1);
-      return input_seq::empty_seq;
-    } else {
-      LOG(FATAL) << "FOUND NO MAP FOR UNKNOWN INPUT" << endl;
+      return {input_seq::empty_seq};
     }
-  }
+    LOG(FATAL) << "FOUND NO MAP FOR UNKNOWN INPUT" << endl;
+		exit(1);
+}
+
+const input_seq &ioport_field::seq_real(bool checkMapping, input_seq_type seqtype) const noexcept
+{
+	if (checkMapping) {
+		LOG(FATAL) << "OOPS";
+	}
 
 	// if no live state, return default
 	if (m_live == nullptr)
@@ -1840,7 +1849,7 @@ time_t ioport_manager::initialize()
       }
 
       if (fromPlayer==0) {
-        playerFieldMap[&fieldFrom] = &fieldFrom;
+				playerFieldMap[&fieldFrom] = { &fieldFrom };
       }
 
       if(fromType<IPT_START1) {
@@ -1890,21 +1899,22 @@ time_t ioport_manager::initialize()
                 LOG(INFO) << "UH O, FOUND THE SAME EXACT INPUT FIELDS: " << fieldFrom.name() << " AND " << fieldTo.name() << endl;
               }
             } else {
-              map<const ioport_field*, const ioport_field*>::iterator it =
+              auto it =
                 playerFieldMap.find(&fieldFrom);
-              if (it == playerFieldMap.end() || portTo == portFrom) {
                 if (it != playerFieldMap.end()) {
                   LOG(INFO) << "DUPLICATE FOUND" << endl;
-                }
-                playerFieldMap[&fieldFrom] = &fieldTo;
-                done = true;
+									playerFieldMap[&fieldFrom].push_back(&fieldTo);
+								}
+								else {
+									playerFieldMap[&fieldFrom] = { &fieldTo };
+								}
+                //done = true;
 
                 if (fieldFrom.name() && fieldTo.name()) {
                   LOG(INFO) << "MAPPING " << fieldFrom.name() << " TO " << fieldTo.name() << endl;
                 } else {
                   LOG(INFO) << "MAPPING UNNAMED " << fromType << " " << fromPlayer << " TO " << toType << " " << toPlayer << endl;
                 }
-              }
             }
           }
         }
@@ -2212,7 +2222,10 @@ void ioport_manager::frame_update()
 	for (auto &port : m_portlist)
 	{
 		for (auto& field : port.second->fields()) {
-      bool pressed = machine().input().seq_pressed(field.seq_real(true, SEQ_TYPE_STANDARD));
+			bool pressed = false;
+			for (auto it : field.seq_mamehub(SEQ_TYPE_STANDARD)) {
+				pressed |= machine().input().seq_pressed(it);
+			}
 	  string key = std::string("INPUT/") + field.mamehub_id();
 	  auto it = inputData.find(key);
 	  if (it != inputData.end()) {

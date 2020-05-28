@@ -1044,6 +1044,7 @@ public:
 	u8 impulse() const noexcept { return m_impulse; }
 	const char *name() const;
 	const char *specific_name() const noexcept { return m_name; }
+  std::vector<input_seq> seq_mamehub(input_seq_type seqtype /*= SEQ_TYPE_STANDARD*/) const noexcept;
   const input_seq &seq_real(bool checkMapping, input_seq_type seqtype /*= SEQ_TYPE_STANDARD*/) const noexcept;
   inline const std::string mamehub_id() const noexcept {
 	  return std::to_string(mamehub_player()) + std::string("/") + name();
