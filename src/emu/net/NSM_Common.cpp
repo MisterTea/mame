@@ -164,9 +164,10 @@ Common::Common(const string &_userId, const string &privateKeyString,
 
   bool localLobby = (lobbyHostname == "self");
   if (localLobby) {
-    LOG(INFO) << "Running local lobby";
+    LOG(INFO) << "Running local lobby for id " << userId;
     server.reset(new wga::SingleGameServer(netEngine, lobbyPort, userId,
                                            publicKey, "Server", 2));
+    server->start();
     peerConnectionServer.reset(
         new wga::PeerConnectionServer(netEngine, lobbyPort, server));
   }

@@ -503,10 +503,10 @@ function toolchain(_buildDir, _subDir)
 
 	configuration { "mingw*" }
 	includedirs {
-    MAME_DIR .. "3rdparty/sodium/mingw/include",
+    --MAME_DIR .. "3rdparty/sodium/mingw/include",
 	}
 	libdirs {
-    MAME_DIR .. "3rdparty/sodium/mingw/lib",
+    --MAME_DIR .. "3rdparty/sodium/mingw/lib",
 	}
 	links {
 		"sodium",

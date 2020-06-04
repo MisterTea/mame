@@ -2233,7 +2233,7 @@ project "wga"
 	configuration { "gmake or ninja" }
 		buildoptions_cpp {
 			"-Wno-strict-prototypes",
-            "-fsanitize=thread"
+            --"-fsanitize=thread"
 		}
 
     configuration { "vs*" }
@@ -2245,6 +2245,7 @@ project "wga"
   
 	includedirs {
     MAME_DIR .. "3rdparty/asio/include",
+	MAME_DIR .. "src/osd",
 
     MAME_DIR .. "3rdparty/wga/peer/src/base",
 		MAME_DIR .. "3rdparty/wga/peer/src/peer",

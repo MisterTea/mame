@@ -737,6 +737,7 @@ end
 		"LUA_COMPAT_ALL",
 		"LUA_COMPAT_5_1",
 		"LUA_COMPAT_5_2",
+		"WGA_MAMEHUB" -- JJG: Add WGA define
 	}
 
 	if _ACTION == "gmake" or _ACTION == "ninja" then
@@ -1020,10 +1021,6 @@ end
 		"-Woverloaded-virtual",
 	}
 
--- JJG: Force tsan linking
-	linkoptions {
-		"-fsanitize=thread"
-	}
 if _OPTIONS["SANITIZE"] then
 	linkoptions {
 		"-fsanitize=".. _OPTIONS["SANITIZE"]
