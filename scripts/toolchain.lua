@@ -491,6 +491,72 @@ function toolchain(_buildDir, _subDir)
 
 	configuration {} -- reset configuration
 
+	-- MAMEHub config
+	defines {
+		"STATICLIB",
+		"MINIUPNP_STATICLIB",
+		"ASIO_STANDALONE",
+		"SODIUM_STATIC",
+		"WGA_VERSION=\"0.0.1\"",
+    "_HAS_ITERATOR_DEBUGGING=0", -- To prevent crashes in msvc
+	}	
+
+	configuration { "mingw*" }
+	includedirs {
+    --MAME_DIR .. "3rdparty/sodium/mingw/include",
+	}
+	libdirs {
+    --MAME_DIR .. "3rdparty/sodium/mingw/lib",
+	}
+	links {
+		"sodium",
+		"dbghelp",
+	}
+
+	configuration { "vs*" }
+	includedirs {
+    MAME_DIR .. "3rdparty/sodium/msvc/include",
+	}
+	links {
+		"libsodium",
+		"Shlwapi",
+		"dbghelp",
+	}
+
+	configuration { "vs*", "x32", "Debug" }
+	libdirs {
+		MAME_DIR .. "3rdparty/sodium/msvc/Win32/Debug/v142/static",
+	}
+
+	configuration { "vs*", "x32", "Release" }
+	libdirs {
+		MAME_DIR .. "3rdparty/sodium/msvc/Win32/Release/v142/static",
+	}
+
+	configuration { "vs*", "x64", "Debug" }
+	libdirs {
+		MAME_DIR .. "3rdparty/sodium/msvc/x64/Debug/v142/static",
+	}
+
+	configuration { "vs*", "x64", "Release" }
+	libdirs {
+		MAME_DIR .. "3rdparty/sodium/msvc/x64/Release/v142/static",
+	}
+
+	configuration { "linux*" }
+	links {
+		"sodium"
+	}
+
+	configuration { "osx*" }
+	includedirs {
+		"/usr/local/Cellar/libsodium/1.0.17/include",
+	}
+	links {
+		"sodium"
+	}
+
+	-- End MAMEHub config
 
 	configuration { "x32", "vs*" }
 		objdir (_buildDir .. _ACTION .. "/obj")

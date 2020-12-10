@@ -13,11 +13,14 @@
 #include "emucore.h"
 #include "osdcore.h"
 
+#include "UniversalStacktrace/ust/ust.hpp"
+
 const char *const endianness_names[2] = { "little", "big" };
 
 emu_fatalerror::emu_fatalerror(util::format_argument_pack<std::ostream> const &args)
 	: emu_fatalerror(0, args)
 {
+  std::cout << ust::generate() << std::endl;
 	osd_break_into_debugger(m_text.c_str());
 }
 
@@ -25,6 +28,7 @@ emu_fatalerror::emu_fatalerror(int _exitcode, util::format_argument_pack<std::os
 	: m_text(util::string_format(args))
 	, m_code(_exitcode)
 {
+  std::cout << ust::generate() << std::endl;
 }
 
 

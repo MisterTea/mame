@@ -23,8 +23,15 @@ if (_OPTIONS["targetos"] ~= "asmjs") then
 end
 
 includedirs {
+	MAME_DIR .. "3rdparty/wga/peer/src/base",
+	MAME_DIR .. "3rdparty/wga/peer/src/peer",
+	MAME_DIR .. "3rdparty/wga/peer/external",
+	MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
+	MAME_DIR .. "3rdparty/wga/peer/external/json/include",
+
 	MAME_DIR .. "src/osd",
 	MAME_DIR .. "src/emu",
+	MAME_DIR .. "src/emu/net",
 	MAME_DIR .. "src/frontend/mame",
 	MAME_DIR .. "src/devices", -- till deps are fixed
 	MAME_DIR .. "src/lib",
@@ -79,6 +86,8 @@ files {
 	MAME_DIR .. "src/frontend/mame/luaengine_render.cpp",
 	MAME_DIR .. "src/frontend/mame/mame.cpp",
 	MAME_DIR .. "src/frontend/mame/mame.h",
+	MAME_DIR .. "src/frontend/mame/mamehub.cpp",
+	MAME_DIR .. "src/frontend/mame/mamehub.h",
 	MAME_DIR .. "src/frontend/mame/mameopts.cpp",
 	MAME_DIR .. "src/frontend/mame/mameopts.h",
 	MAME_DIR .. "src/frontend/mame/media_ident.cpp",

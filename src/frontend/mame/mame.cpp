@@ -258,7 +258,7 @@ int mame_machine_manager::execute()
 		// create the machine configuration
 		machine_config config(*system, m_options);
 
-		// create the machine structure and driver
+    // create the machine structure and driver
 		running_machine machine(config, *this);
 
 		set_machine(&machine);

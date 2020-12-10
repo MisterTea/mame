@@ -1,0 +1,101 @@
+name: Build
+
+on:
+  push:
+    branches: [ mamehub, mamehub_libretro ]
+  pull_request:
+    branches: [ mamehub, mamehub_libretro ]
+
+jobs:
+  build_linux:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Update OS
+      run: sudo apt update -y && sudo apt-get install -y git build-essential python libsdl2-dev libsdl2-ttf-dev libfontconfig-dev qt5-default p7zip-full libsodium-dev
+
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        path: 'mame'
+
+    - name: make
+      run: pushd mame && make -j2 && rm -Rf build .git src 3rdparty && ./mamehub64 -cc && mv mame.ini mame.ini.sample && popd
+      
+    - name: Upload mame binary
+      uses: actions/upload-artifact@v2
+      with:
+        # Artifact name
+        name: mamehub_ubuntu_beta
+        # A file, directory or wildcard pattern that describes what to upload
+        path: mame/*
+    
+  build_mac:
+
+    runs-on: macos-latest
+
+    steps:
+    - name: Update OS
+      run: brew update && brew upgrade && brew install sdl2 sdl2_ttf
+
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        path: 'mame'
+
+    - uses: actions/checkout@v2
+      with:
+        repository: spurious/SDL-mirror
+        ref: release-2.0.12
+        path: 'sdl2'
+
+    - name: make sdl2
+      run: pushd sdl2 && ./configure --enable-static --disable-shared --prefix=$PWD/out && make && make install && popd
+
+    - name: make mame
+      run: pushd mame && make USE_LIBSDL=1 VERBOSE=1 SDL_INSTALL_ROOT=$PWD/../sdl2/out -j2 && rm -Rf build .git src 3rdparty && ./mamehub64 -cc && mv mame.ini mame.ini.sample && popd
+      
+    - name: Upload mame binary
+      uses: actions/upload-artifact@v2
+      with:
+        # Artifact name
+        name: mamehub_mac_beta
+        # A file, directory or wildcard pattern that describes what to upload
+        path: mame/*
+    
+  build_windows:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        path: 'mame'
+
+    - uses: actions/checkout@v2
+      with:
+        repository: jedisct1/libsodium
+        ref: stable
+        path: 'libsodium'
+
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+    - shell: msys2 {0}
+      run: |
+        pacman -Syu --noconfirm make mingw-w64-x86_64-python2 mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc
+        #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-libs-9.3.0-2-any.pkg.tar.xz
+        #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
+        #pacman -U --noconfirm /tmp/*.tar.xz
+        pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
+        pushd mame && MINGW64=/mingw64 make -j2 && rm -Rf build .git src 3rdparty && ./mamehub64.exe -cc && mv mame.ini mame.ini.sample && popd
+
+    - name: Upload mame binary
+      uses: actions/upload-artifact@v2
+      with:
+        # Artifact name
+        name: mamehub_windows_beta
+        # A file, directory or wildcard pattern that describes what to upload
+        path: mame/*

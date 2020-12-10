@@ -21,6 +21,9 @@
 
 #include "osdepend.h"
 
+#include <chrono>
+
+#include "NSM_CommonInterface.h"
 
 //**************************************************************************
 //  DEBUGGING
@@ -185,8 +188,14 @@ video_manager::video_manager(running_machine &machine)
 
 void video_manager::set_frameskip(int frameskip)
 {
+	//Can't skip frames in client-server mode
+	if(netCommon)
+	{
+		m_auto_frameskip = false;
+		m_frameskip_level = 0;
+	}
 	// -1 means autoframeskip
-	if (frameskip == -1)
+	else if (frameskip == -1)
 	{
 		m_auto_frameskip = true;
 		m_frameskip_level = 0;
@@ -200,15 +209,18 @@ void video_manager::set_frameskip(int frameskip)
 	}
 }
 
-
 //-------------------------------------------------
 //  frame_update - handle frameskipping and UI,
 //  plus updating the screen during normal
 //  operations
 //-------------------------------------------------
 
+bool SKIP_OSD = false;
+int64_t video_tick = 0;
+
 void video_manager::frame_update(bool from_debugger)
 {
+	video_tick++;
 	// only render sound and video if we're in the running phase
 	machine_phase const phase = machine().phase();
 	bool skipped_it = m_skipping_this_frame;
@@ -225,6 +237,11 @@ void video_manager::frame_update(bool from_debugger)
 			m_empty_skip_count = 0;
 	}
 
+	if(netCommon)
+	{
+		//Can't skip frames in network mode
+		skipped_it = false;
+	}
 	// draw the user interface
 	emulator_info::draw_user_interface(machine());
 
@@ -235,7 +252,7 @@ void video_manager::frame_update(bool from_debugger)
 
 	// ask the OSD to update
 	g_profiler.start(PROFILER_BLIT);
-	machine().osd().update(!from_debugger && skipped_it);
+	machine().osd().update((SKIP_OSD) || (!from_debugger && skipped_it));
 	g_profiler.stop();
 
 	// we synchronize after rendering instead of before, if low latency mode is enabled
@@ -252,7 +269,7 @@ void video_manager::frame_update(bool from_debugger)
 		machine().call_notifiers(MACHINE_NOTIFY_FRAME);
 
 	// update frameskipping
-	if (!from_debugger && phase > machine_phase::INIT)
+	if (!netCommon && !from_debugger && phase > machine_phase::INIT)
 		update_frameskip();
 
 	// update speed computations
@@ -342,12 +359,18 @@ void video_manager::save_snapshot(screen_device *screen, emu_file &file)
 }
 
 
+int createSnapshot = 0;
 //-------------------------------------------------
 //  save_active_screen_snapshots - save a
 //  snapshot of all active screens
 //-------------------------------------------------
 
 void video_manager::save_active_screen_snapshots()
+{
+  createSnapshot = 1;
+}
+
+void video_manager::save_active_screen_snapshots_real()
 {
 	// if we're native, then write one snapshot per visible screen
 	if (m_snap_native)
@@ -664,6 +687,10 @@ bool video_manager::finish_screen_updates()
 	// update our movie recording and burn-in state
 	if (!machine().paused())
 	{
+	  if(createSnapshot) {
+	    save_active_screen_snapshots_real();
+	    createSnapshot = 0;
+	  }
 		record_frame();
 
 		// iterate over screens and update the burnin for the ones that care
@@ -678,156 +705,84 @@ bool video_manager::finish_screen_updates()
 	return anything_changed;
 }
 
-
-
 //-------------------------------------------------
 //  update_throttle - throttle to the game's
 //  natural speed
 //-------------------------------------------------
 
-void video_manager::update_throttle(attotime emutime)
-{
-/*
+void video_manager::update_throttle(attotime emutime) {
+  // For mamehub we need to do something different
+  {
+    bool printed=false;
 
-   Throttling theory:
+    while(true) {
+      VLOG(1) << "In video update";
+      // Get current ticks
+      int64_t curTime = netCommon->getCurrentTime();
+      //if (netClient) {
+        // TODO: One person has to be time keeper
+        //curTime = netClient->getCurrentServerTime();
+      //}
+      //LOG(INFO) << "Current time is: " << curTime << endl;
+      //osd_ticks_t currentTicks = osd_ticks() - realtimeEmulationShift;
 
-   This routine is called periodically with an up-to-date emulated time.
-   The idea is to synchronize real time with emulated time. We do this
-   by "throttling", or waiting for real time to catch up with emulated
-   time.
+      // Convert ticks to emulation time
+      attotime expectedEmulationTime(
+          curTime/1000000, // microseconds to seconds
+                      (curTime % 1000000) *
+                          ATTOSECONDS_PER_MICROSECOND);  // microseconds to
+                                                         // attoseconds
+      //currentTicks/osd_ticks_per_second(),
+      //(currentTicks%osd_ticks_per_second())*attoseconds_per_tick);
+      LOG_EVERY_N(300, INFO) << "Time difference: " << expectedEmulationTime.to_msec() << " vs " << emutime.to_msec();
 
-   In an ideal world, it will take less real time to emulate and render
-   each frame than the emulated time, so we need to slow things down to
-   get both times in sync.
+      if (expectedEmulationTime < emutime) {
+        if (SKIP_OSD) {
+          SKIP_OSD=false;
+          LOG(INFO) << "We are caught up " << ((emutime - expectedEmulationTime).attoseconds()/ATTOSECONDS_PER_MILLISECOND) << "ms" << std::endl;
+        }
+        if (!printed) {
+          printed=true;
+        }
+        attotime tolerance(0,16*ATTOSECONDS_PER_MILLISECOND);
+        if ((emutime - expectedEmulationTime) < tolerance) {
+          //LOG(INFO) << "Returning " << ((emutime - expectedEmulationTime).attoseconds/ATTOSECONDS_PER_MILLISECOND) << endl;
+          //return;
+        }
 
-   There are many complications to this model:
+        // if (netClient) {
+        //   // Sleep for 15 ms and return
+        //   osd_sleep((osd_ticks_per_second()/1000)*15);
+        //   return;
+        // } else {
+          // Sleep the processor 1ms and check again
+          osd_sleep((osd_ticks_per_second()/1000));
+          //continue;
+        // }
 
-       * some games run too slow, so each frame we get further and
-           further behind real time; our only choice here is to not
-           throttle
+      } else {
+        attotime diffTime = expectedEmulationTime - emutime;
 
-       * some games have very uneven frame rates; one frame will take
-           a long time to emulate, and the next frame may be very fast
+        int msBehind = (diffTime.attoseconds()/ATTOSECONDS_PER_MILLISECOND) + diffTime.seconds()*1000;
 
-       * we run on top of multitasking OSes; sometimes execution time
-           is taken away from us, and this means we may not get enough
-           time to emulate one frame
-
-       * we may be paused, and emulated time may not be marching
-           forward
-
-       * emulated time could jump due to resetting the machine or
-           restoring from a saved state
-
-*/
-	static const u8 popcount[256] =
-	{
-		0,1,1,2,1,2,2,3, 1,2,2,3,2,3,3,4, 1,2,2,3,2,3,3,4, 2,3,3,4,3,4,4,5,
-		1,2,2,3,2,3,3,4, 2,3,3,4,3,4,4,5, 2,3,3,4,3,4,4,5, 3,4,4,5,4,5,5,6,
-		1,2,2,3,2,3,3,4, 2,3,3,4,3,4,4,5, 2,3,3,4,3,4,4,5, 3,4,4,5,4,5,5,6,
-		2,3,3,4,3,4,4,5, 3,4,4,5,4,5,5,6, 3,4,4,5,4,5,5,6, 4,5,5,6,5,6,6,7,
-		1,2,2,3,2,3,3,4, 2,3,3,4,3,4,4,5, 2,3,3,4,3,4,4,5, 3,4,4,5,4,5,5,6,
-		2,3,3,4,3,4,4,5, 3,4,4,5,4,5,5,6, 3,4,4,5,4,5,5,6, 4,5,5,6,5,6,6,7,
-		2,3,3,4,3,4,4,5, 3,4,4,5,4,5,5,6, 3,4,4,5,4,5,5,6, 4,5,5,6,5,6,6,7,
-		3,4,4,5,4,5,5,6, 4,5,5,6,5,6,6,7, 4,5,5,6,5,6,6,7, 5,6,6,7,6,7,7,8
-	};
-
-	// outer scope so we can break out in case of a resync
-	while (1)
-	{
-		// apply speed factor to emu time
-		if (m_speed != 0 && m_speed != 1000)
-		{
-			// multiply emutime by 1000, then divide by the global speed factor
-			emutime = (emutime * 1000) / m_speed;
-		}
-
-		// compute conversion factors up front
-		osd_ticks_t ticks_per_second = osd_ticks_per_second();
-		attoseconds_t attoseconds_per_tick = ATTOSECONDS_PER_SECOND / ticks_per_second * m_throttle_rate;
-
-		// if we're paused, emutime will not advance; instead, we subtract a fixed
-		// amount of time (1/60th of a second) from the emulated time that was passed in,
-		// and explicitly reset our tracked real and emulated timers to that value ...
-		// this means we pretend that the last update was exactly 1/60th of a second
-		// ago, and was in sync in both real and emulated time
-		if (machine().paused())
-		{
-			m_throttle_emutime = emutime - attotime(0, ATTOSECONDS_PER_SECOND / PAUSED_REFRESH_RATE);
-			m_throttle_realtime = m_throttle_emutime;
-		}
-
-		// attempt to detect anomalies in the emulated time by subtracting the previously
-		// reported value from our current value; this should be a small value somewhere
-		// between 0 and 1/10th of a second ... anything outside of this range is obviously
-		// wrong and requires a resync
-		attoseconds_t emu_delta_attoseconds = (emutime - m_throttle_emutime).as_attoseconds();
-		if (emu_delta_attoseconds < 0 || emu_delta_attoseconds > ATTOSECONDS_PER_SECOND / 10)
-		{
-			if (LOG_THROTTLE)
-				machine().logerror("Resync due to weird emutime delta: %s\n", attotime(0, emu_delta_attoseconds).as_string(18));
-			break;
-		}
-
-		// now determine the current real time in OSD-specified ticks; we have to be careful
-		// here because counters can wrap, so we only use the difference between the last
-		// read value and the current value in our computations
-		osd_ticks_t diff_ticks = osd_ticks() - m_throttle_last_ticks;
-		m_throttle_last_ticks += diff_ticks;
-
-		// if it has been more than a full second of real time since the last call to this
-		// function, we just need to resynchronize
-		if (diff_ticks >= ticks_per_second)
-		{
-			if (LOG_THROTTLE)
-				machine().logerror("Resync due to real time advancing by more than 1 second\n");
-			break;
-		}
-
-		// convert this value into attoseconds for easier comparison
-		attoseconds_t real_delta_attoseconds = diff_ticks * attoseconds_per_tick;
-
-		// now update our real and emulated timers with the current values
-		m_throttle_emutime = emutime;
-		m_throttle_realtime += attotime(0, real_delta_attoseconds);
-
-		// keep a history of whether or not emulated time beat real time over the last few
-		// updates; this can be used for future heuristics
-		m_throttle_history = (m_throttle_history << 1) | (emu_delta_attoseconds > real_delta_attoseconds);
-
-		// determine how far ahead real time is versus emulated time; note that we use the
-		// accumulated times for this instead of the deltas for the current update because
-		// we want to track time over a longer duration than a single update
-		attoseconds_t real_is_ahead_attoseconds = (m_throttle_emutime - m_throttle_realtime).as_attoseconds();
-
-		// if we're more than 1/10th of a second out, or if we are behind at all and emulation
-		// is taking longer than the real frame, we just need to resync
-		if (real_is_ahead_attoseconds < -ATTOSECONDS_PER_SECOND / 10 ||
-			(real_is_ahead_attoseconds < 0 && popcount[m_throttle_history & 0xff] < 6))
-		{
-			if (LOG_THROTTLE)
-				machine().logerror("Resync due to being behind: %s (history=%08X)\n", attotime(0, -real_is_ahead_attoseconds).as_string(18), m_throttle_history);
-			break;
-		}
-
-		// if we're behind, it's time to just get out
-		if (real_is_ahead_attoseconds < 0)
-			return;
-
-		// compute the target real time, in ticks, where we want to be
-		osd_ticks_t target_ticks = m_throttle_last_ticks + real_is_ahead_attoseconds / attoseconds_per_tick;
-
-		// throttle until we read the target, and update real time to match the final time
-		diff_ticks = throttle_until_ticks(target_ticks) - m_throttle_last_ticks;
-		m_throttle_last_ticks += diff_ticks;
-		m_throttle_realtime += attotime(0, diff_ticks * attoseconds_per_tick);
-		return;
-	}
-
-	// reset realtime and emutime to the same value
-	m_throttle_realtime = m_throttle_emutime = emutime;
+        if (msBehind > 100 && emutime.seconds()>0) {
+          static int lastSecondBehind = 0;
+          if (lastSecondBehind < emutime.seconds()) {
+            LOG(INFO) << "We are behind " << msBehind << "ms.  Skipping video." << std::endl;
+            lastSecondBehind = emutime.seconds();
+          }
+          SKIP_OSD=true;
+        }
+        return;
+      }
+    }
+  }
 }
 
+void video_manager::rollback(attotime rollbackAmount) {
+  osd_ticks_t ticks_per_second = osd_ticks_per_second();
+  attoseconds_t attoseconds_per_tick = ATTOSECONDS_PER_SECOND / ticks_per_second * m_throttle_rate;
+}
 
 //-------------------------------------------------
 //  throttle_until_ticks - spin until the
@@ -945,7 +900,7 @@ void video_manager::update_frameskip()
 void video_manager::update_refresh_speed()
 {
 	// only do this if the refreshspeed option is used
-	if (machine().options().refresh_speed())
+	if (machine().options().refresh_speed() && !machine().options().mamehub())
 	{
 		double minrefresh = machine().render().max_update_rate();
 		if (minrefresh != 0)
@@ -1065,6 +1020,21 @@ void video_manager::create_snapshot_bitmap(screen_device *screen)
 	// get the minimum width/height and set it on the target
 	s32 width, height;
 	compute_snapshot_size(width, height);
+
+	while(width<400 || height<300) {
+	    width <<= 1;
+	    height <<= 1;
+	  }
+	while(width>800 || height>600) {
+	  width >>= 1;
+	  height >>= 1;
+	}
+	// JJG: Make sure it's divisible by 16
+  width = ((width>>4)<<4);
+  height = ((height>>4)<<4);
+
+	//LOG(INFO) << "WIDTH: " << width << " HEIGHT: " << height << endl;
+
 	m_snap_target->set_bounds(width, height);
 
 	// if we don't have a bitmap, or if it's not the right size, allocate a new one
@@ -1257,7 +1227,7 @@ void video_manager::record_frame()
 
 	// start the profiler and get the current time
 	g_profiler.start(PROFILER_MOVIE_REC);
-	attotime curtime = machine().time();
+	attotime curtime = machine().machine_time();
 
 	bool error = false;
 	for (auto &recording : m_movie_recordings)

@@ -2,7 +2,7 @@
 // detail/impl/socket_ops.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2016 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -241,8 +241,6 @@ bool non_blocking_accept(socket_type s,
     if (ec == asio::error::would_block
         || ec == asio::error::try_again)
     {
-      if (state & user_set_non_blocking)
-        return true;
       // Fall through to retry operation.
     }
     else if (ec == asio::error::connection_aborted)
@@ -772,6 +770,8 @@ signed_size_type recv(socket_type s, buf* bufs, size_t count,
     ec = asio::error::connection_reset;
   else if (ec.value() == ERROR_PORT_UNREACHABLE)
     ec = asio::error::connection_refused;
+  else if (ec.value() == WSAEMSGSIZE || ec.value() == ERROR_MORE_DATA)
+    ec.assign(0, ec.category());
   if (result != 0)
     return socket_error_retval;
   ec = asio::error_code();
@@ -850,6 +850,10 @@ void complete_iocp_recv(state_type state,
   {
     ec = asio::error::connection_refused;
   }
+  else if (ec.value() == WSAEMSGSIZE || ec.value() == ERROR_MORE_DATA)
+  {
+    ec.assign(0, ec.category());
+  }
 
   // Check for connection closed.
   else if (!ec && bytes_transferred == 0
@@ -920,6 +924,8 @@ signed_size_type recvfrom(socket_type s, buf* bufs, size_t count,
     ec = asio::error::connection_reset;
   else if (ec.value() == ERROR_PORT_UNREACHABLE)
     ec = asio::error::connection_refused;
+  else if (ec.value() == WSAEMSGSIZE || ec.value() == ERROR_MORE_DATA)
+    ec.assign(0, ec.category());
   if (result != 0)
     return socket_error_retval;
   ec = asio::error_code();
@@ -988,6 +994,10 @@ void complete_iocp_recvfrom(
   else if (ec.value() == ERROR_PORT_UNREACHABLE)
   {
     ec = asio::error::connection_refused;
+  }
+  else if (ec.value() == WSAEMSGSIZE || ec.value() == ERROR_MORE_DATA)
+  {
+    ec.assign(0, ec.category());
   }
 }
 
@@ -1101,6 +1111,10 @@ void complete_iocp_recvmsg(
   else if (ec.value() == ERROR_PORT_UNREACHABLE)
   {
     ec = asio::error::connection_refused;
+  }
+  else if (ec.value() == WSAEMSGSIZE || ec.value() == ERROR_MORE_DATA)
+  {
+    ec.assign(0, ec.category());
   }
 }
 
@@ -3327,6 +3341,37 @@ asio::error_code getaddrinfo(const char* host,
   return ec = translate_addrinfo_error(error);
 #else
   int error = ::getaddrinfo(host, service, &hints, result);
+#if defined(__MACH__) && defined(__APPLE__)
+  using namespace std; // For isdigit and atoi.
+  if (error == 0 && service && isdigit(static_cast<unsigned char>(service[0])))
+  {
+    u_short_type port = host_to_network_short(atoi(service));
+    for (addrinfo_type* ai = *result; ai; ai = ai->ai_next)
+    {
+      switch (ai->ai_family)
+      {
+      case ASIO_OS_DEF(AF_INET):
+        {
+          sockaddr_in4_type* sinptr =
+            reinterpret_cast<sockaddr_in4_type*>(ai->ai_addr);
+          if (sinptr->sin_port == 0)
+            sinptr->sin_port = port;
+          break;
+        }
+      case ASIO_OS_DEF(AF_INET6):
+        {
+          sockaddr_in6_type* sin6ptr =
+            reinterpret_cast<sockaddr_in6_type*>(ai->ai_addr);
+          if (sin6ptr->sin6_port == 0)
+            sin6ptr->sin6_port = port;
+          break;
+        }
+      default:
+        break;
+      }
+    }
+  }
+#endif
   return ec = translate_addrinfo_error(error);
 #endif
 }
@@ -3404,7 +3449,6 @@ asio::error_code getnameinfo(const socket_addr_type* addr,
   using namespace std; // For memcpy.
   sockaddr_storage_type tmp_addr;
   memcpy(&tmp_addr, addr, addrlen);
-  tmp_addr.ss_len = addrlen;
   addr = reinterpret_cast<socket_addr_type*>(&tmp_addr);
   clear_last_error();
   return getnameinfo_emulation(addr, addrlen,

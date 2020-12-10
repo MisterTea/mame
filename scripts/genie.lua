@@ -745,6 +745,7 @@ end
 		"LUA_COMPAT_ALL",
 		"LUA_COMPAT_5_1",
 		"LUA_COMPAT_5_2",
+		"WGA_MAMEHUB" -- JJG: Add WGA define
 	}
 
 	if _ACTION == "gmake" or _ACTION == "ninja" then
@@ -1019,9 +1020,6 @@ end
 	}
 
 if _OPTIONS["SANITIZE"] then
-	buildoptions {
-		"-fsanitize=".. _OPTIONS["SANITIZE"]
-	}
 	linkoptions {
 		"-fsanitize=".. _OPTIONS["SANITIZE"]
 	}
@@ -1321,7 +1319,6 @@ if _OPTIONS["vs"]==nil or not (string.startswith(_OPTIONS["vs"], "winstore8") or
 end
 
 		buildoptions {
-			"/WX",     -- Treats all compiler warnings as errors.
 			"/w45038", -- warning C5038: data member 'member1' will be initialized after data member 'member2'
 		}
 

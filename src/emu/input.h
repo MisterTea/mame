@@ -429,7 +429,8 @@ public:
 	// construction/destruction
 	input_seq() noexcept : input_seq(std::make_index_sequence<std::tuple_size<decltype(m_code)>::value>()) { }
 	template <typename... T> input_seq(input_code code_0, T... code_n) noexcept : input_seq(std::make_index_sequence<std::tuple_size<decltype(m_code)>::value - sizeof...(T) - 1>(), code_0, code_n...) { }
-	constexpr input_seq(const input_seq &rhs) noexcept = default;
+	input_seq(const input_seq &rhs) = default;
+  explicit input_seq(const std::string& _mamehub_input_key) noexcept : m_mamehub_input_key(_mamehub_input_key) {}
 
 	// operators
 	bool operator==(const input_seq &rhs) const noexcept { return m_code == rhs.m_code; }
@@ -444,6 +445,7 @@ public:
 	int length() const noexcept;
 	bool is_valid() const noexcept;
 	constexpr bool is_default() const noexcept { return m_code[0] == default_code; }
+    std::string mamehub_input_key() const { return m_mamehub_input_key; }
 
 	// setters
 	template <typename... T> void set(input_code code_0, T... code_n) noexcept
@@ -483,6 +485,7 @@ private:
 
 	// internal state
 	std::array<input_code, 16> m_code;
+  std::string m_mamehub_input_key;
 };
 
 

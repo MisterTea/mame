@@ -20,7 +20,12 @@
 #include <set>
 
 
-#define LOG_LOAD 0
+#include <fstream>
+
+#include "client_http.hpp"
+using HttpClient = webpp::Client<webpp::HTTP>;
+
+#define LOG_LOAD 1
 #define LOG(...) do { if (LOG_LOAD) debugload(__VA_ARGS__); } while(0)
 
 
@@ -35,6 +40,87 @@
 ****************************************************************************/
 
 namespace {
+
+std::tuple<std::string, std::string, std::string, std::string> parse_url(const std::string& url_s)
+{
+	std::string protocol_, host_, path_, query_;
+	const std::string prot_end("://");
+	std::string::const_iterator prot_i = std::search(url_s.begin(), url_s.end(),
+		prot_end.begin(), prot_end.end());
+	protocol_.reserve(distance(url_s.begin(), prot_i));
+	transform(url_s.begin(), prot_i,
+		back_inserter(protocol_),
+		[](unsigned char c){ return std::tolower(c); }); // protocol is icase
+	if (prot_i == url_s.end())
+		return std::make_tuple("","","", "");
+	advance(prot_i, prot_end.length());
+	std::string::const_iterator path_i = find(prot_i, url_s.end(), '/');
+	host_.reserve(distance(prot_i, path_i));
+	std::transform(prot_i, path_i,
+		back_inserter(host_),
+		[](unsigned char c){ return std::tolower(c); }); // host is icase
+	std::string::const_iterator query_i = find(path_i, url_s.end(), '?');
+	path_.assign(path_i, query_i);
+	if (query_i != url_s.end())
+		++query_i;
+	query_.assign(query_i, url_s.end());
+	return std::make_tuple(protocol_, host_, path_, query_);
+}
+
+void candy_mode(const std::string& baseName, const std::string& leafName, const char* mediaPath) {
+	// Candy mode
+	std::string contentString;
+	std::string url;
+	std::string filename;
+	if (leafName.empty()) {
+		url = std::string("http://archive.org/download/MAME220RomsOnlyMerged/") + baseName + std::string(".zip");
+		filename = baseName;
+	} else {
+		url = std::string("http://archive.org/download/MAME_0.202_Software_List_ROMs_merged/") + baseName + std::string(".zip/") + baseName + std::string("%2F") + leafName + std::string(".zip");
+		filename = baseName + std::string(PATH_SEPARATOR) + leafName;
+	}
+	while (true) {
+		auto urlTokens = parse_url(url);
+		std::string query = std::get<3>(urlTokens);
+		if (query.empty() == false) {
+			query = std::string("?") + query;
+		}
+		HttpClient client(std::get<1>(urlTokens));
+		auto r1 = client.request("GET", std::get<2>(urlTokens) + query);
+		std::cout << "Made request to " << url << " with response " << r1->status_code << std::endl;
+		if (r1->status_code == "302 Found" || r1->status_code == "301 Moved Permanently") {
+			for (auto it : r1->header) {
+				std::cout << it.first << " " << it.second << std::endl;
+			}
+			std::string newUrl;
+			auto its = r1->header.equal_range("Location");
+			for (auto it = its.first; it != its.second; ++it) {
+				newUrl = it->second;
+			}
+			url = newUrl;
+		}
+		else if (r1->status_code == "200 OK") {
+			contentString = { std::istreambuf_iterator<char>(r1->content),
+									 std::istreambuf_iterator<char>() };
+			break;
+		} else {
+			return;
+		}
+	}
+	//std::ofstream outfile(std::string("roms/") + driver_list::driver(drv).name + std::string(".zip"), std::ofstream::binary);
+	//outfile << r1->content.rdbuf();
+	//outfile.close();
+
+	auto image_file = std::make_unique<emu_file>(mediaPath, OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+	auto filerr = image_file->open(filename + std::string(".zip"));
+	if (filerr == osd_file::error::NONE) {
+		//std::string contentString = r1->content.rdbuf();
+		std::cout << "Saving file of size " << contentString.size() << " to path " << std::endl;
+		image_file->write(contentString.c_str(), contentString.length());
+	}
+	image_file->close();
+
+}
 
 auto next_parent_system(game_driver const &system)
 {
@@ -175,6 +261,9 @@ chd_error do_open_disk(const emu_options &options, std::initializer_list<std::re
 			}
 		}
 	}
+
+	//JJG: TODO: Support loading CHD with candy mode
+
 	return result;
 }
 
@@ -633,7 +722,6 @@ void rom_load_manager::region_post_process(memory_region *region, bool invert)
 	}
 }
 
-
 /*-------------------------------------------------
     open_rom_file - open a ROM file, searching
     up the parent and loading by checksum
@@ -674,7 +762,7 @@ std::unique_ptr<emu_file> rom_load_manager::open_rom_file(std::initializer_list<
 }
 
 
-std::unique_ptr<emu_file> rom_load_manager::open_rom_file(const std::vector<std::string> &paths, std::vector<std::string> &tried, bool has_crc, u32 crc, const std::string &name, osd_file::error &filerr)
+std::unique_ptr<emu_file> rom_load_manager::open_rom_file(const std::vector<std::string> &paths, std::vector<std::string> &tried, bool has_crc, u32 crc, const std::string &name, osd_file::error &filerr, bool candy)
 {
 	// record the set names we search
 	tried.insert(tried.end(), paths.begin(), paths.end());
@@ -686,6 +774,33 @@ std::unique_ptr<emu_file> rom_load_manager::open_rom_file(const std::vector<std:
 		filerr = result->open(name, crc);
 	else
 		filerr = result->open(name);
+
+	std::cout << "Image file result: " << (osd_file::error::NONE != filerr) << std::endl;
+
+	if (osd_file::error::NONE != filerr && candy && machine().options().candy()) {
+		std::cout << "Candy mode! " << name << std::endl;
+		for (auto path : paths) {
+			std::cout << "Path " << path << std::endl;
+			std::string locationString(path);
+			auto pathLocation = locationString.find(PATH_SEPARATOR);
+			if (pathLocation == std::string::npos) {
+				candy_mode(locationString, std::string(""), machine().options().media_path());
+			} else {
+				candy_mode(locationString.substr(0, pathLocation), locationString.substr(pathLocation + 1), machine().options().media_path());
+			}
+
+			if (has_crc)
+				filerr = result->open(name, crc);
+			else
+				filerr = result->open(name);
+
+			if (osd_file::error::NONE == filerr) {
+				std::cout << "Candy mode worked!" << std::endl;
+				break;
+			}
+		}
+	}
+
 
 	// don't return anything if unsuccessful
 	if (osd_file::error::NONE != filerr)

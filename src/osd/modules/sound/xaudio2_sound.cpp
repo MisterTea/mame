@@ -235,6 +235,7 @@ public:
 	// sound_module
 	void update_audio_stream(bool is_throttled, int16_t const *buffer, int samples_this_frame) override;
 	void set_mastervolume(int attenuation) override;
+	void pauseAudio(bool pause) override {}
 
 	// Xaudio callbacks
 	void STDAPICALLTYPE OnVoiceProcessingPassStart(uint32_t bytes_required) override;

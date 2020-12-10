@@ -192,6 +192,17 @@
 
 #define OPTION_LANGUAGE             "language"
 
+// core net options
+#define OPTION_USER_ID             "user_id"
+#define OPTION_PASSWORD             "password"
+#define OPTION_MAMEHUB                  "mamehub"
+#define OPTION_HOSTNAME                "hostname"
+#define OPTION_PORT                    "port"
+#define OPTION_LOBBY_HOST                    "lobby_host"
+#define OPTION_LOBBY_PORT                    "lobby_port"
+#define OPTION_FAKE_LAG                  "fake_lag"
+#define OPTION_CANDY					"candy"
+
 #define OPTION_HTTP                 "http"
 #define OPTION_HTTP_PORT            "http_port"
 #define OPTION_HTTP_ROOT            "http_root"
@@ -464,6 +475,17 @@ public:
 	const char *autoboot_command() const { return value(OPTION_AUTOBOOT_COMMAND); }
 	int autoboot_delay() const { return int_value(OPTION_AUTOBOOT_DELAY); }
 	const char *autoboot_script() const { return value(OPTION_AUTOBOOT_SCRIPT); }
+
+	// core net options
+	const char *user_id() const { return value(OPTION_USER_ID); }
+	const char *password() const { return value(OPTION_PASSWORD); }
+	const char *hostname() const { return value(OPTION_HOSTNAME); }
+	int port() const { return int_value(OPTION_PORT); }
+	bool mamehub() const { return bool_value(OPTION_MAMEHUB); }
+	bool candy() const { return bool_value(OPTION_CANDY); }
+	const char *lobby_host() const { return value(OPTION_LOBBY_HOST); }
+	int lobby_port() const { return int_value(OPTION_LOBBY_PORT); }
+	bool fake_lag() const { return bool_value(OPTION_FAKE_LAG); }
 
 	bool console() const { return bool_value(OPTION_CONSOLE); }
 

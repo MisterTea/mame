@@ -22,39 +22,39 @@ project("mametests")
 	end
 
 	configuration { "x64", "Release" }
-		targetsuffix "64"
+		targetsuffix "hub64"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "64p"
+			targetsuffix "hub64p"
 		end
 
 	configuration { "x64", "Debug" }
-		targetsuffix "64d"
+		targetsuffix "hub64d"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "64dp"
+			targetsuffix "hub64dp"
 		end
 
 	configuration { "x32", "Release" }
-		targetsuffix ""
+		targetsuffix "hub"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "p"
+			targetsuffix "hubp"
 		end
 
 	configuration { "x32", "Debug" }
-		targetsuffix "d"
+		targetsuffix "hubd"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "dp"
+			targetsuffix "hubdp"
 		end
 
 	configuration { "Native", "Release" }
-		targetsuffix ""
+		targetsuffix "hub"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "p"
+			targetsuffix "hubp"
 		end
 
 	configuration { "Native", "Debug" }
-		targetsuffix "d"
+		targetsuffix "hubd"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "dp"
+			targetsuffix "hubdp"
 		end
 
 	configuration { "mingw*" or "vs*" }

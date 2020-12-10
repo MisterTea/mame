@@ -955,7 +955,7 @@ void lua_engine::initialize()
 
 	auto core_options_type = sol().registry().new_usertype<core_options>("core_options", "new", sol::no_constructor);
 	core_options_type.set("help", &core_options::output_help);
-	core_options_type.set("command", &core_options::command);
+	//core_options_type.set("command", &core_options::command);
 	core_options_type.set("entries", sol::property([this](core_options &options) {
 			sol::table table = sol().create_table();
 			int unadorned_index = 0;

@@ -319,20 +319,20 @@ typedef std::add_pointer_t<device_type> device_type_ptr;
 extern emu::detail::device_registrar const registered_device_types;
 
 template <
-		typename DeviceClass,
-		char const *ShortName,
-		char const *FullName,
-		char const *Source>
-constexpr auto device_creator = &emu::detail::device_tag_func<DeviceClass, ShortName, FullName, Source>;
+		typename DeviceClass, typename DriverNames>
+constexpr auto device_creator =
+    &emu::detail::device_tag_func<DeviceClass, DriverNames::shortname,
+                                  DriverNames::fullname, DriverNames::source>;
 
 template <
 		typename DriverClass,
-		char const *ShortName,
-		char const *FullName,
-		char const *Source,
+		typename DriverNames,
 		emu::detail::device_feature::type Unemulated,
 		emu::detail::device_feature::type Imperfect>
-constexpr auto driver_device_creator = &emu::detail::driver_tag_func<DriverClass, ShortName, FullName, Source, Unemulated, Imperfect>;
+constexpr auto driver_device_creator =
+    &emu::detail::driver_tag_func<DriverClass, DriverNames::shortname,
+                                  DriverNames::fullname, DriverNames::source,
+                                  Unemulated, Imperfect>;
 
 #define DECLARE_DEVICE_TYPE(Type, Class) \
 		class Class; \
@@ -351,7 +351,7 @@ constexpr auto driver_device_creator = &emu::detail::driver_tag_func<DriverClass
 			struct Class##_device_traits { static constexpr char const shortname[] = ShortName, fullname[] = FullName, source[] = __FILE__; }; \
 			constexpr char const Class##_device_traits::shortname[], Class##_device_traits::fullname[], Class##_device_traits::source[]; \
 		} \
-		emu::detail::device_type_impl<Class> const &Type = device_creator<Class, (Class##_device_traits::shortname), (Class##_device_traits::fullname), (Class##_device_traits::source)>; \
+		emu::detail::device_type_impl<Class> const &Type = device_creator<Class, Class##_device_traits>; \
 		template class device_finder<Class, false>; \
 		template class device_finder<Class, true>;
 
@@ -360,14 +360,14 @@ constexpr auto driver_device_creator = &emu::detail::driver_tag_func<DriverClass
 			struct Class##_device_traits { static constexpr char const shortname[] = ShortName, fullname[] = FullName, source[] = __FILE__; }; \
 			constexpr char const Class##_device_traits::shortname[], Class##_device_traits::fullname[], Class##_device_traits::source[]; \
 		} \
-		emu::detail::device_type_impl<Base> const &Type = device_creator<Class, (Class##_device_traits::shortname), (Class##_device_traits::fullname), (Class##_device_traits::source)>;
+		emu::detail::device_type_impl<Base> const &Type = device_creator<Class, Class##_device_traits>;
 
 #define DEFINE_DEVICE_TYPE_NS(Type, Namespace, Class, ShortName, FullName) \
 		namespace { \
 			struct Class##_device_traits { static constexpr char const shortname[] = ShortName, fullname[] = FullName, source[] = __FILE__; }; \
 			constexpr char const Class##_device_traits::shortname[], Class##_device_traits::fullname[], Class##_device_traits::source[]; \
 		} \
-		emu::detail::device_type_impl<Namespace::Class> const &Type = device_creator<Namespace::Class, (Class##_device_traits::shortname), (Class##_device_traits::fullname), (Class##_device_traits::source)>; \
+		emu::detail::device_type_impl<Namespace::Class> const &Type = device_creator<Namespace::Class, Class##_device_traits>; \
 		template class device_finder<Namespace::Class, false>; \
 		template class device_finder<Namespace::Class, true>;
 

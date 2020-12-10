@@ -33,6 +33,7 @@ constexpr int MAX_FRAMESKIP = FRAMESKIP_LEVELS - 2;
 //  TYPE DEFINITIONS
 //**************************************************************************
 
+class WebMEncoder;
 // ======================> video_manager
 
 class video_manager
@@ -79,6 +80,7 @@ public:
 	void save_snapshot(screen_device *screen, emu_file &file);
 	void save_active_screen_snapshots();
 	void save_input_timecode();
+	void save_active_screen_snapshots_real();
 
 	// movies
 	void begin_recording(const char *name, movie_recording::format format);
@@ -94,6 +96,10 @@ public:
 	void add_to_total_time(attotime time) { m_timecode_total += time; }
 	std::string &timecode_text(std::string &str);
 	std::string &timecode_total_text(std::string &str);
+
+
+  // Override time for rollback
+  void rollback(attotime rollbackAmount);
 
 private:
 	// internal helpers
@@ -174,6 +180,8 @@ private:
 	std::vector<movie_recording::ptr> m_movie_recordings;
 
 	static const bool   s_skiptable[FRAMESKIP_LEVELS][FRAMESKIP_LEVELS];
+	// movie recording - dummy
+	bool                m_dummy_recording;          // indicates if snapshot should be created of every frame
 
 	static const attoseconds_t ATTOSECONDS_PER_SPEED_UPDATE = ATTOSECONDS_PER_SECOND / 4;
 	static const int PAUSED_REFRESH_RATE = 30;

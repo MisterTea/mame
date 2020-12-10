@@ -2231,7 +2231,6 @@ links {
 }
 end
 
-
 --------------------------------------------------
 -- wdlfft library objects (from Cockos WDL)
 --------------------------------------------------
@@ -2388,3 +2387,67 @@ project "asmjit"
 		MAME_DIR .. "3rdparty/asmjit/src/asmjit/x86/x86rapass_p.h",
 	}
 end
+project "wga"
+	uuid "9ee43987-9a53-4fbd-9469-769d2b485379"
+	kind "StaticLib"
+
+	configuration { "gmake or ninja" }
+		buildoptions_cpp {
+			"-Wno-strict-prototypes",
+            --"-fsanitize=thread"
+		}
+
+    configuration { "vs*" }
+		flags {
+			"Symbols",
+		}
+		
+  configuration { }
+  
+	includedirs {
+    MAME_DIR .. "3rdparty/asio/include",
+	MAME_DIR .. "src/osd",
+
+    MAME_DIR .. "3rdparty/wga/peer/src/base",
+		MAME_DIR .. "3rdparty/wga/peer/src/peer",
+		MAME_DIR .. "3rdparty/wga/peer/external",
+    MAME_DIR .. "3rdparty/wga/peer/external/Optional",
+		MAME_DIR .. "3rdparty/wga/peer/external/cxxopts",
+		MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
+		MAME_DIR .. "3rdparty/wga/peer/external/json/include",
+	}
+
+  files {
+    MAME_DIR .. "3rdparty/wga/peer/src/base/BiDirectionalRpc.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/CryptoHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/EasyLoggingWrapper.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/EncryptedMultiEndpointHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/LocalIpFetcher.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/LogHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/RpcServer.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/MultiEndpointHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/PortMappingHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/PortMultiplexer.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/TimeHandler.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/StunClient.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/ClockSynchronizer.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/base/UdpBiDirectionalRpc.cpp",
+
+    MAME_DIR .. "3rdparty/wga/peer/src/peer/MyPeer.cpp",
+    MAME_DIR .. "3rdparty/wga/peer/src/peer/SingleGameServer.cpp",
+
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/minisoap.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/portlistingparse.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/connecthostport.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/upnpreplyparse.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/receivedata.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/miniwget.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/upnpdev.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/upnpcommands.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/upnperrors.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/minixml.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/minissdpc.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/miniupnpc.c",
+    MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/igd_desc_parse.c",
+    }
+

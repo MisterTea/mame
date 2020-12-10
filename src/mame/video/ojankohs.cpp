@@ -264,7 +264,8 @@ VIDEO_START_MEMBER(ojankohs_state,ojankoc)
 {
 	m_screen->register_screen_bitmap(m_tmpbitmap);
 
-	save_item(NAME(m_tmpbitmap));
+	//JJG: Don't save resolution-dependent items.
+	//save_item(NAME(m_tmpbitmap));
 }
 
 

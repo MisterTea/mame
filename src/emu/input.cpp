@@ -20,6 +20,7 @@
 #include "emu.h"
 #include "inputdev.h"
 
+#include "NSM_CommonInterface.h"
 
 
 //**************************************************************************
@@ -1175,6 +1176,25 @@ const char *input_manager::standard_token(input_item_id itemid) const
 
 bool input_manager::seq_pressed(const input_seq &seq)
 {
+  if (!seq.mamehub_input_key().empty()) {
+    auto timestamp = machine().machine_time().to_msec();
+    if (timestamp < 1000) {
+      return false;
+    }
+    auto values = netCommon->getAllInputValues(
+      timestamp)[std::string("INPUT/") + seq.mamehub_input_key()];
+    if (values.empty()) {
+        std::cout << "All peers have left, exiting" << std::endl;
+        machine().schedule_exit();
+    }
+    for (const auto& s : values) {
+      if (s == std::string("1")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 	// iterate over all of the codes
 	bool result = false;
 	bool invert = false;

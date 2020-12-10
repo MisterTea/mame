@@ -476,7 +476,8 @@ void smsmfg_state::video_start()
 	m_screen->register_screen_bitmap(m_bitmap);
 
 	save_item(NAME(m_vid_regs));
-	save_item(NAME(m_bitmap));
+	//JJG: Resolution dependent bitmaps
+	//save_item(NAME(m_bitmap));
 }
 
 uint32_t smsmfg_state::screen_update_sms(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)

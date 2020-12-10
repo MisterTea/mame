@@ -207,8 +207,18 @@ int configuration_manager::load_xml(emu_file &file, config_type which_type)
 			osd_printf_debug("Entry: %s -- processing\n", name);
 
 		/* loop over all registrants and call their load function */
-		for (const auto &type : m_typelist)
+		for (const auto &type : m_typelist) {
+			//JJG: Only load input cfgs.
+      if(machine().options().mamehub())
+      {
+        if(type.name != "input")
+        {
+          //printf("SKIPPING CFG TYPE %s\n",type->name);
+          continue;
+        }
+      }
 			type.load(which_type, systemnode->get_child(type.name.c_str()));
+    }
 		count++;
 	}
 

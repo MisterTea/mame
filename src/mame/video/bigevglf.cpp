@@ -53,10 +53,11 @@ void bigevglf_state::video_start()
 	m_screen->register_screen_bitmap(m_tmp_bitmap[1]);
 	m_screen->register_screen_bitmap(m_tmp_bitmap[2]);
 	m_screen->register_screen_bitmap(m_tmp_bitmap[3]);
-	save_item(NAME(m_tmp_bitmap[0]));
-	save_item(NAME(m_tmp_bitmap[1]));
-	save_item(NAME(m_tmp_bitmap[2]));
-	save_item(NAME(m_tmp_bitmap[3]));
+	//JJG: resolution-dependent bitmap
+	//save_item(NAME(m_tmp_bitmap[0]));
+	//save_item(NAME(m_tmp_bitmap[1]));
+	//save_item(NAME(m_tmp_bitmap[2]));
+	//save_item(NAME(m_tmp_bitmap[3]));
 
 	m_vidram = std::make_unique<uint8_t[]>(0x100 * 0x100 * 4);
 

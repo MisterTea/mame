@@ -32,8 +32,9 @@ end
 		targetextension ".so"
 		linkoptions {
 			"-shared",
-			"-Wl,-soname,libmain.so"
-		}
+			"-Wl,-soname,libmain.so",
+      "$(shell pkg-config --libs-only-L libsodium)",
+    }
 		links {
 			"EGL",
 			"GLESv1_CM",
@@ -99,39 +100,39 @@ end
 			flags { "DeploymentContent" }
 
 	configuration { "x64", "Release" }
-		targetsuffix "64"
+		targetsuffix "hub64"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "64p"
+			targetsuffix "hub64p"
 		end
 
 	configuration { "x64", "Debug" }
-		targetsuffix "64d"
+		targetsuffix "hub64d"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "64dp"
+			targetsuffix "hub64dp"
 		end
 
 	configuration { "x32", "Release" }
-		targetsuffix ""
+		targetsuffix "hub"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "p"
+			targetsuffix "hubp"
 		end
 
 	configuration { "x32", "Debug" }
-		targetsuffix "d"
+		targetsuffix "hubd"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "dp"
+			targetsuffix "hubdp"
 		end
 
 	configuration { "Native", "Release" }
-		targetsuffix ""
+		targetsuffix "hub"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "p"
+			targetsuffix "hubp"
 		end
 
 	configuration { "Native", "Debug" }
-		targetsuffix "d"
+		targetsuffix "hubd"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "dp"
+			targetsuffix "hubdp"
 		end
 
 	configuration { "mingw*" or "vs20*" }
@@ -208,7 +209,7 @@ end
 		files {
 			MAME_DIR .. "3rdparty/SDL2/src/main/android/SDL_android_main.c",
 		}
-		targetsuffix ""
+		targetsuffix "hub"
 		if _OPTIONS["SEPARATE_BIN"]~="1" then
 			if _OPTIONS["PLATFORM"]=="arm" then
 				targetdir(MAME_DIR .. "android-project/app/src/main/libs/armeabi-v7a")
@@ -276,6 +277,7 @@ end
 		"wdlfft",
 		ext_lib("jpeg"),
 		"7z",
+    "wga",
 	}
 if not _OPTIONS["FORCE_DRC_C_BACKEND"] then
 	links {
@@ -333,6 +335,7 @@ end
 	includedirs {
 		MAME_DIR .. "src/osd",
 		MAME_DIR .. "src/emu",
+		MAME_DIR .. "src/emu/net",
 		MAME_DIR .. "src/devices",
 		MAME_DIR .. "src/" .. _target,
 		MAME_DIR .. "src/lib",

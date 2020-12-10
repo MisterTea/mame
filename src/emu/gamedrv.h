@@ -145,30 +145,34 @@ public:
 //**************************************************************************
 
 // wrappers for declaring and defining game drivers
-#define GAME_NAME(name)         driver_##name
-#define GAME_TRAITS_NAME(name)  driver_##name##traits
-#define GAME_EXTERN(name)       extern game_driver const GAME_NAME(name)
+#define GAME_NAME(NAME) driver_ ## NAME
+#define GAME_TRAITS_NAME(NAME) driver_ ## NAME ## traits
+#define GAME_EXTERN(NAME) extern game_driver const GAME_NAME(NAME)
 
 // static game traits
 #define GAME_DRIVER_TRAITS(NAME, FULLNAME) \
 namespace { \
-	struct GAME_TRAITS_NAME(NAME) { static constexpr char const shortname[] = #NAME, fullname[] = FULLNAME, source[] = __FILE__; }; \
-	constexpr char const GAME_TRAITS_NAME(NAME)::shortname[], GAME_TRAITS_NAME(NAME)::fullname[], GAME_TRAITS_NAME(NAME)::source[]; \
-}
-#define GAME_DRIVER_TYPE(NAME, CLASS, FLAGS) \
-driver_device_creator< \
+	struct GAME_TRAITS_NAME(NAME) {                                      \
+    static constexpr char const shortname[] = #NAME,                   \
+                                fullname[] = FULLNAME, source[] = __FILE__; \
+  }; \
+	constexpr char const GAME_TRAITS_NAME(NAME)::shortname[],            \
+      GAME_TRAITS_NAME(NAME)::fullname[],                                   \
+      GAME_TRAITS_NAME(NAME)::source[]; \
+  }
+#define GAME_DRIVER_TYPE(NAME, CLASS, FLAGS)                        \
+  driver_device_creator< \
 		CLASS, \
-		(GAME_TRAITS_NAME(NAME)::shortname), \
-		(GAME_TRAITS_NAME(NAME)::fullname), \
-		(GAME_TRAITS_NAME(NAME)::source), \
+		GAME_TRAITS_NAME(NAME), \
 		game_driver::unemulated_features(FLAGS), \
 		game_driver::imperfect_features(FLAGS)>
 
+
 // standard GAME() macro
-#define GAME(YEAR,NAME,PARENT,MACHINE,INPUT,CLASS,INIT,MONITOR,COMPANY,FULLNAME,FLAGS) \
-GAME_DRIVER_TRAITS(NAME,FULLNAME)                                       \
-extern game_driver const GAME_NAME(NAME)                                \
-{                                                                       \
+#define GAME(YEAR, NAME, PARENT, MACHINE, INPUT, CLASS, INIT, MONITOR, \
+             COMPANY, FULLNAME, FLAGS)                                      \
+  GAME_DRIVER_TRAITS(NAME, FULLNAME)                                  \
+  extern game_driver const GAME_NAME(NAME){                                                                       \
 	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
 	#PARENT,                                                            \
 	#YEAR,                                                              \
@@ -180,14 +184,13 @@ extern game_driver const GAME_NAME(NAME)                                \
 	nullptr,                                                            \
 	nullptr,                                                            \
 	machine_flags::type(u32((MONITOR) | (FLAGS) | MACHINE_TYPE_ARCADE)),\
-	#NAME                                                               \
-};
+	#NAME};
 
 // standard macro with additional layout
-#define GAMEL(YEAR,NAME,PARENT,MACHINE,INPUT,CLASS,INIT,MONITOR,COMPANY,FULLNAME,FLAGS,LAYOUT) \
-GAME_DRIVER_TRAITS(NAME,FULLNAME)                                       \
-extern game_driver const GAME_NAME(NAME)                                \
-{                                                                       \
+#define GAMEL(YEAR, NAME, PARENT, MACHINE, INPUT, CLASS, INIT, MONITOR, \
+              COMPANY, FULLNAME, FLAGS, LAYOUT)                              \
+  GAME_DRIVER_TRAITS(NAME, FULLNAME)                                  \
+  extern game_driver const GAME_NAME(NAME){                                                                       \
 	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
 	#PARENT,                                                            \
 	#YEAR,                                                              \
@@ -199,15 +202,14 @@ extern game_driver const GAME_NAME(NAME)                                \
 	nullptr,                                                            \
 	&LAYOUT,                                                            \
 	machine_flags::type(u32((MONITOR) | (FLAGS) | MACHINE_TYPE_ARCADE)),\
-	#NAME                                                               \
-};
+	#NAME};
 
 
 // standard console definition macro
-#define CONS(YEAR,NAME,PARENT,COMPAT,MACHINE,INPUT,CLASS,INIT,COMPANY,FULLNAME,FLAGS) \
-GAME_DRIVER_TRAITS(NAME,FULLNAME)                                       \
-extern game_driver const GAME_NAME(NAME)                                \
-{                                                                       \
+#define CONS(YEAR, NAME, PARENT, COMPAT, MACHINE, INPUT, CLASS, INIT, \
+             COMPANY, FULLNAME, FLAGS)                                     \
+  GAME_DRIVER_TRAITS(NAME, FULLNAME)                                      \
+  extern game_driver const GAME_NAME(NAME){                                                                       \
 	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
 	#PARENT,                                                            \
 	#YEAR,                                                              \
@@ -219,14 +221,13 @@ extern game_driver const GAME_NAME(NAME)                                \
 	#COMPAT,                                                            \
 	nullptr,                                                            \
 	machine_flags::type(u32(ROT0 | (FLAGS) | MACHINE_TYPE_CONSOLE)),    \
-	#NAME                                                               \
-};
+	#NAME};
 
 // standard computer definition macro
-#define COMP(YEAR,NAME,PARENT,COMPAT,MACHINE,INPUT,CLASS,INIT,COMPANY,FULLNAME,FLAGS) \
-GAME_DRIVER_TRAITS(NAME,FULLNAME)                                       \
-extern game_driver const GAME_NAME(NAME)                                \
-{                                                                       \
+#define COMP(YEAR, NAME, PARENT, COMPAT, MACHINE, INPUT, CLASS, INIT, \
+             COMPANY, FULLNAME, FLAGS)                                     \
+  GAME_DRIVER_TRAITS(NAME, FULLNAME)                                      \
+  extern game_driver const GAME_NAME(NAME){                                                                       \
 	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
 	#PARENT,                                                            \
 	#YEAR,                                                              \
@@ -238,14 +239,13 @@ extern game_driver const GAME_NAME(NAME)                                \
 	#COMPAT,                                                            \
 	nullptr,                                                            \
 	machine_flags::type(u32(ROT0 | (FLAGS) | MACHINE_TYPE_COMPUTER)),   \
-	#NAME                                                               \
-};
+	#NAME};
 
 // standard system definition macro
-#define SYST(YEAR,NAME,PARENT,COMPAT,MACHINE,INPUT,CLASS,INIT,COMPANY,FULLNAME,FLAGS) \
-GAME_DRIVER_TRAITS(NAME,FULLNAME)                                       \
-extern game_driver const GAME_NAME(NAME)                                \
-{                                                                       \
+#define SYST(YEAR, NAME, PARENT, COMPAT, MACHINE, INPUT, CLASS, INIT, \
+             COMPANY, FULLNAME, FLAGS)                                     \
+  GAME_DRIVER_TRAITS(NAME, FULLNAME)                                      \
+  extern game_driver const GAME_NAME(NAME){                                                                       \
 	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
 	#PARENT,                                                            \
 	#YEAR,                                                              \
@@ -257,7 +257,7 @@ extern game_driver const GAME_NAME(NAME)                                \
 	#COMPAT,                                                            \
 	nullptr,                                                            \
 	machine_flags::type(u32(ROT0 | (FLAGS) | MACHINE_TYPE_OTHER)),      \
-	#NAME                                                               \
+	#NAME \
 };
 
 

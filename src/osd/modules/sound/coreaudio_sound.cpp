@@ -66,6 +66,7 @@ public:
 
 	virtual void update_audio_stream(bool is_throttled, int16_t const *buffer, int samples_this_frame) override;
 	virtual void set_mastervolume(int attenuation) override;
+  virtual void pauseAudio(bool pause) override;
 
 private:
 	struct node_detail
@@ -324,6 +325,10 @@ void sound_coreaudio::set_mastervolume(int attenuation)
 	m_scale = (-32 == clamped_attenuation) ? 0 : (int32_t)(pow(10.0, clamped_attenuation / 20.0) * 128);
 }
 
+void sound_coreaudio::pauseAudio(bool pause)
+{
+  // TODO: Implement
+}
 
 bool sound_coreaudio::create_graph(osd_options const &options)
 {

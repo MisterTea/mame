@@ -104,6 +104,10 @@
 #include <cctype>
 #include <ctime>
 
+#include "NSM_CommonInterface.h"
+
+
+using namespace std;
 
 namespace {
 
@@ -461,7 +465,7 @@ void digital_joystick::frame_update()
 		for (const std::reference_wrapper<ioport_field> &i : m_field[direction])
 		{
 			machine = &i.get().machine();
-			if (machine->input().seq_pressed(i.get().seq(SEQ_TYPE_STANDARD)))
+			if (machine->input().seq_pressed(i.get().seq_peers(SEQ_TYPE_STANDARD)))
 				m_current |= 1 << direction;
 		}
 
@@ -691,8 +695,69 @@ const char *ioport_field::name() const
 //  given input field
 //-------------------------------------------------
 
-const input_seq &ioport_field::seq(input_seq_type seqtype) const noexcept
+// playerFieldMap maps inputs for players onto their player 1
+// equivalent.
+unordered_map<const ioport_field*,vector<const ioport_field*>> playerFieldMap;
+
+u8 ioport_field::mamehub_player() const {
+	int p = player();
+	ioport_type t = type();
+
+	if(t >= IPT_START1 && t <= IPT_START8) {
+		p = t - IPT_START1;
+	}
+	if(t >= IPT_COIN1 && t <= IPT_COIN12) {
+		p = t - IPT_COIN1;
+	}
+	if(t >= IPT_SERVICE1 && t <= IPT_SERVICE4) {
+		p = t - IPT_SERVICE1;
+	}
+	if(t >= IPT_TILT1 && t <= IPT_TILT4) {
+		p = t - IPT_TILT1;
+	}
+
+	return p;
+}
+
+vector<input_seq> ioport_field::seq_mamehub(input_seq_type seqtype) const noexcept 
 {
+    set<int> players = netCommon->getMyPlayers();
+
+    int playerToMap = this->mamehub_player();
+
+    if (playerToMap < 0 || playerToMap >= MAX_PLAYERS) {
+      // Invalid player
+      return {input_seq::empty_seq};
+    }
+
+    auto it = playerFieldMap.find(this);
+
+    if(it != playerFieldMap.end()) {
+      if(players.find(playerToMap) == players.end()) {
+        // We shouldn't be controlling this player
+        return {input_seq::empty_seq};
+      }
+      vector<input_seq> retval;
+	  for (auto it2 : it->second) {
+		  retval.push_back(it2->seq_real(false, seqtype));
+	  }
+	  return retval;
+    } else if(name()) {
+      ioport_type typeToMap = type();
+      LOG(INFO) << "FOUND NO MAP FOR " << name() << " " << typeToMap << " " << playerToMap << endl;
+			//exit(1);
+      return {input_seq::empty_seq};
+    }
+    LOG(FATAL) << "FOUND NO MAP FOR UNKNOWN INPUT" << endl;
+		exit(1);
+}
+
+const input_seq &ioport_field::seq_real(bool checkMapping, input_seq_type seqtype) const noexcept
+{
+	if (checkMapping) {
+		LOG(FATAL) << "OOPS";
+	}
+
 	// if no live state, return default
 	if (m_live == nullptr)
 		return defseq(seqtype);
@@ -729,7 +794,7 @@ const input_seq &ioport_field::defseq(input_seq_type seqtype) const noexcept
 
 void ioport_field::set_defseq(input_seq_type seqtype, const input_seq &newseq)
 {
-	const bool was_changed = seq(seqtype) != defseq(seqtype);
+	const bool was_changed = seq_real(false, seqtype) != defseq(seqtype);
 
 	// set the new sequence
 	m_seq[seqtype] = newseq;
@@ -881,7 +946,7 @@ void ioport_field::get_user_settings(user_settings &settings) const noexcept
 
 	// copy the basics
 	for (input_seq_type seqtype = SEQ_TYPE_STANDARD; seqtype < SEQ_TYPE_TOTAL; ++seqtype)
-		settings.seq[seqtype] = seq(seqtype);
+    settings.seq[seqtype] = seq_real(false, seqtype);
 
 	// if there's a list of settings or we're an adjuster, copy the current value
 	if (!m_settinglist.empty() || m_type == IPT_ADJUSTER)
@@ -1098,8 +1163,9 @@ void ioport_field::frame_update(ioport_value &result)
 	}
 
 	// if UI is active, ignore digital inputs
-	if (machine().ui().is_menu_active())
-		return;
+	// JJG: Don't do this for mamehub because it causes desyncs
+	//if (machine().ui().is_menu_active())
+		//return;
 
 	// if user input is locked out here, bail
 	if (m_live->lockout)
@@ -1111,7 +1177,7 @@ void ioport_field::frame_update(ioport_value &result)
 	}
 
 	// if the state changed, look for switch down/switch up
-	bool curstate = m_digital_value || machine().input().seq_pressed(seq());
+	bool curstate = m_digital_value || machine().input().seq_pressed(seq_peers(SEQ_TYPE_STANDARD));
 	bool changed = false;
 	if (curstate != m_live->last)
 	{
@@ -1188,7 +1254,7 @@ void ioport_field::frame_update(ioport_value &result)
 
 	// if we're active, set the appropriate bits in the digital state
 	if (curstate)
-		result |= m_mask;
+    result |= m_mask;
 }
 
 
@@ -1659,6 +1725,7 @@ ioport_manager::ioport_manager(running_machine &machine)
 	memset(m_type_to_entry, 0, sizeof(m_type_to_entry));
 }
 
+const attotime inputStartTime(1,0);
 
 //-------------------------------------------------
 //  initialize - walk the configured ports and
@@ -1736,6 +1803,109 @@ time_t ioport_manager::initialize()
 
 	// register callbacks for when we load configurations
 	machine().configuration().config_register("input", config_load_delegate(&ioport_manager::load_config, this), config_save_delegate(&ioport_manager::save_config, this));
+
+  // Set up player X->player Y maps
+  vector<ioport_port*> ports;
+  for (auto &port : m_portlist) {
+    ports.push_back(port.second.get());
+  }
+  for (int portFromIndex=0;portFromIndex<m_portlist.size();portFromIndex++) {
+    ioport_port* portFrom = ports[portFromIndex];
+    for (ioport_field &fieldFrom : portFrom->fields()) {
+      int fromPlayer = fieldFrom.player();
+      ioport_type fromType = fieldFrom.type();
+
+      if(fromType >= IPT_START1 && fromType <= IPT_START8) {
+        fromPlayer = (fromType - IPT_START1);
+        fromType = IPT_START1;
+      }
+      if(fromType >= IPT_COIN1 && fromType <= IPT_COIN12) {
+        fromPlayer = (fromType - IPT_COIN1);
+        fromType = IPT_COIN1;
+      }
+      if(fromType >= IPT_SERVICE1 && fromType <= IPT_SERVICE4) {
+        fromPlayer = (fromType - IPT_SERVICE1);
+        fromType = IPT_SERVICE1;
+      }
+      if(fromType >= IPT_TILT1 && fromType <= IPT_TILT4) {
+        fromPlayer = (fromType - IPT_TILT1);
+        fromType = IPT_TILT1;
+      }
+
+      if (fromPlayer==0) {
+				playerFieldMap[&fieldFrom] = { &fieldFrom };
+      }
+
+      if(fromType<IPT_START1) {
+        continue; // Don't map these psuedo-inputs
+      }
+
+      bool done = false;
+      for (int portToIndex=portFromIndex;!done && portToIndex>=0;portToIndex--) {
+        ioport_port* portTo = ports[portToIndex];
+        for (ioport_field &fieldTo : portTo->fields()) {
+          if (done) break;
+          if(&fieldFrom == &fieldTo)
+            continue; // Don't map a field to itself
+
+          int toPlayer = fieldTo.player();
+
+          ioport_type toType = fieldTo.type();
+
+          if(toType >= IPT_START1 && toType <= IPT_START8) {
+            toPlayer = (toType - IPT_START1);
+            toType = IPT_START1;
+          }
+          if(toType >= IPT_COIN1 && toType <= IPT_COIN12) {
+            toPlayer = (toType - IPT_COIN1);
+            toType = IPT_COIN1;
+          }
+          if(toType >= IPT_SERVICE1 && toType <= IPT_SERVICE4) {
+            toPlayer = (toType - IPT_SERVICE1);
+            toType = IPT_SERVICE1;
+          }
+          if(toType >= IPT_TILT1 && toType <= IPT_TILT4) {
+            toPlayer = (toType - IPT_TILT1);
+            toType = IPT_TILT1;
+          }
+
+          if (toPlayer != 0) {
+            continue;  // We only want to map players 2+ to player 1
+          }
+
+          if (fieldFrom.name() && fieldTo.name()) {
+            LOG(INFO) << "CHECKING " << fieldFrom.name() << " AND " << fieldTo.name() << endl;
+          }
+
+          if(fromType == toType) {
+            if(fromPlayer == toPlayer) {
+              if(fieldFrom.name() && fieldTo.name() && !strcmp(fieldFrom.name(),fieldTo.name())) {
+                LOG(INFO) << "UH O, FOUND THE SAME EXACT INPUT FIELDS: " << fieldFrom.name() << " AND " << fieldTo.name() << endl;
+              }
+            } else {
+              auto it =
+                playerFieldMap.find(&fieldFrom);
+                if (it != playerFieldMap.end()) {
+                  LOG(INFO) << "DUPLICATE FOUND" << endl;
+									playerFieldMap[&fieldFrom].push_back(&fieldTo);
+								}
+								else {
+									playerFieldMap[&fieldFrom] = { &fieldTo };
+								}
+                //done = true;
+
+                if (fieldFrom.name() && fieldTo.name()) {
+                  LOG(INFO) << "MAPPING " << fieldFrom.name() << " TO " << fieldTo.name() << endl;
+                } else {
+                  LOG(INFO) << "MAPPING UNNAMED " << fromType << " " << fromPlayer << " TO " << toType << " " << toPlayer << endl;
+                }
+            }
+          }
+        }
+      }
+    }
+  }
+
 
 	// open playback and record files if specified
 	time_t basetime = playback_init();
@@ -1972,7 +2142,6 @@ void ioport_manager::frame_update_callback()
 		frame_update();
 }
 
-
 //-------------------------------------------------
 //  frame_update_internal - core logic for
 //  per-frame input port updating
@@ -1983,7 +2152,7 @@ void ioport_manager::frame_update()
 	g_profiler.start(PROFILER_INPUT);
 
 	// record/playback information about the current frame
-	attotime curtime = machine().time();
+	attotime curtime = machine().machine_time();
 	playback_frame(curtime);
 	record_frame(curtime);
 
@@ -2006,21 +2175,95 @@ void ioport_manager::frame_update()
 	for (auto &port : m_portlist)
 	{
 		port.second->frame_update();
+  }
 
-		// handle playback/record
-		playback_port(*port.second.get());
-		record_port(*port.second.get());
+  std::unordered_map<string,string> inputData;
+	// Store physical inputs
+	for (auto &port : m_portlist)
+	{
+		for (auto& field : port.second->fields()) {
+			bool pressed = false;
+			for (auto it : field.seq_mamehub(SEQ_TYPE_STANDARD)) {
+				pressed |= machine().input().seq_pressed(it);
+			}
+	  string key = std::string("INPUT/") + field.mamehub_id();
+	  auto it = inputData.find(key);
+	  if (it != inputData.end()) {
+		  // Resolve conflicts by allowing any pressed input through
+		if(pressed) {
+			inputData[key] = "1";
+		}
+	  } else {
+      	inputData[key] = pressed?"1":"0";
+	  }
+    }
+  }
 
-		// call device line write handlers
-		ioport_value newvalue = port.second->read();
-		for (dynamic_field &dynfield : port.second->live().writelist)
-			if (dynfield.field().type() != IPT_OUTPUT)
-				dynfield.write(newvalue);
+  attotime curMachineTime = machine().machine_time();
+  //LOG(INFO) << "AT TIME " << curMachineTime.seconds << "." << curMachineTime.attoseconds << endl;
+
+  if(netCommon) {
+    // Calculate the time that the new inputs will take effect
+    int delayFromPing = max(50,min(600,netCommon->getLargestPing()));
+    //attoseconds_t attosecondsToLead = 0;
+    //attosecondsToLead = ATTOSECONDS_PER_MILLISECOND*delayFromPing;
+    auto futureInputTime = netCommon->getCurrentTime()/1000 + delayFromPing;
+    auto sendTime = futureInputTime;
+
+    // If we were going to send inputs much before where we should be now, just send it at the expected current time
+    int64_t curTime = curMachineTime.to_msec();
+    //sendTime = max(sendTime, curTime - 1000);
+
+		//auto stateChanges = netCommon->getStateChanges(inputData);
+
+		//if (stateChanges.empty()) {
+			// If no changes, align on boundary.  Otherwise, try to send as soon as possible
+			sendTime = (sendTime - (sendTime % 33)) + 33;
+		//}
+		//else {
+			// If changes, align on smaller boundary.
+			//sendTime = (sendTime - (sendTime % 16)) + 16;
+		//}
+
+    LOG_EVERY_N(600, INFO) << "SEND TIME: " << sendTime << " CUR TIME: " << curTime;
+
+		if (sendTime < inputStartTime.to_msec()) {
+			VLOG(1) << "SEND TIME BEFORE START TIME";
+      // Inputs before the input start time are not valid.
+    }
+    else if (sendTime <= netCommon->getLastSendTime()) {
+		VLOG(1) << "SEND TIME BEFORE LAST SEND TIME: " << sendTime << " " << netCommon->getLastSendTime();
+      // This input would occur in the past or be a duplicate, ignore it.
+    } else {
+      VLOG(1) << "SENDING INPUTS AT TIME " << sendTime << " emu time: " << netCommon->getCurrentTime()/1000 << endl;
+	  VLOG(1) << "Last send time: " << netCommon->getLastSendTime() << endl;
+      netCommon->sendInputs(sendTime, inputData);
+    }
 	}
 
-	g_profiler.stop();
+  int portIndex=0;
+	for (auto &portPair : m_portlist)
+	{
+    ioport_port* port = portPair.second.get();
+    if (!netCommon) {
+      // handle playback
+      playback_port(*port);
+    }
+
+    // handle record
+    record_port(*port);
+
+		// call device line write handlers
+		ioport_value newvalue = port->read();
+		for (dynamic_field &dynfield : port->live().writelist)
+			if (dynfield.field().type() != IPT_OUTPUT)
+				dynfield.write(newvalue);
+
+    portIndex++;
 }
 
+  g_profiler.stop();
+}
 
 //-------------------------------------------------
 //  frame_interpolate - interpolate between two
@@ -2034,7 +2277,7 @@ s32 ioport_manager::frame_interpolate(s32 oldval, s32 newval)
 		return newval;
 
 	// otherwise, interpolate
-	attoseconds_t nsec_since_last = (machine().time() - m_last_frame_time).as_attoseconds() / ATTOSECONDS_PER_NANOSECOND;
+	attoseconds_t nsec_since_last = (machine().machine_time() - m_last_frame_time).as_attoseconds() / ATTOSECONDS_PER_NANOSECOND;
 	return oldval + (s64(newval - oldval) * nsec_since_last / m_last_delta_nsec);
 }
 
@@ -2436,7 +2679,7 @@ void ioport_manager::save_game_inputs(util::xml::data_node &parentnode)
 				// determine if we changed
 				bool changed = false;
 				for (input_seq_type seqtype = SEQ_TYPE_STANDARD; seqtype < SEQ_TYPE_TOTAL; ++seqtype)
-					changed |= (field.seq(seqtype) != field.defseq(seqtype));
+					changed |= (field.seq_real(false, seqtype) != field.defseq(seqtype));
 
 				// non-analog changes
 				if (!field.is_analog())
@@ -2469,8 +2712,8 @@ void ioport_manager::save_game_inputs(util::xml::data_node &parentnode)
 
 						// add sequences if changed
 						for (input_seq_type seqtype = SEQ_TYPE_STANDARD; seqtype < SEQ_TYPE_TOTAL; ++seqtype)
-							if (field.seq(seqtype) != field.defseq(seqtype))
-								save_sequence(*portnode, seqtype, field.type(), field.seq(seqtype));
+							if (field.seq_real(false, seqtype) != field.defseq(seqtype))
+								save_sequence(*portnode, seqtype, field.type(), field.seq_real(false, seqtype));
 
 						// write out non-analog changes
 						if (!field.is_analog())
@@ -2675,7 +2918,6 @@ void ioport_manager::playback_port(ioport_port &port)
 		}
 	}
 }
-
 
 //-------------------------------------------------
 //  record_write - write a value to the record file
@@ -3543,7 +3785,7 @@ void analog_field::frame_update(running_machine &machine)
 
 	// get the new raw analog value and its type
 	input_item_class itemclass;
-	s32 rawvalue = machine.input().seq_axis_value(m_field.seq(SEQ_TYPE_STANDARD), itemclass);
+  s32 rawvalue = machine.input().seq_axis_value(m_field.seq_peers(SEQ_TYPE_STANDARD), itemclass);
 
 	// use programmatically set value if avaiable
 	if (m_was_written)
@@ -3610,7 +3852,7 @@ void analog_field::frame_update(running_machine &machine)
 	// if the decrement code sequence is pressed, add the key delta to
 	// the accumulated delta; also note that the last input was a digital one
 	bool keypressed = false;
-	if (machine.input().seq_pressed(m_field.seq(SEQ_TYPE_DECREMENT)))
+  if (machine.input().seq_pressed(m_field.seq_peers(SEQ_TYPE_DECREMENT)))
 	{
 		keypressed = true;
 		if (m_delta != 0)
@@ -3622,7 +3864,7 @@ void analog_field::frame_update(running_machine &machine)
 	}
 
 	// same for the increment code sequence
-	if (machine.input().seq_pressed(m_field.seq(SEQ_TYPE_INCREMENT)))
+  if (machine.input().seq_pressed(m_field.seq_peers(SEQ_TYPE_INCREMENT)))
 	{
 		keypressed = true;
 		if (m_delta)
@@ -3641,7 +3883,7 @@ void analog_field::frame_update(running_machine &machine)
 		m_accum = 0;
 
 	// apply the delta to the accumulated value
-	m_accum += delta;
+  m_accum += delta;
 
 	// if our last movement was due to a digital input, and if this control
 	// type autocenters, and if neither the increment nor the decrement seq

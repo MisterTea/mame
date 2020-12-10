@@ -88,12 +88,15 @@
 #include <ctime>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
+#include <chrono>
 
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 #endif
 
+#include "NSM_CommonInterface.h"
 
+using namespace std;
 
 //**************************************************************************
 //  RUNNING MACHINE
@@ -208,15 +211,29 @@ void running_machine::start()
 	m_video = std::make_unique<video_manager>(*this);
 	m_ui = manager().create_ui(*this);
 
+  if(options().mamehub())
+  {
+    // Make the base time a constant for MAMEHub consistency
+    m_base_time = 946080000ULL;
+  }
+  else
+  {
 	// initialize the base time (needed for doing record/playback)
 	::time(&m_base_time);
+  }
 
 	// initialize the input system and input ports for the game
 	// this must be done before memory_init in order to allow specifying
 	// callbacks based on input port tags
 	time_t newbase = m_ioport.initialize();
+  if(options().mamehub())
+  {
+  }
+  else
+  {
 	if (newbase != 0)
 		m_base_time = newbase;
+  }
 
 	// initialize the streams engine before the sound devices start
 	m_sound = std::make_unique<sound_manager>(*this);
@@ -278,6 +295,7 @@ void running_machine::start()
 	filename = options().avi_write();
 	if (filename[0] != 0 && !m_video->is_recording())
 		m_video->begin_recording(filename, movie_recording::format::AVI);
+    m_machine_time = attotime(0,0);
 
 	// if we're coming in with a savegame request, process it now
 	const char *savegame = options().state();
@@ -291,7 +309,6 @@ void running_machine::start()
 	manager().update_machine();
 }
 
-
 //-------------------------------------------------
 //  run - execute the machine
 //-------------------------------------------------
@@ -300,9 +317,12 @@ int running_machine::run(bool quiet)
 {
 	int error = EMU_ERR_NONE;
 
+  vector<int> peerIDs;
+#if 0
 	// use try/catch for deep error recovery
 	try
 	{
+#endif
 		m_manager.http()->clear();
 
 		// move to the init phase
@@ -370,10 +390,25 @@ int running_machine::run(bool quiet)
 		emscripten_set_running_machine(this);
 #endif
 
+    printf("SOFT RESET FINISHED\n");
+
+    u64 trackFrameNumber=0;
+
+    attotime largestEmulationTime(0,0);
+
 		// run the CPUs until a reset or exit
 		while ((!m_hard_reset_pending && !m_exit_pending) || m_saveload_schedule != saveload_schedule::NONE)
 		{
+      //printf("IN MAIN LOOP\n");
 			g_profiler.start(PROFILER_EXTRA);
+
+#if defined(EMSCRIPTEN)
+			// break out to our async javascript loop and halt
+			js_set_main_loop(this);
+#endif
+
+      attotime timeBefore = m_scheduler.time();
+      attotime machineTimeBefore = machine_time();
 
 			// execute CPUs if not paused
 			if (!m_paused)
@@ -382,9 +417,59 @@ int running_machine::run(bool quiet)
 			else
 				m_video->frame_update();
 
+      attotime timeAfter = m_scheduler.time();
+      if (timeBefore > timeAfter) {
+        LOG(FATAL) << "OOPS! WE WENT BACK IN TIME SOMEHOW\n";
+      }
+      if (timeAfter > largestEmulationTime) {
+        largestEmulationTime = timeAfter;
+      }
+      bool timePassed = (timeBefore != timeAfter);
+      bool secondPassed = false;
+      bool tenthSecondPassed = false;
+
+      if (timePassed) {
+        //LOG(INFO) << "TIME MOVED FROM " << timeBefore << " TO " << timeAfter << endl;
+        m_machine_time += (timeAfter - timeBefore);
+        attotime machineTimeAfter = machine_time();
+        secondPassed = machineTimeBefore.seconds() != machineTimeAfter.seconds();
+        tenthSecondPassed = secondPassed || ((machineTimeBefore.attoseconds()/(ATTOSECONDS_PER_SECOND/10ULL)) != (machineTimeAfter.attoseconds()/(ATTOSECONDS_PER_SECOND/10ULL)));
+      }
+
+      static int lastSyncSecond = 0;
+      //printf("EMULATION FINSIHED\n");
+
+      static int firstTimeAtSecond=0;
+      if(m_machine_time.seconds()>0 && m_scheduler.can_save() && timePassed && !firstTimeAtSecond) {
+        firstTimeAtSecond = 1;
+        // Load initial data
+        netCommon->createInitialBlocks(this);
+      }
+      else if(m_machine_time.seconds()>0 && m_scheduler.can_save() && timePassed)
+      {
+        if(
+          netCommon &&
+          lastSyncSecond != m_machine_time.seconds() &&
+          (m_machine_time.seconds()%30)==0
+          )
+        {
+          lastSyncSecond = m_machine_time.seconds();
+          printf("SYNC AT TIME: %d\n",int(::time(NULL)));
+          if (!m_scheduler.can_save())
+          {
+            printf("ANONYMOUS TIMER! COULD NOT DO FULL SYNC\n");
+          }
+          else
+          {
+            //netCommon->sync(this);
+            LOG(INFO) << "RAND/TIME AT SYNC: " << m_rand_seed << ' ' << machine_time().seconds() << '.' << machine_time().attoseconds() << endl;
+          }
+        }
+      }
 			// handle save/load
-			if (m_saveload_schedule != saveload_schedule::NONE)
+			if (timePassed && m_saveload_schedule != saveload_schedule::NONE) {
 				handle_saveload();
+      }
 
 			g_profiler.stop();
 		}
@@ -398,6 +483,7 @@ int running_machine::run(bool quiet)
 		if (options().nvram_save())
 			nvram_save();
 		m_configuration->save_settings();
+#if 0
 	}
 	catch (emu_fatalerror &fatal)
 	{
@@ -431,7 +517,7 @@ int running_machine::run(bool quiet)
 		osd_printf_error("Caught unhandled exception\n");
 		error = EMU_ERR_FATALERROR;
 	}
-
+#endif
 	// make sure our phase is set properly before cleaning up,
 	// in case we got here via exception
 	m_current_phase = machine_phase::EXIT;
@@ -451,6 +537,10 @@ int running_machine::run(bool quiet)
 
 void running_machine::schedule_exit()
 {
+    if (m_exit_pending) {
+        return;
+    }
+
 	m_exit_pending = true;
 
 	// if we're executing, abort out immediately
@@ -745,6 +835,11 @@ void running_machine::rewind_invalidate()
 
 void running_machine::pause()
 {
+  if(netCommon)
+  {
+    //Can't pause during netplay
+    return;
+  }
 	// ignore if nothing has changed
 	if (m_paused)
 		return;
@@ -1175,6 +1270,22 @@ std::string running_machine::nvram_filename(device_t &device) const
 	return result.str();
 }
 
+int nvram_size(running_machine &machine) {
+	int retval=0;
+
+	nvram_interface_iterator iter(machine.root_device());
+	for (device_nvram_interface &nvram : nvram_interface_iterator(machine.root_device()))
+		{
+      std::string filename;
+			emu_file file(machine.options().nvram_directory(), OPEN_FLAG_READ);
+      if (file.open(machine.nvram_filename(nvram.device()).c_str()) == osd_file::error::NONE)
+			{
+				retval += file.size();
+			}
+		}
+	return retval;
+}
+
 /*-------------------------------------------------
     nvram_load - load a system's NVRAM
 -------------------------------------------------*/
@@ -1184,7 +1295,8 @@ void running_machine::nvram_load()
 	for (device_nvram_interface &nvram : nvram_interface_enumerator(root_device()))
 	{
 		emu_file file(options().nvram_directory(), OPEN_FLAG_READ);
-		if (file.open(nvram_filename(nvram.device())) == osd_file::error::NONE)
+		// JJG: Disable nvram on mamehub for now
+		if (!netCommon && file.open(nvram_filename(nvram.device())) == osd_file::error::NONE)
 		{
 			nvram.nvram_load(file);
 			file.close();
@@ -1201,6 +1313,17 @@ void running_machine::nvram_load()
 
 void running_machine::nvram_save()
 {
+  static bool first=true;
+	if(netCommon) {
+          if(nvram_size(*this)>=32*1024*1024) {
+            if(first) {
+              ui().popup_time(3, "The NVRAM for this game is too big, not saving NVRAM.");
+              first = false;
+            }
+            return;
+          }
+	}
+
 	for (device_nvram_interface &nvram : nvram_interface_enumerator(root_device()))
 	{
 		if (nvram.nvram_can_save())
@@ -1322,6 +1445,21 @@ void system_time::set(time_t t)
 
 void system_time::full_time::set(struct tm &t)
 {
+  //JJG: Force clock to 1/1/2000.
+  if(netCommon)
+  {
+    second  = 0;
+    minute  = 0;
+    hour  = 0;
+    mday  = 0;
+    month = 0;
+    year  = 2000;
+    weekday = 6;
+    day   = 0;
+    is_dst  = 0;
+  }
+  else
+{
 	second  = t.tm_sec;
 	minute  = t.tm_min;
 	hour    = t.tm_hour;
@@ -1332,7 +1470,7 @@ void system_time::full_time::set(struct tm &t)
 	day  = t.tm_yday;
 	is_dst  = t.tm_isdst;
 }
-
+}
 
 
 //**************************************************************************

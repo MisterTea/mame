@@ -38,6 +38,8 @@
 #include <new>
 #include <cctype>
 
+#include "NSM_CommonInterface.h"
+#include "LogHandler.hpp"
 
 //**************************************************************************
 //  CONSTANTS
@@ -245,6 +247,52 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 		m_osd.set_verbose(m_options.verbose());
 	}
 
+  // Setup easylogging configurations
+  int argc=0;
+  char** argv=NULL;
+  el::Configurations defaultConf = wga::LogHandler::SetupLogHandler(&argc, &argv);
+  defaultConf.setGlobally(el::ConfigurationType::Filename, "MAMEHub.log");
+  defaultConf.setGlobally(el::ConfigurationType::ToFile, "true");
+  el::Loggers::setVerboseLevel(0);
+
+  // Reconfigure default logger to apply settings above
+  el::Loggers::reconfigureLogger("default", defaultConf);
+
+  // Set up client/server as appropriate
+  if (m_options.mamehub()) {
+    string userId = m_options.user_id();
+    if (userId.length() == 0) {
+      userId = string(16,'0');
+      for (int a=0;a<16;a++) {
+        userId[a] += (rand()%10);
+      }
+    }
+    deleteNetCommon();
+	string gameString = m_options.system_name();
+	gameString += ";" + m_options.software_name();
+    createNetCommon(userId,
+      m_options.password(),
+      (unsigned short)m_options.port(),
+      m_options.lobby_host(),
+      (unsigned short)m_options.lobby_port(),
+      50,
+      gameString,
+	  m_options.fake_lag());
+    if (!netCommon->isHosting()) {
+      LOG(INFO) << "NOT SERVER";
+      string gameName = netCommon->getGameName();
+      auto tokens = wga::split(gameName, ';');
+      if (tokens.size() > 2) {
+        LOGFATAL << "Invalid token size: " << gameName;
+      }
+      m_options.set_system_name(tokens[0]);
+      if (tokens.size() > 1) {
+        string software = tokens[1];
+        m_options.set_software(std::move(software));
+      }
+    }
+  }
+
 	// otherwise, check for a valid system
 	load_translation(m_options);
 
@@ -265,6 +313,8 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 
 	// otherwise just run the game
 	m_result = manager->execute();
+
+  deleteNetCommon();
 }
 
 //-------------------------------------------------
@@ -274,10 +324,12 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 
 int cli_frontend::execute(std::vector<std::string> &args)
 {
+  // Initial rand
+  srand(1234);
+
 	// wrap the core execution in a try/catch to field all fatal errors
 	m_result = EMU_ERR_NONE;
 	mame_machine_manager *manager = mame_machine_manager::instance(m_options, m_osd);
-
 	try
 	{
 		start_execution(manager, args);
@@ -331,6 +383,7 @@ int cli_frontend::execute(std::vector<std::string> &args)
 		osd_printf_error("Tag '%s' already exists in tagged map\n", aex.tag());
 		m_result = EMU_ERR_FATALERROR;
 	}
+#if 0
 	catch (std::exception &ex)
 	{
 		osd_printf_error("Caught unhandled %s exception: %s\n", typeid(ex).name(), ex.what());
@@ -341,6 +394,7 @@ int cli_frontend::execute(std::vector<std::string> &args)
 		osd_printf_error("Caught unhandled exception\n");
 		m_result = EMU_ERR_FATALERROR;
 	}
+#endif
 
 	util::archive_file::cache_clear();
 	delete manager;
@@ -1653,6 +1707,15 @@ void cli_frontend::execute_commands(const char *exename)
 		emu_file file(OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
 		if (file.open(std::string(emulator_info::get_configname()) + ".ini") != osd_file::error::NONE)
 			throw emu_fatalerror("Unable to create file %s.ini\n",emulator_info::get_configname());
+
+    // Create a new private key & user id
+		srand(time(NULL));
+		string newPrivateKey = makePrivateKey();
+    m_options.set_value(OPTION_PASSWORD, newPrivateKey,
+                        OPTION_PRIORITY_DEFAULT);
+    string newUserId = makePrivateKey();
+    m_options.set_value(OPTION_USER_ID, newUserId,
+                        OPTION_PRIORITY_DEFAULT);
 
 		// generate the updated INI
 		file.puts(m_options.output_ini().c_str());

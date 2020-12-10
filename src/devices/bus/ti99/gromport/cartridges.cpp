@@ -1731,11 +1731,13 @@ std::unique_ptr<ti99_cartridge_device::rpk_socket> ti99_cartridge_device::rpk_re
 				throw emu_fatalerror("ti99_cartridge_device::rpk_reader::load_ram_resource: Buffer is null or length is 0");
 
 			// try to open the battery file and read it if possible
+			int bytes_read = 0;
+			/* JJG: Disable NVRAM for MAMEHub
 			emu_file file(options.nvram_directory(), OPEN_FLAG_READ);
 			osd_file::error filerr = file.open(ram_pname);
-			int bytes_read = 0;
 			if (filerr == osd_file::error::NONE)
 				bytes_read = file.read(contents.get(), length);
+			*/
 
 			// fill remaining bytes (if necessary)
 			std::fill_n(&contents[bytes_read], length - bytes_read, 0x00);
