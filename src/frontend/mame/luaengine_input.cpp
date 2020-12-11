@@ -346,7 +346,7 @@ void lua_engine::initialize_input(sol::table &emu)
 		[] (ioport_field &f, std::string const &seq_type_string)
 		{
 			input_seq_type seq_type = s_seq_type_parser(seq_type_string);
-			return f.seq(seq_type);
+			return f.seq_real(true, seq_type);
 		};
 	ioport_field_type["set_default_input_seq"] =
 		[] (ioport_field &f, std::string const &seq_type_string, input_seq const &seq)

@@ -1274,7 +1274,7 @@ uint32_t mame_ui_manager::handler_ingame(render_container &container)
 		while (machine().ui_input().pop_event(&event))
 		{
 			// if this was a UI_EVENT_CHAR event, post it
-			if (event.event_type == ui_event::IME_CHAR) {
+			if (event.event_type == ui_event::type::IME_CHAR) {
 				mamehub_manager::instance()->handleChat(machine(), event);
 			}
 		}

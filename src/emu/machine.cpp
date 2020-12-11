@@ -1273,8 +1273,8 @@ std::string running_machine::nvram_filename(device_t &device) const
 int nvram_size(running_machine &machine) {
 	int retval=0;
 
-	nvram_interface_iterator iter(machine.root_device());
-	for (device_nvram_interface &nvram : nvram_interface_iterator(machine.root_device()))
+	nvram_interface_enumerator iter(machine.root_device());
+	for (device_nvram_interface &nvram : nvram_interface_enumerator(machine.root_device()))
 		{
       std::string filename;
 			emu_file file(machine.options().nvram_directory(), OPEN_FLAG_READ);
