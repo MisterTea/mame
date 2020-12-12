@@ -744,8 +744,10 @@ vector<input_seq> ioport_field::seq_mamehub(input_seq_type seqtype) const noexce
 	  return retval;
     } else if(name()) {
       ioport_type typeToMap = type();
+	  if (typeToMap != IPT_UNKNOWN) {
       LOG(INFO) << "FOUND NO MAP FOR " << name() << " " << typeToMap << " " << playerToMap << endl;
 			//exit(1);
+	  }
       return {input_seq::empty_seq};
     }
     LOG(FATAL) << "FOUND NO MAP FOR UNKNOWN INPUT" << endl;
