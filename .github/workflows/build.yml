@@ -37,7 +37,7 @@ jobs:
 
     steps:
     - name: Update OS
-      run: brew update && brew upgrade && brew install sdl2 sdl2_ttf
+      run: brew update && brew install sdl2 sdl2_ttf
 
     - uses: actions/checkout@v2
       with:
