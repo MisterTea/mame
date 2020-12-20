@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Install dependencies
-        run: brew install sdl2
+        run: brew install sdl2 openssl
       - name: Build
         env:
           USE_LIBSDL: 1
