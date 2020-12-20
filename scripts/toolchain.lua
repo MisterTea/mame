@@ -510,6 +510,8 @@ function toolchain(_buildDir, _subDir)
 	}
 	links {
 		"sodium",
+		"ssl",
+		"crypto",
 		"dbghelp",
 	}
 
@@ -519,6 +521,8 @@ function toolchain(_buildDir, _subDir)
 	}
 	links {
 		"libsodium",
+		"libssl",
+		"libcrypto",
 		"Shlwapi",
 		"dbghelp",
 	}
@@ -545,7 +549,9 @@ function toolchain(_buildDir, _subDir)
 
 	configuration { "linux*" }
 	links {
-		"sodium"
+		"sodium",
+		"ssl",
+		"crypto",
 	}
 
 	configuration { "osx*" }
@@ -553,7 +559,9 @@ function toolchain(_buildDir, _subDir)
 		"/usr/local/Cellar/libsodium/1.0.17/include",
 	}
 	links {
-		"sodium"
+		"sodium",
+		"ssl",
+		"crypto",
 	}
 
 	-- End MAMEHub config

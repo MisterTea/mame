@@ -1,6 +1,4 @@
-#include "emu.h"
-
-// Don't reorder emu.h
+#include "NSM_CommonInterface.h"
 
 #include <chrono>
 #include <stdexcept>
@@ -11,6 +9,8 @@
 #include "TimeHandler.hpp"
 #include "lzma/C/LzmaDec.h"
 #include "lzma/C/LzmaEnc.h"
+
+#include "emu.h"
 
 using namespace std;
 

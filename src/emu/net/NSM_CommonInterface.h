@@ -19,7 +19,13 @@
 
 #include "zlib.h"
 
+#ifdef SHA1
+#undef SHA1
+#endif
+
 #include "Headers.hpp"
+
+#define SHA1(x)             "S" #x
 
 #ifdef interface
 #undef interface

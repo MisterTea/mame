@@ -33,7 +33,7 @@ end
 		linkoptions {
 			"-shared",
 			"-Wl,-soname,libmain.so",
-      "$(shell pkg-config --libs-only-L libsodium)",
+      "$(shell pkg-config --libs-only -Llibsodium)",
     }
 		links {
 			"EGL",
