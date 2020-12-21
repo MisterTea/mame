@@ -499,7 +499,7 @@ function toolchain(_buildDir, _subDir)
 		"SODIUM_STATIC",
 		"WGA_VERSION=\"0.0.1\"",
     "_HAS_ITERATOR_DEBUGGING=0", -- To prevent crashes in msvc
-	}	
+	}
 
 	configuration { "mingw*" }
 	includedirs {
@@ -556,7 +556,11 @@ function toolchain(_buildDir, _subDir)
 
 	configuration { "osx*" }
 	includedirs {
-		"/usr/local/Cellar/libsodium/1.0.17/include",
+		"/usr/local/opt/libsodium/include",
+		"/usr/local/opt/openssl/include",
+	}
+	libdirs {
+		"/usr/local/opt/openssl/lib"
 	}
 	links {
 		"sodium",
