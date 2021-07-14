@@ -68,7 +68,7 @@ enum CustomPacketType {
   ID_END
 };
 
-class Common : public CommonInterface {
+class Common : public CommonBase {
  protected:
   shared_ptr<wga::NetEngine> netEngine;
   wga::PrivateKey privateKey;

@@ -1,4 +1,5 @@
-#include "NSM_CommonInterface.h"
+#include "emu.h"
+#undef SHA1
 
 #include <chrono>
 #include <stdexcept>
@@ -10,12 +11,14 @@
 #include "lzma/C/LzmaDec.h"
 #include "lzma/C/LzmaEnc.h"
 
-#include "emu.h"
+
+#include "NSM_CommonInterface.h"
+
 
 using namespace std;
 
-CommonInterface *netCommon = NULL;
-CommonInterface *createNetCommon(const string &userId,
+CommonBase *netCommon = NULL;
+CommonBase *createNetCommon(const string &userId,
                                  const string &privateKeyString,
                                  unsigned short _port,
                                  const string &lobbyHostname,

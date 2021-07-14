@@ -37,15 +37,6 @@
 
 using namespace std;
 
-class CommonInterface;
-
-CommonInterface *createNetCommon(const string& userId,
-const string &privateKeyString, unsigned short _port, const string& lobbyHostname, unsigned short lobbyPort, int _unmeasuredNoise, const string& gameName, bool fakeLag);
-void deleteNetCommon();
-string makePrivateKey();
-
-extern CommonInterface *netCommon;
-
 class running_machine;
 
 class ChatLog {
@@ -119,11 +110,11 @@ class BlockValueLocation {
   }
 };
 
- class CommonInterface {
+ class CommonBase {
  public:
-  CommonInterface() {}
+  CommonBase() {}
 
-  virtual ~CommonInterface() {}
+  virtual ~CommonBase() {}
 
   virtual int getLargestPing() = 0;
 
@@ -167,5 +158,13 @@ class BlockValueLocation {
 
   virtual bool isHosting() = 0;
 };
+
+CommonBase* createNetCommon(const string& userId,
+	const string& privateKeyString, unsigned short _port, const string& lobbyHostname, unsigned short lobbyPort, int _unmeasuredNoise, const string& gameName, bool fakeLag);
+void deleteNetCommon();
+string makePrivateKey();
+
+extern CommonBase* netCommon;
+
 
 #endif
