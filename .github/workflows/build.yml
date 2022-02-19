@@ -99,3 +99,43 @@ jobs:
         name: mamehub_windows_beta
         # A file, directory or wildcard pattern that describes what to upload
         path: mame/*
+
+  build_windows_msvc:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        path: 'mame'
+
+    - uses: actions/checkout@v2
+      with:
+        repository: jedisct1/libsodium
+        ref: stable
+        path: 'libsodium'
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+
+    - shell: msys2 {0}
+      run: |
+        pacman -Syu --noconfirm make mingw-w64-x86_64-python2 mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5
+        #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-libs-9.3.0-2-any.pkg.tar.xz
+        #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
+        #pacman -U --noconfirm /tmp/*.tar.xz
+        pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
+        pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 && rm -Rf build .git src 3rdparty && ./mamehub64.exe -cc && mv mame.ini mame.ini.sample && popd
+
+    - name: Upload mame binary
+      uses: actions/upload-artifact@v2
+      with:
+        # Artifact name
+        name: mamehub_windows_beta
+        # A file, directory or wildcard pattern that describes what to upload
+        path: mame/*
