@@ -20,6 +20,7 @@
 
 #include "osdepend.h"
 
+#include "NSM_CommonInterface.h"
 
 //**************************************************************************
 //  DEBUGGING

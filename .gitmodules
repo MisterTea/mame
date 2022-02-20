@@ -1,0 +1,3 @@
+[submodule "3rdparty/wga"]
+	path = 3rdparty/wga
+	url = https://github.com/MisterTea/we-go-all.git

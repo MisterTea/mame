@@ -227,6 +227,17 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_HTTP_PORT,                                  "8080",      core_options::option_type::INTEGER,    "HTTP server port" },
 	{ OPTION_HTTP_ROOT,                                  "web",       core_options::option_type::PATH,       "HTTP server document root" },
 
+    // net options
+	{ OPTION_USER_ID,               "",         core_options::option_type::STRING,    "User id for arranging games" },
+	{ OPTION_PASSWORD,               "",         core_options::option_type::STRING,    "Password for arranging games" },
+	{ OPTION_MAMEHUB,               "1",         core_options::option_type::BOOLEAN,    "Run in mamehub mode" },
+	{ OPTION_HOSTNAME,               "127.0.0.1",         core_options::option_type::STRING,    "hostname of server to connect to" },
+	{ OPTION_PORT,               "5805",         core_options::option_type::INTEGER,    "port of server to connect to" },
+	{ OPTION_LOBBY_HOST,               "lobby.mamehub.com",         core_options::option_type::STRING,    "Lobby hostname" },
+	{ OPTION_LOBBY_PORT,               "443",         core_options::option_type::INTEGER,    "Lobby port" },
+	{ OPTION_FAKE_LAG,               "0",         core_options::option_type::BOOLEAN,    "Add fake lag and clock skew" },
+	{ OPTION_CANDY,               "0",         core_options::option_type::BOOLEAN,    "Candy mode" },
+
 	{ nullptr }
 };
 

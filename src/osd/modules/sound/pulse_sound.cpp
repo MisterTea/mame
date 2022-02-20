@@ -42,6 +42,7 @@ public:
 	virtual void exit() override;
 	virtual void update_audio_stream(bool is_throttled, const s16 *buffer, int samples_this_frame) override;
 	virtual void set_mastervolume(int attenuation) override;
+  virtual void pauseAudio(bool pause) override;
 
 private:
 	struct abuffer {
@@ -365,11 +366,14 @@ void sound_pulse::i_volume_set_notify(pa_context *, int success, void *self)
 	static_cast<sound_pulse *>(self)->volume_set_notify(success);
 }
 
+int LAST_PULSE_AUDIO_VOLUME=0;
+
 void sound_pulse::set_mastervolume(int attenuation)
 {
 	if(!m_stream)
 		return;
 
+	LAST_PULSE_AUDIO_VOLUME = attenuation;
 
 	std::unique_lock<std::mutex> lock(m_mutex);
 	if(m_setting_volume) {
@@ -380,6 +384,20 @@ void sound_pulse::set_mastervolume(int attenuation)
 		pa_cvolume vol;
 		pa_cvolume_set(&vol, 2, pa_sw_volume_from_dB(attenuation));
 		pa_context_set_sink_input_volume(m_context, pa_stream_get_index(m_stream), &vol, i_volume_set_notify, this);
+	}
+}
+
+void sound_pulse::pauseAudio(bool pause)
+{
+	if(!m_stream)
+		return;
+
+	if (pause) {
+		int last_it = LAST_PULSE_AUDIO_VOLUME;
+		set_mastervolume(0);
+		LAST_PULSE_AUDIO_VOLUME = last_it;
+	} else {
+		set_mastervolume(LAST_PULSE_AUDIO_VOLUME);
 	}
 }
 

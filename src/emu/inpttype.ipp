@@ -593,7 +593,7 @@ namespace {
 
 #define CORE_INPUT_TYPES_TILT \
 		CORE_INPUT_TYPES_BEGIN(tilt) \
-		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    TILT1,               N_p("input-name", "Tilt 1"),                 input_seq(KEYCODE_T) ) \
+		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    TILT1,               N_p("input-name", "Tilt 1"),                 input_seq() ) \
 		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    TILT2,               N_p("input-name", "Tilt 2"),                 input_seq() ) \
 		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    TILT3,               N_p("input-name", "Tilt 3"),                 input_seq() ) \
 		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    TILT4,               N_p("input-name", "Tilt 4"),                 input_seq() ) \
@@ -604,7 +604,7 @@ namespace {
 		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    POWER_ON,            N_p("input-name", "Power On"),               input_seq(KEYCODE_F1) ) \
 		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    POWER_OFF,           N_p("input-name", "Power Off"),              input_seq(KEYCODE_F2) ) \
 		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    SERVICE,             N_p("input-name", "Service"),                input_seq(KEYCODE_F2) ) \
-		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    TILT,                N_p("input-name", "Tilt"),                   input_seq(KEYCODE_T) ) \
+		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    TILT,                N_p("input-name", "Tilt"),                   input_seq() ) \
 		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    INTERLOCK,           N_p("input-name", "Door Interlock"),         input_seq() ) \
 		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    MEMORY_RESET,        N_p("input-name", "Memory Reset"),           input_seq(KEYCODE_F1) ) \
 		INPUT_PORT_DIGITAL_TYPE(  0, OTHER,    VOLUME_DOWN,         N_p("input-name", "Volume Down"),            input_seq(KEYCODE_MINUS) ) \

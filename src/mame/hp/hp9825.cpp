@@ -634,7 +634,7 @@ void hp98xx_state::kb_scan_ioport(ioport_value pressed , ioport_port &port , uns
 	while (pressed) {
 		unsigned bit_no = 31 - count_leading_zeros_32(pressed);
 		ioport_value mask = BIT_MASK<ioport_value>(bit_no);
-		int seq_len = port.field(mask)->seq().length();
+		int seq_len = port.field(mask)->seq_real(true, SEQ_TYPE_STANDARD).length();
 		if (seq_len > max_seq_len) {
 			max_seq_len = seq_len;
 			max_seq_idx = bit_no + idx_base;
