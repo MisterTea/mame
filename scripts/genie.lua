@@ -481,6 +481,7 @@ flags {
 configuration { "vs20*" }
 	buildoptions {
 		"/bigobj",
+		"/utf-8",
 	}
 	buildoptions_cpp {
 		"/Zc:__cplusplus",
@@ -719,6 +720,7 @@ end
 		"LUA_COMPAT_ALL",
 		"LUA_COMPAT_5_1",
 		"LUA_COMPAT_5_2",
+		"WGA_MAMEHUB" -- JJG: Add WGA define
 	}
 
 	if _ACTION == "gmake" or _ACTION == "ninja" then
@@ -744,7 +746,7 @@ local version = str_to_version(_OPTIONS["gcc_version"])
 -- add -g if we need symbols, and ensure we have frame pointers
 if _OPTIONS["SYMBOLS"]~=nil and _OPTIONS["SYMBOLS"]~="0" then
 	buildoptions {
-		"-g" .. _OPTIONS["SYMLEVEL"],
+		"-no-pie -g" .. _OPTIONS["SYMLEVEL"],
 		"-fno-omit-frame-pointer",
 		"-fno-optimize-sibling-calls",
 	}
@@ -993,7 +995,7 @@ end
 
 if _OPTIONS["SANITIZE"] then
 	buildoptions {
-		"-fsanitize=".. _OPTIONS["SANITIZE"]
+        "-fsanitize=".. _OPTIONS["SANITIZE"]
 	}
 	linkoptions {
 		"-fsanitize=".. _OPTIONS["SANITIZE"]
@@ -1189,7 +1191,7 @@ configuration { "asmjs" }
 	}
 	if _OPTIONS["SYMBOLS"]~=nil and _OPTIONS["SYMBOLS"]~="0" then
 		linkoptions {
-			"-g" .. _OPTIONS["SYMLEVEL"],
+			"-no-pie -g" .. _OPTIONS["SYMLEVEL"],
 			"-s DEMANGLE_SUPPORT=1",
 		}
 	end

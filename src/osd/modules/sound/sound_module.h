@@ -24,6 +24,7 @@ public:
 
 	virtual void update_audio_stream(bool is_throttled, const int16_t *buffer, int samples_this_frame) = 0;
 	virtual void set_mastervolume(int attenuation) = 0;
+  virtual void pauseAudio(bool pause) = 0;
 };
 
 #endif // MAME_OSD_SOUND_SOUND_MODULE_H

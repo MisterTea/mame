@@ -585,6 +585,7 @@ public:
 	ioport_condition const &condition() const { return m_condition; }
 	ioport_type type() const { return m_type; }
 	u8 player() const { return m_player; }
+	u8 mamehub_player() const;
 	bool digital_value() const { return m_digital_value; }
 	void set_value(ioport_value value);
 	void clear_value();
@@ -601,7 +602,14 @@ public:
 	u8 impulse() const noexcept { return m_impulse; }
 	std::string name() const;
 	const char *specific_name() const noexcept { return m_name; }
-	const input_seq &seq(input_seq_type seqtype = SEQ_TYPE_STANDARD) const noexcept;
+  std::vector<input_seq> seq_mamehub(input_seq_type seqtype /*= SEQ_TYPE_STANDARD*/) const noexcept;
+  const input_seq &seq_real(bool checkMapping, input_seq_type seqtype /*= SEQ_TYPE_STANDARD*/) const noexcept;
+  inline const std::string mamehub_id() const noexcept {
+	  return std::to_string(mamehub_player()) + std::string("/") + name();
+  }
+  const input_seq seq_peers(input_seq_type seqtype = SEQ_TYPE_STANDARD) const noexcept {
+    return input_seq(mamehub_id());
+  }
 	const input_seq &defseq(input_seq_type seqtype = SEQ_TYPE_STANDARD) const noexcept;
 	const input_seq &defseq_unresolved(input_seq_type seqtype = SEQ_TYPE_STANDARD) const noexcept { return m_seq[seqtype]; }
 	void set_defseq(const input_seq &newseq) noexcept { set_defseq(SEQ_TYPE_STANDARD, newseq); }
@@ -964,8 +972,8 @@ private:
 	void init_port_types();
 	void init_autoselect_devices(std::initializer_list<ioport_type> types, std::string_view option, std::string_view ananame);
 
-	void frame_update_callback();
-	void frame_update();
+       void frame_update_callback();
+       void frame_update();
 
 	ioport_port *port(const std::string &tag) const { auto search = m_portlist.find(tag); if (search != m_portlist.end()) return search->second.get(); else return nullptr; }
 	void exit();

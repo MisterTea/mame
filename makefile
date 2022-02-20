@@ -12,9 +12,9 @@
 #################   BEGIN USER-CONFIGURABLE OPTIONS   #####################
 ###########################################################################
 
-# REGENIE = 1
+REGENIE = 1
 # VERBOSE = 1
-# NOWERROR = 1
+NOWERROR = 1
 # IGNORE_GIT = 1
 
 # TARGET = mame
@@ -26,7 +26,7 @@
 
 # NO_OPENGL = 0
 # USE_DISPATCH_GL = 0
-# MODERN_WIN_API = 0
+MODERN_WIN_API = 1
 # USE_SDL = 1
 # SDL_INI_PATH = .;$HOME/.mame/;ini;
 # SDL2_MULTIAPI = 1
@@ -43,15 +43,15 @@
 
 # DEBUG = 1
 # PROFILER = 1
-# SANITIZE =
+# SANITIZE = address
 
 # PTR64 = 1
 # BIGENDIAN = 1
 # NOASM = 1
 
-# OPTIMIZE = 3
-# SYMBOLS = 1
-# SYMLEVEL = 2
+#OPTIMIZE = s
+#SYMBOLS = 1
+#SYMLEVEL = 1
 # MAP = 1
 # PROFILE = 1
 # ARCHOPTS =
@@ -941,7 +941,9 @@ endif
 endif
 
 ifdef REGENIE
+ifeq ($(REGENIE),1)
 SCRIPTS+= regenie
+endif
 endif
 
 #-------------------------------------------------

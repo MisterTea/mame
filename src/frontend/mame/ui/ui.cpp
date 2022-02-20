@@ -14,6 +14,8 @@
 #include "infoxml.h"
 #include "iptseqpoll.h"
 #include "luaengine.h"
+
+#include "mamehub.h"
 #include "mame.h"
 #include "ui/filemngr.h"
 #include "ui/info.h"
@@ -52,6 +54,7 @@
 #include <functional>
 #include <type_traits>
 
+#include "NSM_CommonInterface.h"
 
 /***************************************************************************
     LOCAL VARIABLES
@@ -407,7 +410,7 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 
 	// disable everything if we are using -str for 300 or fewer seconds, or if we're the empty driver,
 	// or if we are debugging, or if there's no mame window to send inputs to
-	if (!first_time || (str > 0 && str < 60*5) || &machine().system() == &GAME_NAME(___empty) || (machine().debug_flags & DEBUG_FLAG_ENABLED) != 0 || video_none)
+	if (netCommon || !first_time || (str > 0 && str < 60*5) || &machine().system() == &GAME_NAME(___empty) || (machine().debug_flags & DEBUG_FLAG_ENABLED) != 0 || video_none)
 		show_gameinfo = show_warnings = show_mandatory_fileman = false;
 
 #if defined(__EMSCRIPTEN__)
@@ -657,6 +660,9 @@ bool mame_ui_manager::update_and_render(render_container &container)
 	// render any cheat stuff at the bottom
 	if (machine().phase() >= machine_phase::RESET)
 		mame_machine_manager::instance()->cheat().render_text(*this, container);
+
+	// MAMEHub Rendering
+	mamehub_manager::instance()->ui(*this, container);
 
 	// call the current UI handler
 	uint32_t const handler_result = m_handler_callback(container);
@@ -1070,8 +1076,11 @@ void mame_ui_manager::process_natural_keyboard()
 	while (machine().ui_input().pop_event(&event))
 	{
 		// if this was a UI_EVENT_CHAR event, post it
-		if (event.event_type == ui_event::type::IME_CHAR)
+		if (event.event_type == ui_event::type::IME_CHAR) {
+			if (!mamehub_manager::instance()->handleChat(machine(), event)) {
 			machine().natkeyboard().post_char(event.ch);
+			}
+		}
 	}
 
 	// process natural keyboard keys that don't get UI_EVENT_CHARs
@@ -1265,8 +1274,19 @@ uint32_t mame_ui_manager::handler_ingame(render_container &container)
 	}
 
 	// is the natural keyboard enabled?
-	if (machine().natkeyboard().in_use() && (machine().phase() == machine_phase::RUNNING))
+	if (machine().natkeyboard().in_use() && (machine().phase() == machine_phase::RUNNING)) {
 		process_natural_keyboard();
+	} else {
+		ui_event event;
+		// loop while we have interesting events
+		while (machine().ui_input().pop_event(&event))
+		{
+			// if this was a UI_EVENT_CHAR event, post it
+			if (event.event_type == ui_event::type::IME_CHAR) {
+				mamehub_manager::instance()->handleChat(machine(), event);
+			}
+		}
+	}
 
 	if (!ui_disabled)
 	{

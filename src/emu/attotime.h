@@ -41,7 +41,8 @@
 #include "eminline.h"
 
 #include <cmath>
-
+#include <iostream>
+#include <cstdio>
 
 //**************************************************************************
 //  CONSTANTS
@@ -158,6 +159,8 @@ public:
 		else
 			return attotime::never;
 	}
+
+	s64 to_msec() const { return attoseconds_t(m_seconds)*1000 + (m_attoseconds/ (ATTOSECONDS_PER_SECOND / 1000)); }
 
 	// math
 	attotime &operator+=(const attotime &right) noexcept;
@@ -374,5 +377,8 @@ inline attotime attotime::from_double(double _time)
 	return attotime(secs, attos);
 }
 
+inline std::ostream &operator<<(std::ostream &os, attotime const &t) {
+  return os << t.seconds() << '.' << t.attoseconds();
+}
 
 #endif // MAME_EMU_ATTOTIME_H

@@ -14,8 +14,11 @@
 
 #pragma once
 
+// JJG: Required to make msvc compile
 class h8_device;
-class h8_intc_device;
+//class h8_intc_device;
+//#include "h8.h"
+#include "h8_intc.h"
 
 class h8_sci_device : public device_t {
 public:

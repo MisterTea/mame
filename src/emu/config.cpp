@@ -264,8 +264,16 @@ bool configuration_manager::load_xml(game_driver const &system, emu_file &file, 
 			osd_printf_debug("Entry: %s -- processing\n", name);
 
 		// loop over all registrants and call their load function
-		for (auto const &type : m_typelist)
+		for (auto const &type : m_typelist) {
+      // JJG: Only load input cfgs.
+      if (machine().options().mamehub()) {
+        if (which_type != config_type::CONTROLLER) {
+          osd_printf_debug("SKIPPING CFG TYPE");
+          continue;
+        }
+      }
 			type.second.load(which_type, level, systemnode->get_child(type.first.c_str()));
+    }
 		count++;
 
 		// save unhandled settings for default and system types

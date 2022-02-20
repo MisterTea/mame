@@ -188,7 +188,7 @@ void menu_input_specific::populate()
 						input_item_data &item(data.emplace_back());
 						item.ref = &field;
 						item.seqtype = seqtype;
-						item.seq = field.seq(seqtype);
+						item.seq = field.seq_real(false, seqtype);
 						item.defseq = &field.defseq(seqtype);
 						item.group = machine().ioport().type_group(field.type(), field.player());
 						item.type = field.is_analog() ? (INPUT_TYPE_ANALOG + seqtype) : INPUT_TYPE_DIGITAL;
@@ -244,7 +244,7 @@ void menu_input_specific::populate()
 		for (input_item_data &item : data)
 		{
 			const ioport_field &field(*reinterpret_cast<const ioport_field *>(item.ref));
-			item.seq = field.seq(item.seqtype);
+			item.seq = field.seq_real(false, item.seqtype);
 		}
 	}
 
@@ -272,7 +272,7 @@ void menu_input_specific::update_input(input_item_data &seqchangeditem)
 	else
 		settings.cfg[seqchangeditem.seqtype] = machine().input().seq_to_tokens(seqchangeditem.seq);
 	const_cast<ioport_field &>(field).set_user_settings(settings);
-	seqchangeditem.seq = field.seq(seqchangeditem.seqtype);
+	seqchangeditem.seq = field.seq_real(false, seqchangeditem.seqtype);
 }
 
 

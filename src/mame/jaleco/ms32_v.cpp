@@ -92,9 +92,10 @@ void ms32_state::video_start()
 	m_sprite_ctrl[0x10/4] = 0x8000;
 
 	save_pointer(NAME(m_sprram_buffer), m_objectram_size);
-	save_item(NAME(m_temp_bitmap_tilemaps));
-	save_item(NAME(m_temp_bitmap_sprites));
-	save_item(NAME(m_temp_bitmap_sprites_pri));
+	//JJG: resolution-dependent bitmaps
+	//save_item(NAME(m_temp_bitmap_tilemaps));
+	//save_item(NAME(m_temp_bitmap_sprites));
+	//save_item(NAME(m_temp_bitmap_sprites_pri));
 	save_item(NAME(m_tilemaplayoutcontrol));
 	save_item(NAME(m_brt));
 	save_item(NAME(m_brt_r));

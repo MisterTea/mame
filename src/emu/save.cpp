@@ -32,6 +32,8 @@
 #include "util/ioprocsfilter.h"
 
 
+#include "NSM_CommonInterface.h"
+
 //**************************************************************************
 //  DEBUGGING
 //**************************************************************************
@@ -202,6 +204,8 @@ void save_manager::save_memory(device_t *device, const char *module, const char 
 
 	// insert us into the list
 	m_entry_list.emplace_back(std::make_unique<state_entry>(val, std::move(totalname), device, module, tag ? tag : "", index, valsize, valcount, blockcount, stride));
+
+	if(netCommon) netCommon->createMemoryBlock(totalname, (unsigned char*)val,valsize*valcount);
 }
 
 

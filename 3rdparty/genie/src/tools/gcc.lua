@@ -38,7 +38,7 @@
 		Optimize         = "-O2",
 		OptimizeSize     = "-Os",
 		OptimizeSpeed    = "-O3",
-		Symbols          = "-g",
+		Symbols          = "-no-pie -g",
 	}
 
 	local cxxflags =
