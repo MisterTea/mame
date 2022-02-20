@@ -14,6 +14,10 @@ if _OPTIONS["with-emulator"] then
 project ("emu")
 uuid ("e6fa15e4-a354-4526-acef-13c8e80fcacf")
 kind (LIBTYPE)
+configuration { "vs*" }
+flags {
+	"Symbols",
+}
 
 addprojectflags()
 precompiledheaders()
@@ -21,8 +25,15 @@ options {
 	"ArchiveSplit",
 }
 includedirs {
+	MAME_DIR .. "3rdparty/wga/peer/src/base",
+	MAME_DIR .. "3rdparty/wga/peer/src/peer",
+	MAME_DIR .. "3rdparty/wga/peer/external",
+	MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
+	MAME_DIR .. "3rdparty/wga/peer/external/json/include",
+
 	MAME_DIR .. "src/osd",
 	MAME_DIR .. "src/emu",
+	MAME_DIR .. "src/emu/net",
 	MAME_DIR .. "src/lib",
 	MAME_DIR .. "src/lib/util",
 	MAME_DIR .. "3rdparty",
@@ -42,6 +53,10 @@ includedirs {
 }
 
 files {
+	MAME_DIR .. "src/emu/net/NSM_Common.cpp",
+	MAME_DIR .. "src/emu/net/NSM_Common.h",
+	MAME_DIR .. "src/emu/net/NSM_CommonInterface.h",
+
 	MAME_DIR .. "src/emu/emu.h",
 	MAME_DIR .. "src/emu/emufwd.h",
 	MAME_DIR .. "src/emu/main.h",
@@ -344,5 +359,3 @@ pchsource(MAME_DIR .. "src/emu/drivers/empty.cpp")
 dependency {
 	{ "$(OBJDIR)/src/emu/drivers/empty.o", "$(GCH)", true  },
 }
-
-

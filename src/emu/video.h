@@ -35,6 +35,7 @@ constexpr int MAX_FRAMESKIP = FRAMESKIP_LEVELS - 2;
 //  TYPE DEFINITIONS
 //**************************************************************************
 
+class WebMEncoder;
 // ======================> video_manager
 
 class video_manager
@@ -87,6 +88,10 @@ public:
 	void end_recording();
 	void add_sound_to_recording(const s16 *sound, int numsamples);
 	bool is_recording() const { return !m_movie_recordings.empty(); }
+
+
+  // Override time for rollback
+  void rollback(attotime rollbackAmount);
 
 private:
 	// internal helpers
@@ -167,6 +172,8 @@ private:
 	std::vector<movie_recording::ptr> m_movie_recordings;
 
 	static const bool   s_skiptable[FRAMESKIP_LEVELS][FRAMESKIP_LEVELS];
+	// movie recording - dummy
+	bool                m_dummy_recording;          // indicates if snapshot should be created of every frame
 
 	static const attoseconds_t ATTOSECONDS_PER_SPEED_UPDATE = ATTOSECONDS_PER_SECOND / 4;
 	static const int PAUSED_REFRESH_RATE = 30;

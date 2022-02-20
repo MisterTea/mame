@@ -607,6 +607,9 @@ function toolchain(_buildDir, _libDir)
 			"-Wunused-value",
 			"-Wundef",
 		}
+		buildoptions_cpp {
+			"-std=c++17",
+		}
 		linkoptions {
 			"-Wl,--gc-sections",
 			"-static",
@@ -681,6 +684,9 @@ function toolchain(_buildDir, _libDir)
 			"-Wundef",
 --			"-Wuseless-cast",
 		}
+		buildoptions_cpp {
+			"-std=c++17",
+		}
 		links {
 			"rt",
 			"dl",
@@ -735,6 +741,9 @@ function toolchain(_buildDir, _libDir)
 			"-Wunused-value",
 			"-Wundef",
 		}
+		buildoptions_cpp {
+			"-std=c++17",
+		}
 		links {
 			"rt",
 			"dl",
@@ -767,6 +776,9 @@ function toolchain(_buildDir, _libDir)
 			"-ffunction-sections",
 			"-Wunused-value",
 			"-Wundef",
+		}
+		buildoptions_cpp {
+			"-std=c++17",
 		}
 		linkoptions {
 			"--gcc-toolchain=" .. androidToolchainRoot(),
@@ -831,6 +843,9 @@ function toolchain(_buildDir, _libDir)
 		buildoptions {
 			"-Wunused-value",
 			"-Wundef",
+		}
+		buildoptions_cpp {
+			"-std=c++17",
 		}
 
 		linkoptions {
@@ -935,6 +950,12 @@ function toolchain(_buildDir, _libDir)
 		}
 
 	configuration { "osx*" }
+		buildoptions_cpp {
+			"-std=c++17",
+		}
+		buildoptions_objcpp {
+			"-std=c++14",
+		}
 		buildoptions {
 			"-Wfatal-errors",
 			"-Wunused-value",
@@ -945,6 +966,12 @@ function toolchain(_buildDir, _libDir)
 	configuration { "ios*" }
 		linkoptions {
 			"-lc++",
+		}
+		buildoptions_cpp {
+			"-std=c++17",
+		}
+		buildoptions_objcpp {
+			"-std=c++14",
 		}
 		buildoptions {
 			"-Wfatal-errors",
@@ -1089,6 +1116,9 @@ function toolchain(_buildDir, _libDir)
 			"$(SCE_ORBIS_SDK_DIR)/target/include",
 			"$(SCE_ORBIS_SDK_DIR)/target/include_common",
 		}
+		buildoptions_cpp {
+			"-std=c++17",
+		}
 
 	configuration { "rpi" }
 		targetdir (path.join(_buildDir, "rpi/bin"))
@@ -1104,6 +1134,9 @@ function toolchain(_buildDir, _libDir)
 		buildoptions {
 			"-Wunused-value",
 			"-Wundef",
+		}
+		buildoptions_cpp {
+			"-std=c++17",
 		}
 		includedirs {
 			"/opt/vc/include",
@@ -1133,6 +1166,9 @@ function toolchain(_buildDir, _libDir)
 			"-Wunused-value",
 			"-Wundef",
 			"--sysroot=$(FREEDOM_E_SDK)/work/build/riscv-gnu-toolchain/riscv64-unknown-elf/prefix/riscv64-unknown-elf",
+		}
+		buildoptions_cpp {
+			"-std=c++17",
 		}
 
 	configuration {} -- reset configuration

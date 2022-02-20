@@ -30,8 +30,9 @@ end
 		targetextension ".so"
 		linkoptions {
 			"-shared",
-			"-Wl,-soname,libmain.so"
-		}
+			"-Wl,-soname,libmain.so",
+      "$(shell pkg-config --libs-only -Llibsodium)",
+    }
 		links {
 			"EGL",
 			"GLESv1_CM",
@@ -69,15 +70,15 @@ end
 	end
 
 	configuration { "Release" }
-		targetsuffix ""
+		targetsuffix "hub"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "p"
+			targetsuffix "hubp"
 		end
 
 	configuration { "Debug" }
-		targetsuffix "d"
+		targetsuffix "hubd"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "dp"
+			targetsuffix "hubdp"
 		end
 
 	configuration { "mingw*" or "vs20*" }
@@ -92,7 +93,7 @@ end
 		files {
 			MAME_DIR .. "src/osd/sdl/android_main.cpp",
 		}
-		targetsuffix ""
+		targetsuffix "hub"
 		if _OPTIONS["SEPARATE_BIN"]~="1" then
 			if _OPTIONS["PLATFORM"]=="arm" then
 				targetdir(MAME_DIR .. "android-project/app/src/main/libs/armeabi-v7a")
@@ -162,6 +163,7 @@ end
 		"ymfm",
 		ext_lib("jpeg"),
 		"7z",
+    "wga",
 	}
 if CPU_INCLUDE_DRC_NATIVE then
 	links {
@@ -217,6 +219,7 @@ end
 	includedirs {
 		MAME_DIR .. "src/osd",
 		MAME_DIR .. "src/emu",
+		MAME_DIR .. "src/emu/net",
 		MAME_DIR .. "src/devices",
 		MAME_DIR .. "src/" .. _target,
 		MAME_DIR .. "src/lib",

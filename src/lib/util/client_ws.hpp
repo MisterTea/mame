@@ -27,7 +27,7 @@
 #include <atomic>
 #include <list>
 #include "crypto.hpp"
-#include "base64.hpp"
+#include "emubase64.hpp"
 
 #ifndef CASE_INSENSITIVE_EQUALS_AND_HASH
 #define CASE_INSENSITIVE_EQUALS_AND_HASH

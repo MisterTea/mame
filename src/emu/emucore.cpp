@@ -10,12 +10,16 @@
 ****************************************************************************/
 
 #include "emu.h"
+
+//
+#include "UniversalStacktrace/ust/ust.hpp"
 #include "emucore.h"
 #include "osdcore.h"
 
 emu_fatalerror::emu_fatalerror(util::format_argument_pack<char> const &args)
 	: emu_fatalerror(0, args)
 {
+  std::cout << ust::generate() << std::endl;
 	osd_break_into_debugger(m_text.c_str());
 }
 
@@ -23,17 +27,21 @@ emu_fatalerror::emu_fatalerror(int _exitcode, util::format_argument_pack<char> c
 	: m_text(util::string_format(args))
 	, m_code(_exitcode)
 {
+  std::cout << ust::generate() << std::endl;
 }
 
-
-void report_bad_cast(const std::type_info &src_type, const std::type_info &dst_type)
-{
-	throw emu_fatalerror("Error: bad downcast<> or device<>.  Tried to convert a %s to a %s, which are incompatible.\n",
-			src_type.name(), dst_type.name());
+void report_bad_cast(const std::type_info &src_type,
+                     const std::type_info &dst_type) {
+  throw emu_fatalerror(
+      "Error: bad downcast<> or device<>.  Tried to convert a %s to a %s, "
+      "which are incompatible.\n",
+      src_type.name(), dst_type.name());
 }
 
-void report_bad_device_cast(const device_t *dev, const std::type_info &src_type, const std::type_info &dst_type)
-{
-	throw emu_fatalerror("Error: bad downcast<> or device<>.  Tried to convert the device %s (%s) of type %s to a %s, which are incompatible.\n",
-			dev->tag(), dev->name(), src_type.name(), dst_type.name());
+void report_bad_device_cast(const device_t *dev, const std::type_info &src_type,
+                            const std::type_info &dst_type) {
+  throw emu_fatalerror(
+      "Error: bad downcast<> or device<>.  Tried to convert the device %s (%s) "
+      "of type %s to a %s, which are incompatible.\n",
+      dev->tag(), dev->name(), src_type.name(), dst_type.name());
 }

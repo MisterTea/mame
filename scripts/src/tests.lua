@@ -22,15 +22,15 @@ project("mametests")
 	end
 
 	configuration { "Release" }
-		targetsuffix ""
+		targetsuffix "hub"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "p"
+			targetsuffix "hubp"
 		end
 
 	configuration { "Debug" }
-		targetsuffix "d"
+		targetsuffix "hubd"
 		if _OPTIONS["PROFILE"] then
-			targetsuffix "dp"
+			targetsuffix "hubdp"
 		end
 
 	configuration { "mingw*" or "vs*" }
