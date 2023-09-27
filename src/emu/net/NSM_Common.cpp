@@ -7,24 +7,19 @@
 #include "ChronoMap.hpp"
 #include "LogHandler.hpp"
 #include "NSM_Common.h"
+#include "NSM_CommonInterface.h"
 #include "TimeHandler.hpp"
 #include "lzma/C/LzmaDec.h"
 #include "lzma/C/LzmaEnc.h"
-
-
-#include "NSM_CommonInterface.h"
-
 
 using namespace std;
 
 CommonBase *netCommon = NULL;
 CommonBase *createNetCommon(const string &userId,
-                                 const string &privateKeyString,
-                                 unsigned short _port,
-                                 const string &lobbyHostname,
-                                 unsigned short lobbyPort, int _unmeasuredNoise,
-                                 const string &gameName,
-                                 bool fakeLag) {
+                            const string &privateKeyString,
+                            unsigned short _port, const string &lobbyHostname,
+                            unsigned short lobbyPort, int _unmeasuredNoise,
+                            const string &gameName, bool fakeLag) {
   netCommon = new Common(userId, privateKeyString, _port, lobbyHostname,
                          lobbyPort, _unmeasuredNoise, gameName, fakeLag);
   return netCommon;
@@ -153,17 +148,23 @@ Common::Common(const string &_userId, const string &privateKeyString,
                unsigned short _port, const string &lobbyHostname,
                unsigned short lobbyPort, int _unmeasuredNoise,
                const string &gameName, bool fakeLag)
-    : userId(_userId), lastSendTime(0), unmeasuredNoise(_unmeasuredNoise), cachedInputValues(-1,{}) {
+    : userId(_userId),
+      lastSendTime(0),
+      unmeasuredNoise(_unmeasuredNoise),
+      cachedInputValues(-1, {}) {
   if (fakeLag) {
     wga::GlobalClock::addNoise();
     wga::ALL_RPC_FLAKY = true;
   }
 
   netEngine.reset(new wga::NetEngine());
-  privateKey = wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString +
-                                                              "/" + userId);
+  // privateKey =
+  // wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString +
+  //"/" + userId);
+  privateKey = wga::CryptoHandler::makePrivateKeyFromB64(privateKeyString);
   publicKey = wga::CryptoHandler::makePublicFromPrivate(privateKey);
-  LOG(INFO) << "Using public key: " << wga::CryptoHandler::keyToString(publicKey);
+  LOG(INFO) << "Using public key: "
+            << wga::CryptoHandler::keyToString(publicKey);
 
   bool localLobby = (lobbyHostname == "self");
   if (localLobby) {
@@ -177,16 +178,13 @@ Common::Common(const string &_userId, const string &privateKeyString,
                                localLobby ? "" : lobbyHostname, lobbyPort,
                                userId));
   if (myPeer->isHosting()) {
-    if (!gameName.length()) {
-      LOG(FATAL) << "Hosting but didn't choose a game";
-    }
     LOG(INFO) << "Hosting game: " << gameName;
     myPeer->host(gameName);
   } else {
     LOG(INFO) << "Joining game: ";
     myPeer->join();
   }
-  myPlayers = { myPeer->getPosition() };
+  myPlayers = {myPeer->getPosition()};
 
   netEngine->start();
   myPeer->start();
@@ -198,9 +196,7 @@ Common::Common(const string &_userId, const string &privateKeyString,
 
 set<int> Common::getMyPlayers() { return myPlayers; }
 
-void Common::setMyPlayers(std::set<int> newPlayers) {
-  myPlayers = newPlayers;
-}
+void Common::setMyPlayers(std::set<int> newPlayers) { myPlayers = newPlayers; }
 
 Common::~Common() {
   myPeer->shutdown();
@@ -482,7 +478,8 @@ void Common::updateForces(const vector<pair<unsigned char *, int>> &ramBlocks) {
   }
 }
 
-unordered_map<string, string> Common::getStateChanges(const unordered_map<string, string>& inputMap) {
+unordered_map<string, string> Common::getStateChanges(
+    const unordered_map<string, string> &inputMap) {
   return myPeer->getStateChanges(inputMap);
 }
 
@@ -525,7 +522,8 @@ vector<uint8_t> Common::computeChecksum(running_machine *machine) {
   return blockChecksums;
 }
 
-std::unordered_map<std::string, std::vector<std::string>> Common::getAllInputValues(int64_t ts) {
+std::unordered_map<std::string, std::vector<std::string>>
+Common::getAllInputValues(int64_t ts) {
   if (cachedInputValues.first == ts) {
     return cachedInputValues.second;
   }
