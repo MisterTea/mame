@@ -291,19 +291,16 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
       50,
       gameString,
 	  m_options.fake_lag());
-    if (!netCommon->isHosting()) {
-      LOG(INFO) << "NOT SERVER";
-      string gameName = netCommon->getGameName();
-      auto tokens = wga::split(gameName, ';');
-      if (tokens.size() > 2) {
-        LOGFATAL << "Invalid token size: " << gameName;
-      }
-      m_options.set_system_name(tokens[0]);
-      if (tokens.size() > 1) {
-        string software = tokens[1];
-        m_options.set_software(std::move(software));
-      }
-    }
+	string gameName = netCommon->getGameName();
+	auto tokens = wga::split(gameName, ';');
+	if (tokens.size() > 2) {
+	LOGFATAL << "Invalid token size: " << gameName;
+	}
+	m_options.set_system_name(tokens[0]);
+	if (tokens.size() > 1) {
+	string software = tokens[1];
+	m_options.set_software(std::move(software));
+	}
   }
 
 	// otherwise, check for a valid system

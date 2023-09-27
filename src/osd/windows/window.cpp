@@ -801,7 +801,7 @@ static void create_window_class()
 		WNDCLASS wc = { 0 };
 
 		// initialize the description of the window class
-		wc.lpszClassName    = TEXT("MAME");
+		wc.lpszClassName    = TEXT("MAMEHub");
 		wc.hInstance        = GetModuleHandleUni();
 		wc.lpfnWndProc      = winwindow_video_window_proc_ui;
 		wc.hCursor          = LoadCursor(nullptr, IDC_ARROW);
@@ -939,7 +939,7 @@ int win_window_info::complete_create()
 		// create the window, but don't show it yet
 		hwnd = win_create_window_ex_utf8(
 				fullscreen() ? FULLSCREEN_STYLE_EX : WINDOW_STYLE_EX,
-				"MAME",
+				"MAMEHub",
 				title().c_str(),
 				fullscreen() ? FULLSCREEN_STYLE : WINDOW_STYLE,
 				monitorbounds.left() + 20, monitorbounds.top() + 20,
