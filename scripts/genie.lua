@@ -745,7 +745,7 @@ local version = str_to_version(_OPTIONS["gcc_version"])
 -- add -g if we need symbols, and ensure we have frame pointers
 if _OPTIONS["SYMBOLS"]~=nil and _OPTIONS["SYMBOLS"]~="0" then
 	buildoptions {
-		"-g" .. _OPTIONS["SYMLEVEL"],
+		"-no-pie -g" .. _OPTIONS["SYMLEVEL"],
 		"-fno-omit-frame-pointer",
 		"-fno-optimize-sibling-calls",
 	}
@@ -1190,7 +1190,7 @@ configuration { "asmjs" }
 	}
 	if _OPTIONS["SYMBOLS"]~=nil and _OPTIONS["SYMBOLS"]~="0" then
 		linkoptions {
-			"-g" .. _OPTIONS["SYMLEVEL"],
+			"-no-pie -g" .. _OPTIONS["SYMLEVEL"],
 			"-s DEMANGLE_SUPPORT=1",
 		}
 	end
