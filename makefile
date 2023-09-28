@@ -45,7 +45,7 @@ NOWERROR = 1
 
 # DEBUG = 1
 # PROFILER = 1
-# SANITIZE =
+# SANITIZE = address
 
 # PTR64 = 1
 # BIGENDIAN = 1

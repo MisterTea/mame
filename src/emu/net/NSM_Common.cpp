@@ -184,6 +184,9 @@ Common::Common(const string &_userId, const string &privateKeyString,
     LOG(INFO) << "Joining game: ";
     myPeer->join();
   }
+  if (myPeer->getPosition() == -1) {
+    LOGFATAL << "Somehow didn't get my player position";
+  }
   myPlayers = {myPeer->getPosition()};
 
   netEngine->start();
