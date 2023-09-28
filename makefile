@@ -49,9 +49,9 @@ NOWERROR = 1
 # BIGENDIAN = 1
 # NOASM = 1
 
-OPTIMIZE = s
-SYMBOLS = 1
-SYMLEVEL = 1
+#OPTIMIZE = s
+#SYMBOLS = 1
+#SYMLEVEL = 1
 # MAP = 1
 # PROFILE = 1
 # ARCHOPTS =
@@ -940,8 +940,8 @@ endif
 endif
 endif
 
-ifdef REGNIE
-ifeq ($(REGNIE),1)
+ifdef REGENIE
+ifeq ($(REGENIE),1)
 SCRIPTS+= regenie
 endif
 endif
