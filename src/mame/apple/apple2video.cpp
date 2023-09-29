@@ -364,7 +364,7 @@ static constexpr unsigned rotl4b(unsigned n, unsigned count) { return (n >> (-co
 // 4-bit left rotate. Bits 4-6 of n must be zero.
 static constexpr unsigned rotl4(unsigned n, unsigned count) { return rotl4b(n * 0x11, count); }
 
-static constexpr class bit_doubler
+static class bit_doubler
 {
 	uint16_t a[128];
 
@@ -380,7 +380,7 @@ public:
 
 } double_7_bits;
 
-static constexpr class bit_reverser
+static class bit_reverser
 {
 	uint8_t a[128];
 

@@ -28,17 +28,18 @@
 std::string_view core_filename_extract_base(std::string_view name, bool strip_extension) noexcept
 {
 	// find the start of the basename
-	auto const start = std::find_if(name.rbegin(), name.rend(), &util::is_directory_separator);
+	auto start = std::find_if(name.rbegin(), name.rend(), &util::is_directory_separator);
 	if (start == name.rbegin())
 		return std::string_view();
 
 	// find the end of the basename
-	auto const chop_position = strip_extension
+	// JJG: Const causes asan to complain.
+	auto chop_position = strip_extension
 		? std::find(name.rbegin(), start, '.')
 		: start;
-	auto const end = ((chop_position != start) && (std::next(chop_position) != start))
-		? std::next(chop_position)
-		: name.rbegin();
+	auto end = name.rbegin();
+	if (((chop_position != start) && (std::next(chop_position) != start)))
+		end = std::next(chop_position);
 
 	return std::string_view(&*start.base(), end.base() - start.base());
 }

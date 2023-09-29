@@ -34,7 +34,7 @@ public:
 	~cli_frontend();
 
 	// execute based on the incoming argc/argv
-	int execute(std::vector<std::string> &args);
+	int execute(std::vector<std::string> args);
 
 private:
 	struct info_command_struct

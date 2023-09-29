@@ -25,6 +25,7 @@
 #include "h8_dtc.h"
 #include "h8_port.h"
 #include "h8d.h"
+#include "h8_sci.h"
 
 h8_device::h8_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, address_map_constructor map_delegate) :
 	h8_cpu_base(mconfig, type, tag, owner, clock),

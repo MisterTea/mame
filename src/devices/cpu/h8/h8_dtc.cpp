@@ -5,6 +5,7 @@
 #include "h8_dtc.h"
 
 #include "h8.h"
+#include "h8_sci.h"
 
 // Verbosity level
 // 0 = no messages
