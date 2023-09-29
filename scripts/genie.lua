@@ -481,6 +481,7 @@ flags {
 configuration { "vs20*" }
 	buildoptions {
 		"/bigobj",
+		"/utf-8",
 	}
 	buildoptions_cpp {
 		"/Zc:__cplusplus",

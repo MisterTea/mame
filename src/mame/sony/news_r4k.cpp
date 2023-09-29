@@ -446,7 +446,8 @@ void news_r4k_state::machine_common(machine_config &config)
 
 	CXD8452AQ(config, m_sonic3, 0);
 	m_sonic3->set_addrmap(0, &news_r4k_state::sonic3_map);
-	m_sonic3->irq_out().set(FUNC(news_r4k_state::irq_w<irq0_number::SONIC>));
+	//JJG: Doesn't compile on msvc
+	//m_sonic3->irq_out().set(FUNC(news_r4k_state::irq_w<irq0_number::SONIC>));
 	m_sonic3->set_bus(m_cpu, 0);
 	m_sonic3->set_apbus_address_translator(FUNC(news_r4k_state::apbus_virt_to_phys));
 
@@ -481,7 +482,8 @@ void news_r4k_state::machine_common(machine_config &config)
 	DMAC3(config, m_dmac, 0);
 	m_dmac->set_apbus_address_translator(FUNC(news_r4k_state::apbus_virt_to_phys));
 	m_dmac->set_bus(m_cpu, 0);
-	m_dmac->irq_out().set(FUNC(news_r4k_state::irq_w<DMAC>));
+	//JJG: Doesn't compile on msvc
+	//m_dmac->irq_out().set(FUNC(news_r4k_state::irq_w<DMAC>));
 
 	NSCSI_BUS(config, m_scsibus0);
 	NSCSI_BUS(config, m_scsibus1);

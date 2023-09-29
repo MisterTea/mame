@@ -14,6 +14,7 @@
 #include "h8_dma.h"
 #include "h8_dtc.h"
 #include "h8d.h"
+#include "h8_sci.h"
 
 h8_device::h8_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, address_map_constructor map_delegate) :
 	cpu_device(mconfig, type, tag, owner, clock),

@@ -159,6 +159,8 @@ void tseng_vga_device::sequencer_map(address_map &map)
 
 void tseng_vga_device::attribute_map(address_map &map)
 {
+	//JJG: Doesn't compile on msvc
+#if 0
 	map.global_mask(0x3f);
 	map.unmap_value_high();
 	svga_device::attribute_map(map);
@@ -179,7 +181,7 @@ void tseng_vga_device::attribute_map(address_map &map)
 		NAME([this] (offs_t offset, u8 data) {
 			et4k.misc1 = data;
 			// TODO: this should be taken into account for recompute_params
-			#if 0
+#if 0
 			svga.rgb8_en = 0;
 			svga.rgb15_en = 0;
 			svga.rgb16_en = 0;
@@ -197,7 +199,7 @@ void tseng_vga_device::attribute_map(address_map &map)
 					popmessage("Tseng 15/16 bit HiColor mode, contact MAMEdev");
 					break;
 			}
-			#endif
+#endif
 		})
 	);
 	// Miscellaneous 2
@@ -208,6 +210,7 @@ void tseng_vga_device::attribute_map(address_map &map)
 			et4k.misc2 = data;
 		})
 	);
+#endif
 }
 
 void tseng_vga_device::recompute_params()

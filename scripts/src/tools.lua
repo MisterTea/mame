@@ -790,6 +790,7 @@ if (_OPTIONS["osd"] == "sdl") then
 				}
 			configuration { "vs*" }
 				links {
+					"SDL2main",
 					"SDL2",
 					"imm32",
 					"version",

@@ -329,7 +329,7 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 //  command line interface
 //-------------------------------------------------
 
-int cli_frontend::execute(std::vector<std::string> &args)
+int cli_frontend::execute(std::vector<std::string> args)
 {
   // Initial rand
   srand(1234);
