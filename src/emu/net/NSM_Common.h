@@ -1,23 +1,14 @@
 #ifndef __NSM_COMMON_H__
 #define __NSM_COMMON_H__
 
-#include "zlib.h"
-
 #include "NSM_CommonInterface.h"
+#include "zlib.h"
 
 #ifndef _MSVC_LANG
 #define _MSVC_LANG (0)
 #endif
 #define ASIO_STANDALONE 1
 #define BOOST_VERSION (0)
-
-#include "ChronoMap.hpp"
-#include "CryptoHandler.hpp"
-#include "LogHandler.hpp"
-#include "MyPeer.hpp"
-#include "NetEngine.hpp"
-#include "SingleGameServer.hpp"
-#include "TimeHandler.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -29,6 +20,14 @@
 #include <set>
 #include <string>
 #include <vector>
+
+#include "ChronoMap.hpp"
+#include "CryptoHandler.hpp"
+#include "LogHandler.hpp"
+#include "MyPeer.hpp"
+#include "NetEngine.hpp"
+#include "SingleGameServer.hpp"
+#include "TimeHandler.hpp"
 
 #ifdef interface
 #undef interface
@@ -75,38 +74,37 @@ class Common : public CommonBase {
   wga::PublicKey publicKey;
   shared_ptr<wga::MyPeer> myPeer;
 
-  std::vector<std::pair<BlockValueLocation, int> > forcedLocations;
+  std::vector<std::pair<BlockValueLocation, int>> forcedLocations;
 
-  std::vector<std::shared_ptr<MemoryBlock> > initialBlocks;
-  std::vector<std::shared_ptr<MemoryBlock> > blocks;
+  std::vector<std::shared_ptr<MemoryBlock>> initialBlocks;
+  std::vector<std::shared_ptr<MemoryBlock>> blocks;
 
   std::unordered_map<std::string, std::string> dataToAttach;
 
  public:
-  Common(const string& userId, const string &privateKeyString, unsigned short _port, const string& lobbyHostname, unsigned short lobbyPort, int _unmeasuredNoise, const string& gameName, bool fakeLag);
+  Common(const string &userId, const string &privateKeyString,
+         unsigned short _port, const string &lobbyHostname,
+         unsigned short lobbyPort, int _unmeasuredNoise, const string &gameName,
+         bool fakeLag);
 
   virtual ~Common();
 
-  virtual void createMemoryBlock(
-      const std::string &name, unsigned char *ptr, int size);
+  virtual void createMemoryBlock(const std::string &name, unsigned char *ptr,
+                                 int size);
 
   int getLargestPing();
 
-  virtual int64_t getLastSendTime() {
-    return lastSendTime;
-  }
+  virtual int64_t getLastSendTime() { return lastSendTime; }
 
   virtual int64_t getCurrentTime() {
-    return wga::GlobalClock::currentTimeMicros() - 10*1000*1000;
+    return (wga::GlobalClock::currentTimeMicros() - machineTimeShift);
   }
 
-  virtual std::string getGameName() {
-    return myPeer->getGameName();
-  }
+  virtual std::string getGameName() { return myPeer->getGameName(); }
 
   std::shared_ptr<MemoryBlock> getMemoryBlock(int i) { return blocks[i]; }
 
-  virtual void attachToNextInputs(const string& key, const string& value) {
+  virtual void attachToNextInputs(const string &key, const string &value) {
     if (dataToAttach.find(key) != dataToAttach.end()) {
       LOG(FATAL) << "Tried to attach twice to the same key: " << key;
     }
@@ -124,33 +122,37 @@ class Common : public CommonBase {
   std::vector<BlockValueLocation> getLocationsWithValue(
       unsigned int value,
       const std::vector<BlockValueLocation> &locationsToIntersect,
-      const std::vector<std::pair<unsigned char *, int> > &ramBlocks);
+      const std::vector<std::pair<unsigned char *, int>> &ramBlocks);
 
   void forceLocation(BlockValueLocation location, unsigned int value) {
     forcedLocations.push_back(
         std::pair<BlockValueLocation, int>(location, value));
   }
 
-  virtual unordered_map<string, string> getStateChanges(const unordered_map<string, string>& inputMap);
+  virtual unordered_map<string, string> getStateChanges(
+      const unordered_map<string, string> &inputMap);
   virtual void sendInputs(int64_t inputTimeMs,
-                  const unordered_map<string, string> &inputMap);
+                          const unordered_map<string, string> &inputMap);
 
   void updateForces(
-      const std::vector<std::pair<unsigned char *, int> > &ramBlocks);
+      const std::vector<std::pair<unsigned char *, int>> &ramBlocks);
 
   vector<uint8_t> computeChecksum(running_machine *machine);
 
-  virtual std::unordered_map<std::string, std::vector<std::string>> getAllInputValues(int64_t ts);
+  virtual std::unordered_map<std::string, std::vector<std::string>>
+  getAllInputValues(int64_t ts);
 
   virtual bool isHosting();
 
  protected:
+  int64_t machineTimeShift;
   std::string userId;
   std::string doInflate(const unsigned char *inputString, int length);
   int64_t lastSendTime;
   int unmeasuredNoise;
   set<int> myPlayers;
-  pair<int64_t, std::unordered_map<std::string, std::vector<std::string>>> cachedInputValues;
+  pair<int64_t, std::unordered_map<std::string, std::vector<std::string>>>
+      cachedInputValues;
 
   shared_ptr<wga::SingleGameServer> server;
 };
