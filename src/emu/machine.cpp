@@ -391,7 +391,9 @@ int running_machine::run(bool quiet)
       if(m_machine_time.seconds()>0 && m_scheduler.can_save() && timePassed && !firstTimeAtSecond) {
         firstTimeAtSecond = 1;
         // Load initial data
-        netCommon->createInitialBlocks(this);
+		if (netCommon) {
+        	netCommon->createInitialBlocks(this);
+		}
       }
       else if(m_machine_time.seconds()>0 && m_scheduler.can_save() && timePassed)
       {

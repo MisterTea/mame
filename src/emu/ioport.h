@@ -607,9 +607,7 @@ public:
   inline const std::string mamehub_id() const noexcept {
 	  return std::to_string(mamehub_player()) + std::string("/") + name();
   }
-  const input_seq seq_peers(input_seq_type seqtype = SEQ_TYPE_STANDARD) const noexcept {
-    return input_seq(mamehub_id());
-  }
+  const input_seq seq_peers(input_seq_type seqtype = SEQ_TYPE_STANDARD) const noexcept;
 	const input_seq &defseq(input_seq_type seqtype = SEQ_TYPE_STANDARD) const noexcept;
 	const input_seq &defseq_unresolved(input_seq_type seqtype = SEQ_TYPE_STANDARD) const noexcept { return m_seq[seqtype]; }
 	void set_defseq(const input_seq &newseq) noexcept { set_defseq(SEQ_TYPE_STANDARD, newseq); }
