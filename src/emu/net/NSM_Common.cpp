@@ -157,6 +157,10 @@ Common::Common(const string &_userId, const string &privateKeyString,
     wga::ALL_RPC_FLAKY = true;
   }
 
+  auto startConnectTime =
+      chrono::duration_cast<chrono::microseconds>(
+          chrono::high_resolution_clock::now().time_since_epoch())
+          .count();
   netEngine.reset(new wga::NetEngine());
   // privateKey =
   // wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString +
@@ -194,6 +198,32 @@ Common::Common(const string &_userId, const string &privateKeyString,
   while (!myPeer->initialized()) {
     LOG(INFO) << "Waiting for initialization for peer...";
     wga::microsleep(1000 * 1000);
+  }
+  if (myPeer->isHosting()) {
+    machineTimeShift =
+        (chrono::duration_cast<chrono::microseconds>(
+             chrono::high_resolution_clock::now().time_since_epoch())
+             .count() -
+         startConnectTime);
+    unordered_map<string, string> machineTimeShiftMap = {
+        {"__BASE_TIME__", to_string(machineTimeShift)}};
+    myPeer->updateState(2, machineTimeShiftMap);
+  } else {
+    myPeer->updateState(2, {{"__BASE_TIME__", to_string(0)}});
+    auto retval = myPeer->getAllInputValues(1).at("__BASE_TIME__");
+    for (string it : retval) {
+      if (it == "0") {
+        continue;
+      }
+      machineTimeShift = stoll(it);
+    }
+  }
+
+  if (getCurrentTime() < 0) {
+    LOG(INFO) << "Waiting for time==0";
+    wga::microsleep(std::max(int64_t(0), getCurrentTime() * -1));
+  } else {
+    LOG(INFO) << "AT TIME: " << getCurrentTime();
   }
 }
 
@@ -493,6 +523,10 @@ void Common::sendInputs(int64_t inputTimeMs,
     cout << "FINISHED" << endl;
     myPeer->shutdown();
     exit(0);
+  }
+  if (inputTimeMs <= 1) {
+    VLOG(1) << "SKIPPING FIRST INPUT BLOCK" << endl;
+    return;
   }
   VLOG(1) << "SENDING INPUTS AT TIME " << inputTimeMs << endl;
   myPeer->updateState(inputTimeMs, inputMap);

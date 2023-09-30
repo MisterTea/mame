@@ -853,7 +853,7 @@ const char *input_manager::standard_token(input_item_id itemid) const
 
 bool input_manager::seq_pressed(const input_seq &seq)
 {
-  if (!seq.mamehub_input_key().empty()) {
+  if (netCommon && !seq.mamehub_input_key().empty()) {
     auto timestamp = machine().machine_time().to_msec();
     if (timestamp < 1000) {
       return false;

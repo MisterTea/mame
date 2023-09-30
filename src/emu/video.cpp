@@ -32,6 +32,7 @@
 #include <chrono>
 
 #include "NSM_CommonInterface.h"
+#include "TimeHandler.hpp"
 
 //**************************************************************************
 //  DEBUGGING
@@ -690,7 +691,12 @@ void video_manager::update_throttle(attotime emutime) {
     while(true) {
       VLOG(1) << "In video update";
       // Get current ticks
-      int64_t curTime = netCommon->getCurrentTime();
+      int64_t curTime;
+	  if (netCommon) {
+        curTime = netCommon->getCurrentTime();
+	  } else {
+		curTime = wga::GlobalClock::currentTimeMicros();
+	  }
       //if (netClient) {
         // TODO: One person has to be time keeper
         //curTime = netClient->getCurrentServerTime();
