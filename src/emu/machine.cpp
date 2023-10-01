@@ -346,7 +346,7 @@ int running_machine::run(bool quiet)
 
     printf("SOFT RESET FINISHED\n");
 
-    u64 trackFrameNumber=0;
+    //u64 trackFrameNumber=0;
 
     attotime largestEmulationTime(0,0);
 

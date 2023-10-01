@@ -1,19 +1,41 @@
 #include "emu.h"
 #include "emuopts.h"
+
+//
+
 #include "mamehub.h"
 
+//
+
+#include "NSM_CommonInterface.h"
 #include "mame.h"
 #include "ui/menu.h"
 #include "ui/ui.h"
 
-#include "NSM_CommonInterface.h"
+//
+
+#include <algorithm>
 
 mamehub_manager* mamehub_manager::m_manager = NULL;
+
+class ChatLog {
+ public:
+  time_t timeReceived;
+  std::string message;
+  std::string userId;
+
+  ChatLog(time_t _timeReceived, const std::string& _message,
+          const std::string& _userId)
+      : timeReceived(_timeReceived), message(_message), userId(_userId) {}
+};
 
 std::list<ChatLog> chatLogs;
 std::vector<char> chatString;
 int chatEnabled = false;
 int statsVisible = true;
+int chatCounter = 0;
+std::map<std::string, std::string> lastChatFromUserId;
+std::map<std::string, int> userIdColorMap;
 
 extern int initialSyncPercentComplete;
 
@@ -36,6 +58,31 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
   }
 
   time_t curRealTime = time(NULL);
+  auto timestamp = ui_manager.machine().machine_time().to_msec();
+  if (timestamp >= 1000) {
+    auto values = netCommon->getAllInputValues(timestamp, std::string("CHAT"));
+    for (auto value : values) {
+      auto userId = value.first;
+      auto chat = value.second;
+      if (lastChatFromUserId.find(userId) != lastChatFromUserId.end() &&
+          lastChatFromUserId[userId] == chat) {
+        // Already processed
+        continue;
+      }
+      lastChatFromUserId[userId] = chat;
+      auto slashPos = chat.find('/');
+      if (slashPos == string::npos) {
+        LOGFATAL << "Somehow got a bad chat: " << chat;
+      }
+      auto chatWithoutCounter = chat.substr(slashPos + 1);
+      if (userIdColorMap.find(userId) == userIdColorMap.end()) {
+		  int index = min(int(userIdColorMap.size()), 14);
+        userIdColorMap[userId] = index;
+      }
+      chatLogs.push_back(ChatLog(curRealTime, chatWithoutCounter, userId));
+    }
+  }
+
   for (std::list<ChatLog>::iterator it = chatLogs.begin();
        it != chatLogs.end();) {
     if (it->timeReceived + 8 < curRealTime) {
@@ -53,10 +100,10 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
 
   int chatIndex = 0;
   static const rgb_t chatColors[] = {
-      rgb_t(192, 255, 255, 255), rgb_t(192, 255, 0, 0),
       rgb_t(192, 0, 128, 0),     rgb_t(192, 0, 0, 255),
       rgb_t(192, 128, 128, 0),   rgb_t(192, 128, 0, 128),
       rgb_t(192, 0, 128, 128),   rgb_t(192, 0, 0, 0),
+      rgb_t(192, 255, 255, 255), rgb_t(192, 255, 0, 0),
       rgb_t(192, 128, 128, 128), rgb_t(192, 128, 128, 255),
       rgb_t(192, 128, 255, 128), rgb_t(192, 255, 255, 128),
       rgb_t(192, 128, 255, 128), rgb_t(192, 255, 128, 128),
@@ -81,9 +128,9 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
       );
     */
     //
-    ui_manager.draw_text_box(container, it->message.c_str(),
-                             ui::text_layout::text_justify::CENTER, 0.5,
-                             0.7 + 0.06 * chatIndex, chatColors[it->playerID]);
+    ui_manager.draw_text_box(
+        container, it->message.c_str(), ui::text_layout::text_justify::CENTER,
+        0.5, 0.7 + 0.06 * chatIndex, chatColors[userIdColorMap[it->userId]]);
     //
     chatIndex++;
   }
@@ -184,7 +231,9 @@ bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
             attotime curtime = machine.time();
             netCommon->attachToNextInputs(
                 string("CHAT"),
-                std::string(&chatString[0], chatString.size()));
+                std::to_string(chatCounter) + "/" + netCommon->getMyUserName() +
+                    ": " + std::string(&chatString[0], chatString.size()));
+            chatCounter++;
           }
         }
         chatString.clear();

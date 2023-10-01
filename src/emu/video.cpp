@@ -758,8 +758,8 @@ void video_manager::update_throttle(attotime emutime) {
 }
 
 void video_manager::rollback(attotime rollbackAmount) {
-  osd_ticks_t ticks_per_second = osd_ticks_per_second();
-  attoseconds_t attoseconds_per_tick = ATTOSECONDS_PER_SECOND / ticks_per_second * m_throttle_rate;
+  //osd_ticks_t ticks_per_second = osd_ticks_per_second();
+  //attoseconds_t attoseconds_per_tick = ATTOSECONDS_PER_SECOND / ticks_per_second * m_throttle_rate;
 }
 
 //-------------------------------------------------

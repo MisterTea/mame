@@ -111,6 +111,8 @@ class Common : public CommonBase {
     dataToAttach[key] = value;
   }
 
+  virtual std::string getMyUserName();
+
   virtual std::set<int> getMyPlayers();
 
   virtual void setMyPlayers(std::set<int> newPlayers);
@@ -132,15 +134,15 @@ class Common : public CommonBase {
   virtual unordered_map<string, string> getStateChanges(
       const unordered_map<string, string> &inputMap);
   virtual void sendInputs(int64_t inputTimeMs,
-                          const unordered_map<string, string> &inputMap);
+                          unordered_map<string, string> inputMap);
 
   void updateForces(
       const std::vector<std::pair<unsigned char *, int>> &ramBlocks);
 
   vector<uint8_t> computeChecksum(running_machine *machine);
 
-  virtual std::unordered_map<std::string, std::vector<std::string>>
-  getAllInputValues(int64_t ts);
+  virtual std::map<std::string, std::string> getAllInputValues(
+      int64_t ts, const std::string &key);
 
   virtual bool isHosting();
 
@@ -151,7 +153,8 @@ class Common : public CommonBase {
   int64_t lastSendTime;
   int unmeasuredNoise;
   set<int> myPlayers;
-  pair<int64_t, std::unordered_map<std::string, std::vector<std::string>>>
+  pair<int64_t,
+       std::unordered_map<std::string, std::map<std::string, std::string>>>
       cachedInputValues;
 
   shared_ptr<wga::SingleGameServer> server;

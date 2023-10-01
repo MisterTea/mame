@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -14,8 +15,8 @@
 #include <set>
 #include <stdexcept>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "zlib.h"
 
@@ -25,7 +26,7 @@
 
 #include "Headers.hpp"
 
-#define SHA1(x)             "S" #x
+#define SHA1(x) "S" #x
 
 #ifdef interface
 #undef interface
@@ -38,16 +39,6 @@
 using namespace std;
 
 class running_machine;
-
-class ChatLog {
- public:
-  int playerID;
-  time_t timeReceived;
-  std::string message;
-
-  ChatLog(int _playerID, time_t _timeReceived, const std::string &_message)
-      : playerID(_playerID), timeReceived(_timeReceived), message(_message) {}
-};
 
 class MemoryBlock {
  public:
@@ -110,7 +101,7 @@ class BlockValueLocation {
   }
 };
 
- class CommonBase {
+class CommonBase {
  public:
   CommonBase() {}
 
@@ -118,12 +109,14 @@ class BlockValueLocation {
 
   virtual int getLargestPing() = 0;
 
-  virtual void createMemoryBlock(
-      const std::string &name, unsigned char *ptr, int size) = 0;
+  virtual void createMemoryBlock(const std::string &name, unsigned char *ptr,
+                                 int size) = 0;
 
   virtual std::string getLatencyString() = 0;
 
   virtual std::string getStatisticsString() = 0;
+
+  virtual std::string getMyUserName() = 0;
 
   virtual std::set<int> getMyPlayers() = 0;
 
@@ -138,33 +131,37 @@ class BlockValueLocation {
   virtual std::vector<BlockValueLocation> getLocationsWithValue(
       unsigned int value,
       const std::vector<BlockValueLocation> &locationsToIntersect,
-      const std::vector<std::pair<unsigned char *, int> > &ramBlocks) = 0;
+      const std::vector<std::pair<unsigned char *, int>> &ramBlocks) = 0;
 
   virtual void forceLocation(BlockValueLocation location,
                              unsigned int value) = 0;
 
   virtual void updateForces(
-      const std::vector<std::pair<unsigned char *, int> > &ramBlocks) = 0;
+      const std::vector<std::pair<unsigned char *, int>> &ramBlocks) = 0;
 
-  virtual void attachToNextInputs(const string& key, const string& value) = 0;
+  virtual void attachToNextInputs(const string &key, const string &value) = 0;
 
-  virtual std::unordered_map<std::string, std::vector<std::string>> getAllInputValues(int64_t ts) = 0;
+  virtual std::map<std::string, std::string> getAllInputValues(
+      int64_t ts, const std::string &key) = 0;
 
-  virtual unordered_map<string, string> getStateChanges(const unordered_map<string, string>& inputMap) = 0;
+  virtual unordered_map<string, string> getStateChanges(
+      const unordered_map<string, string> &inputMap) = 0;
   virtual void sendInputs(int64_t inputTimeMs,
-                  const unordered_map<string, string> &inputMap) = 0;
+                          unordered_map<string, string> inputMap) = 0;
 
   virtual void createInitialBlocks(running_machine *machine) {}
 
   virtual bool isHosting() = 0;
 };
 
-CommonBase* createNetCommon(const string& userId,
-	const string& privateKeyString, unsigned short _port, const string& lobbyHostname, unsigned short lobbyPort, int _unmeasuredNoise, const string& gameName, bool fakeLag);
+CommonBase *createNetCommon(const string &userId,
+                            const string &privateKeyString,
+                            unsigned short _port, const string &lobbyHostname,
+                            unsigned short lobbyPort, int _unmeasuredNoise,
+                            const string &gameName, bool fakeLag);
 void deleteNetCommon();
 string makePrivateKey();
 
-extern CommonBase* netCommon;
-
+extern CommonBase *netCommon;
 
 #endif
