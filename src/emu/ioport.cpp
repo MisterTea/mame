@@ -921,7 +921,7 @@ const input_seq &ioport_field::seq_real(bool checkMapping, input_seq_type seqtyp
 //  the given input field
 //-------------------------------------------------
 
-const input_seq ioport_field::seq_peers(input_seq_type seqtype = SEQ_TYPE_STANDARD) const noexcept {
+const input_seq ioport_field::seq_peers(input_seq_type seqtype) const noexcept {
 	if (netCommon) {
 		return input_seq(mamehub_id());
 	} else {
@@ -2379,19 +2379,19 @@ void ioport_manager::frame_update()
 	for (auto &port : m_portlist)
 	{
 		port.second->frame_update();
-  }
 
-  if (!netCommon) {
-	// handle playback/record
-	playback_port(*port.second.get());
-	record_port(*port.second.get());
+		if (!netCommon) {
+			// handle playback/record
+			playback_port(*port.second.get());
+			record_port(*port.second.get());
 
-	// call device line write handlers
-	ioport_value newvalue = port.second->read();
-	for (dynamic_field &dynfield : port.second->live().writelist)
-			if (dynfield.field().type() != IPT_OUTPUT)
+			// call device line write handlers
+			ioport_value newvalue = port.second->read();
+			for (dynamic_field& dynfield : port.second->live().writelist)
+				if (dynfield.field().type() != IPT_OUTPUT)
 					dynfield.write(newvalue);
-  }
+		}
+	}
 
   std::unordered_map<string,string> inputData;
 	// Store physical inputs
