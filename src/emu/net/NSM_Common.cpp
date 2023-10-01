@@ -211,11 +211,11 @@ Common::Common(const string &_userId, const string &privateKeyString,
   } else {
     myPeer->updateState(2, {{"__BASE_TIME__", to_string(0)}});
     auto retval = myPeer->getAllInputValues(1).at("__BASE_TIME__");
-    for (string it : retval) {
-      if (it == "0") {
+    for (auto it : retval) {
+      if (it.second == "0") {
         continue;
       }
-      machineTimeShift = stoll(it);
+      machineTimeShift = stoll(it.second);
     }
   }
 
@@ -226,6 +226,8 @@ Common::Common(const string &_userId, const string &privateKeyString,
     LOG(INFO) << "AT TIME: " << getCurrentTime();
   }
 }
+
+std::string Common::getMyUserName() { return myPeer->getMyUserName(); }
 
 set<int> Common::getMyPlayers() { return myPlayers; }
 
@@ -517,8 +519,8 @@ unordered_map<string, string> Common::getStateChanges(
 }
 
 void Common::sendInputs(int64_t inputTimeMs,
-                        const unordered_map<string, string> &inputMap) {
-  if (myPeer->getLivingPeerCount() == 0) {
+                        unordered_map<string, string> inputMap) {
+  if (myPeer->getLivingPeerCount() == 0 && myPeer->getTotalPeerCount() > 1) {
     LOG(INFO) << "Finished!";
     cout << "FINISHED" << endl;
     myPeer->shutdown();
@@ -528,6 +530,8 @@ void Common::sendInputs(int64_t inputTimeMs,
     VLOG(1) << "SKIPPING FIRST INPUT BLOCK" << endl;
     return;
   }
+  inputMap.insert(dataToAttach.begin(), dataToAttach.end());
+  dataToAttach.clear();
   VLOG(1) << "SENDING INPUTS AT TIME " << inputTimeMs << endl;
   myPeer->updateState(inputTimeMs, inputMap);
   lastSendTime = inputTimeMs;
@@ -559,18 +563,26 @@ vector<uint8_t> Common::computeChecksum(running_machine *machine) {
   return blockChecksums;
 }
 
-std::unordered_map<std::string, std::vector<std::string>>
-Common::getAllInputValues(int64_t ts) {
+std::map<std::string, std::string> Common::getAllInputValues(
+    int64_t ts, const std::string &key) {
+  std::unordered_map<std::string, std::map<std::string, std::string>>
+      allInputData;
   if (cachedInputValues.first == ts) {
-    return cachedInputValues.second;
+    allInputData = cachedInputValues.second;
+  } else {
+    allInputData = myPeer->getAllInputValues(ts);
+    int livingPeerCount = myPeer->getLivingPeerCount();
+    if (livingPeerCount == 0 && myPeer->getTotalPeerCount() > 1) {
+      return {};
+    }
+    cachedInputValues = make_pair(ts, allInputData);
   }
-  auto retval = myPeer->getAllInputValues(ts);
-  int livingPeerCount = myPeer->getLivingPeerCount();
-  if (livingPeerCount == 0) {
+
+  if (allInputData.find(key) == allInputData.end()) {
     return {};
+  } else {
+    return allInputData.at(key);
   }
-  cachedInputValues = make_pair(ts, retval);
-  return retval;
 }
 
 bool Common::isHosting() { return myPeer->isHosting(); }
