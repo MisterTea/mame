@@ -25,6 +25,9 @@
 #endif
 
 #include "Headers.hpp"
+#undef LOGFATAL
+#define LOGFATAL \
+  LOG(ERROR) << ust::generate() << "\n", system("pause"), LOG(FATAL)
 
 #define SHA1(x) "S" #x
 
