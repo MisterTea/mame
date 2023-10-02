@@ -212,6 +212,11 @@ int main(int argc, char *argv[])
 		osd_output::pop(&winerror);
 	}
 
+	if (win_is_gui_application() || is_double_click_start(args.size())) {
+		// JJG: Allow people to read console before closing.
+		system("pause");
+	}
+
 	return result;
 }
 

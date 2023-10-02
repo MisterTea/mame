@@ -30,6 +30,13 @@ jobs:
             - name: zip
               run: zip mamehub_ubuntu_beta.zip mame
 
+            - name: Update mamehub beta tag
+              uses: richardsimko/update-tag@v1
+              with:
+                  tag_name: mamehub_beta_2
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
             - name: Release
               uses: softprops/action-gh-release@v1
               with:
@@ -37,6 +44,7 @@ jobs:
                       New mamehub version.
                   files: mamehub_ubuntu_beta.zip
                   fail_on_unmatched_files: true
+                  tag_name: mamehub_beta_2
 
     build_and_release_mac:
         runs-on: macos-latest
@@ -73,6 +81,13 @@ jobs:
             - name: zip
               run: zip mamehub_mac_beta.zip mame
 
+            - name: Update mamehub beta tag
+              uses: richardsimko/update-tag@v1
+              with:
+                  tag_name: mamehub_beta_2
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
             - name: Release
               uses: softprops/action-gh-release@v1
               with:
@@ -80,6 +95,7 @@ jobs:
                       New mamehub version.
                   files: mamehub_mac_beta.zip
                   fail_on_unmatched_files: true
+                  tag_name: mamehub_beta_2
 
     build_and_release_windows:
         runs-on: windows-latest
@@ -155,8 +171,19 @@ jobs:
                   # A file, directory or wildcard pattern that describes what to upload
                   path: mame/*
 
-            - name: zip
-              run: zip mamehub_windows_msvc_beta.zip mame
+            - name: Archive Release
+              uses: thedoctor0/zip-release@0.7.1
+              with:
+                  type: "zip"
+                  filename: "mamehub_windows_msvc_beta.zip"
+                  path: "mame"
+
+            - name: Update mamehub beta tag
+              uses: richardsimko/update-tag@v1
+              with:
+                  tag_name: mamehub_beta_2
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Release
               uses: softprops/action-gh-release@v1
@@ -165,3 +192,4 @@ jobs:
                       New mamehub version.
                   files: mamehub_windows_msvc_beta.zip
                   fail_on_unmatched_files: true
+                  tag_name: mamehub_beta_2
