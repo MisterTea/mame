@@ -198,7 +198,9 @@ int main(int argc, char *argv[])
 		// Initialize this after the osd interface so that we are first in the
 		// output order
 		winui_output_error winerror;
-		if (win_is_gui_application() || is_double_click_start(args.size()))
+
+		// JJG: Don't hide the console in mamehub
+		if (false && (win_is_gui_application() || is_double_click_start(args.size())))
 		{
 			// if we are a GUI app, output errors to message boxes
 			osd_output::push(&winerror);

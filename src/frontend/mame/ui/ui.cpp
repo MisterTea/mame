@@ -54,7 +54,7 @@
 #include <functional>
 #include <type_traits>
 
-#include "NSM_CommonInterface.h"
+#include "NSM_Common.h"
 
 /***************************************************************************
     LOCAL VARIABLES

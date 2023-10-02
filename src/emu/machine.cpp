@@ -45,7 +45,7 @@
 #include <emscripten.h>
 #endif
 
-#include "NSM_CommonInterface.h"
+#include "NSM_Common.h"
 
 using namespace std;
 
