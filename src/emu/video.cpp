@@ -31,7 +31,7 @@
 
 #include <chrono>
 
-#include "NSM_CommonInterface.h"
+#include "NSM_Common.h"
 #include "TimeHandler.hpp"
 
 //**************************************************************************
