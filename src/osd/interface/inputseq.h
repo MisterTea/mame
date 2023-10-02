@@ -41,7 +41,7 @@ public:
 		input_seq(std::make_index_sequence<std::tuple_size<decltype(m_code)>::value - sizeof...(T) - 1>(), code_0, code_n...)
 	{
 	}
-	input_seq(const input_seq &rhs) noexcept = default;
+	input_seq(const input_seq &rhs) = default;
   explicit input_seq(const std::string& _mamehub_input_key) noexcept : m_mamehub_input_key(_mamehub_input_key) {}
 
 	// operators
