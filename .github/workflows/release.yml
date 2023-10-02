@@ -1,4 +1,4 @@
-name: Build And Release
+name: Release
 
 on: workflow_dispatch
 
@@ -32,7 +32,8 @@ jobs:
             - name: Release
               uses: softprops/action-gh-release@v1
               with:
-                  body: New mamehub version.
+                  body: |
+                      New mamehub version.
                   files: mamehub_ubuntu_beta.zip
                   fail_on_unmatched_files: true
 
@@ -74,7 +75,8 @@ jobs:
             - name: Release
               uses: softprops/action-gh-release@v1
               with:
-                  body: New mamehub version.
+                  body: |
+                      New mamehub version.
                   files: mamehub_mac_beta.zip
                   fail_on_unmatched_files: true
 
@@ -158,6 +160,7 @@ jobs:
             - name: Release
               uses: softprops/action-gh-release@v1
               with:
-                  body: New mamehub version.
+                  body: |
+                      New mamehub version.
                   files: mamehub_windows_msvc_beta.zip
                   fail_on_unmatched_files: true
