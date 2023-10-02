@@ -45,8 +45,7 @@
 #include <cstdio>
 #include <iostream>
 
-#include "NSM_CommonInterface.h"
-#include "LogHandler.hpp"
+#include "NSM_Common.h"
 
 //**************************************************************************
 //  CONSTANTS

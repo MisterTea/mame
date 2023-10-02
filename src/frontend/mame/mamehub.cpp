@@ -7,7 +7,7 @@
 
 //
 
-#include "NSM_CommonInterface.h"
+#include "NSM_Common.h"
 #include "mame.h"
 #include "ui/menu.h"
 #include "ui/ui.h"
@@ -76,7 +76,7 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
       }
       auto chatWithoutCounter = chat.substr(slashPos + 1);
       if (userIdColorMap.find(userId) == userIdColorMap.end()) {
-		  int index = min(int(userIdColorMap.size()), 14);
+        int index = min(int(userIdColorMap.size()), 14);
         userIdColorMap[userId] = index;
       }
       chatLogs.push_back(ChatLog(curRealTime, chatWithoutCounter, userId));
