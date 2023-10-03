@@ -2,9 +2,9 @@ name: Build
 
 on:
     push:
-        branches: [mamehub, mamehub_libretro]
+        branches: [master, mamehub, mamehub_libretro]
     pull_request:
-        branches: [mamehub, mamehub_libretro]
+        branches: [master, mamehub, mamehub_libretro]
 
 jobs:
     build_linux:
