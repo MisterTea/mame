@@ -176,7 +176,7 @@ jobs:
               with:
                   type: "zip"
                   filename: "mamehub_windows_msvc_beta.zip"
-                  directory: "mame"
+                  path: "mame"
 
             - name: Update mamehub beta tag
               uses: richardsimko/update-tag@v1
