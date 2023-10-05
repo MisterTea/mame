@@ -31,7 +31,7 @@
 #define OPTION_SAMPLEPATH           "samplepath"
 #define OPTION_ARTPATH              "artpath"
 #define OPTION_CTRLRPATH            "ctrlrpath"
-#define OPTION_INIPATH              "inipath"
+#define OPTION_CONFPATH              "confpath"
 #define OPTION_FONTPATH             "fontpath"
 #define OPTION_CHEATPATH            "cheatpath"
 #define OPTION_CROSSHAIRPATH        "crosshairpath"
@@ -328,7 +328,7 @@ public:
 	const char *sample_path() const { return value(OPTION_SAMPLEPATH); }
 	const char *art_path() const { return value(OPTION_ARTPATH); }
 	const char *ctrlr_path() const { return value(OPTION_CTRLRPATH); }
-	const char *ini_path() const { return value(OPTION_INIPATH); }
+	const char *conf_path() const { return value(OPTION_CONFPATH); }
 	const char *font_path() const { return value(OPTION_FONTPATH); }
 	const char *cheat_path() const { return value(OPTION_CHEATPATH); }
 	const char *crosshair_path() const { return value(OPTION_CROSSHAIRPATH); }

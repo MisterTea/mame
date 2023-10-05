@@ -14,7 +14,7 @@ if no information is available for the emulated system).
 To set the folders where the data plugin looks for supported files, choose
 **Configure Options** on the system selection menu, then choose
 **Configure Directories**, and then choose **DATs**.  You can also set the
-``historypath`` option in your **ui.ini** file.
+``historypath`` option in your **ui.conf** file.
 
 Loading large data files like **history.xml** can take quite a while, so please
 be patient the first time you start MAME after updating or adding new data

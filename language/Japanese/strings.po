@@ -221,13 +221,13 @@ msgid "Crosshair Offset Y %1$1.3f"
 msgstr "照準のオフセット Y %1$1.3f"
 
 #: src/frontend/mame/ui/ui.cpp:2137
-msgid "**Error saving ui.ini**"
-msgstr "*** ui.iniの保存エラー ***"
+msgid "**Error saving ui.conf**"
+msgstr "*** ui.confの保存エラー ***"
 
 #: src/frontend/mame/ui/ui.cpp:2196
 #, c-format
-msgid "**Error saving %s.ini**"
-msgstr "*** %s.iniの保存エラー ***"
+msgid "**Error saving %s.conf**"
+msgstr "*** %s.confの保存エラー ***"
 
 #: src/frontend/mame/ui/ui.cpp:2200 src/frontend/mame/ui/miscmenu.cpp:773
 msgid ""
@@ -2035,7 +2035,7 @@ msgid ""
 "If this is your first time using %2$s, please see the %2$s.pdf file in the "
 "docs folder for information on setting up and using %2$s."
 msgstr ""
-"システムROMが見つかりません。%1$s.iniファイルで指定したrompath設定を確認して"
+"システムROMが見つかりません。%1$s.confファイルで指定したrompath設定を確認して"
 "ください。\n"
 "\n"
 "もし %2$s の利用が初めてなら、%2$s の設定および使用方法についてdocsフォルダ"

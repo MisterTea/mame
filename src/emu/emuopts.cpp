@@ -36,7 +36,7 @@ const options_entry emu_options::s_option_entries[] =
 	// config options
 	{ nullptr,                                           nullptr,     core_options::option_type::HEADER,     "CORE CONFIGURATION OPTIONS" },
 	{ OPTION_READCONFIG ";rc",                           "1",         core_options::option_type::BOOLEAN,    "enable loading of configuration files" },
-	{ OPTION_WRITECONFIG ";wc",                          "0",         core_options::option_type::BOOLEAN,    "write configuration to (driver).ini on exit" },
+	{ OPTION_WRITECONFIG ";wc",                          "0",         core_options::option_type::BOOLEAN,    "write configuration to (driver).conf on exit" },
 
 	// search path options
 	{ nullptr,                                           nullptr,     core_options::option_type::HEADER,     "CORE SEARCH PATH OPTIONS" },
@@ -46,7 +46,7 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_SAMPLEPATH ";sp",                           "samples",   core_options::option_type::MULTIPATH,  "path to audio sample sets" },
 	{ OPTION_ARTPATH,                                    "artwork",   core_options::option_type::MULTIPATH,  "path to artwork files" },
 	{ OPTION_CTRLRPATH,                                  "ctrlr",     core_options::option_type::MULTIPATH,  "path to controller definitions" },
-	{ OPTION_INIPATH,                                    ".;ini;ini/presets",     core_options::option_type::MULTIPATH,     "path to ini files" },
+	{ OPTION_CONFPATH,                                    ".;conf;conf/presets",     core_options::option_type::MULTIPATH,     "path to conf files" },
 	{ OPTION_FONTPATH,                                   ".",         core_options::option_type::MULTIPATH,  "path to font files" },
 	{ OPTION_CHEATPATH,                                  "cheat",     core_options::option_type::MULTIPATH,  "path to cheat files" },
 	{ OPTION_CROSSHAIRPATH,                              "crosshair", core_options::option_type::MULTIPATH,  "path to crosshair files" },
@@ -1131,7 +1131,7 @@ const std::string &slot_option::value() const
 	// is a specific order of precedence:
 	//
 	//  1.  Highest priority is whatever may have been specified by the user (whether it
-	//      was specified at the command line, an INI file, or in the UI).  We keep track
+	//      was specified at the command line, an CONF file, or in the UI).  We keep track
 	//      of whether these values were specified this way
 	//
 	//      Take note that slots have a notion of being "selectable".  Slots that are not

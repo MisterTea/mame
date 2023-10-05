@@ -285,7 +285,7 @@ public:
 
 		// load custom filters info from file
 		emu_file file(menu.ui().options().ui_path(), OPEN_FLAG_READ);
-		if (!file.open(util::string_format("custom_%s_filter.ini", menu.m_system.driver->name)))
+		if (!file.open(util::string_format("custom_%s_filter.conf", menu.m_system.driver->name)))
 		{
 			software_filter::ptr flt(software_filter::create(file, m_filter_data));
 			if (flt)
@@ -807,7 +807,7 @@ void menu_select_software::filter_selected()
 					if (software_filter::CUSTOM == new_type)
 					{
 						emu_file file(ui().options().ui_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-						if (!file.open(util::string_format("custom_%s_filter.ini", m_system.driver->name)))
+						if (!file.open(util::string_format("custom_%s_filter.conf", m_system.driver->name)))
 						{
 							filter.save_ini(file, 0);
 							file.close();

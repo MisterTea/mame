@@ -216,13 +216,13 @@ msgid "Crosshair Offset Y %1$1.3f"
 msgstr "Ajuste Y da Mira %1$1.3f"
 
 #: src/frontend/mame/ui/ui.cpp:2137
-msgid "**Error saving ui.ini**"
-msgstr "**Erro ao gravar ui.ini**"
+msgid "**Error saving ui.conf**"
+msgstr "**Erro ao gravar ui.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2196
 #, c-format
-msgid "**Error saving %s.ini**"
-msgstr "**Erro ao gravar %s.ini**"
+msgid "**Error saving %s.conf**"
+msgstr "**Erro ao gravar %s.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2200 src/frontend/mame/ui/miscmenu.cpp:773
 msgid ""
@@ -6544,14 +6544,14 @@ msgstr ""
 
 #, c-format
 #~ msgid ""
-#~ "No machines found. Please check the rompath specified in the %1$s.ini "
+#~ "No machines found. Please check the rompath specified in the %1$s.conf "
 #~ "file.\n"
 #~ "\n"
 #~ "If this is your first time using %2$s, please see the config.txt file in "
 #~ "the docs directory for information on configuring %2$s."
 #~ msgstr ""
 #~ "Nenhuma máquina encontrada. Por favor verifique a rompath especificada no "
-#~ "ficheiro %1$s.ini .\n"
+#~ "ficheiro %1$s.conf .\n"
 #~ "\n"
 #~ "Se esta é a sua primeira vez que usa %2$s, por favor veja o ficheiro "
 #~ "config.txt no diretório docs para informação sobre a configuração de %2$s."

@@ -45,7 +45,7 @@ const folders_entry f_folders[] =
 	{ N_p("path-option", "Plugins"),            OPTION_PLUGINSPATH        },
 	{ N_p("path-option", "UI Translations"),    OPTION_LANGUAGEPATH       },
 	{ N_p("path-option", "Software Lists"),     OPTION_HASHPATH           },
-	{ N_p("path-option", "INIs"),               OPTION_INIPATH            },
+	{ N_p("path-option", "CONFs"),               OPTION_CONFPATH            },
 	{ N_p("path-option", "UI Settings"),        OPTION_UI_PATH            },
 	{ N_p("path-option", "Plugin Data"),        OPTION_PLUGINDATAPATH     },
 	{ N_p("path-option", "DATs"),               OPTION_HISTORY_PATH       },

@@ -222,13 +222,13 @@ msgid "Crosshair Offset Y %1$1.3f"
 msgstr "Μετατόπιση Στοχάστρου Y %1$1.3f"
 
 #: src/frontend/mame/ui/ui.cpp:2137
-msgid "**Error saving ui.ini**"
-msgstr "**Σφάλμα αποθήκευσης ui.ini**"
+msgid "**Error saving ui.conf**"
+msgstr "**Σφάλμα αποθήκευσης ui.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2196
 #, c-format
-msgid "**Error saving %s.ini**"
-msgstr "**Σφάλμα αποθήκευσης %s.ini**"
+msgid "**Error saving %s.conf**"
+msgstr "**Σφάλμα αποθήκευσης %s.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2200 src/frontend/mame/ui/miscmenu.cpp:773
 msgid ""
@@ -2042,7 +2042,7 @@ msgid ""
 "docs folder for information on setting up and using %2$s."
 msgstr ""
 "Δε βρεθηκαν ROMs συστήματος. Παρακαλώ ελέγξτε τις ρυθμίσεις διαδρομής roms "
-"που βρισκονται στο αρχείο %1$s.ini.\n"
+"που βρισκονται στο αρχείο %1$s.conf.\n"
 "\n"
 "Αν αυτή είναι η πρώτη φορά που χρησιμοποιείτε το %2$s, παρακαλώ δείτε το "
 "αρχείο %2$s.pdf στο φάκελο docs για πληροφορίες σχετικά με τη ρύθμιση και "

@@ -764,7 +764,7 @@ menu_machine_configure::menu_machine_configure(
 	// parse the INI file
 	std::ostringstream error;
 	osd_setup_osd_specific_emu_options(m_opts);
-	mame_options::parse_standard_inis(m_opts, error, m_sys.driver);
+	mame_options::parse_standard_confs(m_opts, error, m_sys.driver);
 	setup_bios();
 	set_heading(util::string_format(_("System Settings:\n%1$s"), m_sys.description));
 }
@@ -799,11 +799,11 @@ bool menu_machine_configure::handle(event const *ev)
 			case SAVE:
 				{
 					const std::string filename(m_sys.driver->name);
-					emu_file file(machine().options().ini_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE);
-					std::error_condition const filerr = file.open(filename + ".ini");
+					emu_file file(machine().options().conf_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE);
+					std::error_condition const filerr = file.open(filename + ".conf");
 					if (!filerr)
 					{
-						std::string inistring = m_opts.output_ini();
+						std::string inistring = m_opts.output_conf();
 						file.puts(inistring);
 						ui().popup_time(2, "%s", _("\n    Settings saved    \n\n"));
 					}
@@ -928,15 +928,15 @@ menu_plugins_configure::menu_plugins_configure(mame_ui_manager &mui, render_cont
 
 menu_plugins_configure::~menu_plugins_configure()
 {
-	emu_file file_plugin(machine().options().ini_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-	if (file_plugin.open("plugin.ini"))
+	emu_file file_plugin(machine().options().conf_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+	if (file_plugin.open("plugin.conf"))
 		// Can't throw in a destructor, so let's ignore silently for
 		// now.  We shouldn't write files in a destructor in any case.
 		//
-		// throw emu_fatalerror("Unable to create file plugin.ini\n");
+		// throw emu_fatalerror("Unable to create file plugin.conf\n");
 		return;
 	// generate the updated INI
-	file_plugin.puts(mame_machine_manager::instance()->plugins().output_ini());
+	file_plugin.puts(mame_machine_manager::instance()->plugins().output_conf());
 }
 
 //-------------------------------------------------

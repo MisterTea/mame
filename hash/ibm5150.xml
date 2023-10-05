@@ -9842,7 +9842,7 @@ This release doesn't have copy protection.
 		<publisher>Image Works</publisher>
 		<info name="developer" value="The Bitmap Brothers" />
 		<part name="flop1" interface="floppy_3_5">
-			<!-- modified .ini file -->
+			<!-- modified .conf file -->
 			<dataarea name="flop" size = "737280">
 				<rom name="Cadaver (USA) (Quest and Glory Compilation) (Disk 1).img" size="737280" crc="02fe1148" sha1="9859e610587361ff52e57eb4835c0f0b310d5b52" status="baddump"/>
 			</dataarea>

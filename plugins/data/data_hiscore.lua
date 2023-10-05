@@ -355,8 +355,8 @@ local htmlentites = {
 function env.open(file, size, swap)
 	if file == ".hi" then
 		local path = "hi"
-		local ini = emu.file(manager.options.entries.inipath:value(), 1)
-		local ret = ini:open("hiscore.ini")
+		local ini = emu.file(manager.options.entries.confpath:value(), 1)
+		local ret = ini:open("hiscore.conf")
 		if not ret then
 			local inifile = ini:read(ini:size())
 			for line in inifile:gmatch("[^\n\r]") do

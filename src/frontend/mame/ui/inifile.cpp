@@ -30,7 +30,7 @@
 
 namespace {
 
-char const FAVORITE_FILENAME[] = "favorites.ini";
+char const FAVORITE_FILENAME[] = "favorites.conf";
 
 } // anonymous namespace
 
@@ -48,7 +48,7 @@ inifile_manager::inifile_manager(ui_options &options)
 	for (osd::directory::entry const *dir = path.next(); dir; dir = path.next())
 	{
 		std::string name(dir->name);
-		if (core_filename_ends_with(name, ".ini"))
+		if (core_filename_ends_with(name, ".conf"))
 		{
 			emu_file file(m_options.categoryini_path(), OPEN_FLAG_READ);
 			if (!file.open(name))

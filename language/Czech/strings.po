@@ -224,13 +224,13 @@ msgid "Crosshair Offset Y %1$1.3f"
 msgstr "%1$1.3f Y-ová pozice zaměřovače"
 
 #: src/frontend/mame/ui/ui.cpp:2137
-msgid "**Error saving ui.ini**"
-msgstr "**Chyba při ukládání ui.ini**"
+msgid "**Error saving ui.conf**"
+msgstr "**Chyba při ukládání ui.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2196
 #, c-format
-msgid "**Error saving %s.ini**"
-msgstr "**Chyba při ukládání %s.ini**"
+msgid "**Error saving %s.conf**"
+msgstr "**Chyba při ukládání %s.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2200 src/frontend/mame/ui/miscmenu.cpp:773
 msgid ""
@@ -2039,7 +2039,7 @@ msgid ""
 "If this is your first time using %2$s, please see the %2$s.pdf file in the "
 "docs folder for information on setting up and using %2$s."
 msgstr ""
-"Nebyli nalezeny ROM systému. Zkontrolujte rompath v %1$s.ini souboru.\n"
+"Nebyli nalezeny ROM systému. Zkontrolujte rompath v %1$s.conf souboru.\n"
 "\n"
 "Pokud používáte %2$s poprvé, přečtěte si soubor %2$s.pdf ve složce docs."
 

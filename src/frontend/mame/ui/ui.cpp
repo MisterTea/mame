@@ -2113,16 +2113,16 @@ void mame_ui_manager::load_ui_options()
 {
 	// parse the file
 	// attempt to open the output file
-	emu_file file(machine().options().ini_path(), OPEN_FLAG_READ);
-	if (!file.open("ui.ini"))
+	emu_file file(machine().options().conf_path(), OPEN_FLAG_READ);
+	if (!file.open("ui.conf"))
 	{
 		try
 		{
-			options().parse_ini_file((util::core_file &)file, OPTION_PRIORITY_MAME_INI, OPTION_PRIORITY_MAME_INI < OPTION_PRIORITY_DRIVER_INI, true);
+			options().parse_conf_file((util::core_file &)file, OPTION_PRIORITY_MAME_CONF, OPTION_PRIORITY_MAME_CONF < OPTION_PRIORITY_DRIVER_CONF, true);
 		}
 		catch (options_exception &)
 		{
-			osd_printf_error("**Error loading ui.ini**\n");
+			osd_printf_error("**Error loading ui.conf**\n");
 		}
 	}
 }
@@ -2134,15 +2134,15 @@ void mame_ui_manager::load_ui_options()
 void mame_ui_manager::save_ui_options()
 {
 	// attempt to open the output file
-	emu_file file(machine().options().ini_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-	if (!file.open("ui.ini"))
+	emu_file file(machine().options().conf_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+	if (!file.open("ui.conf"))
 	{
-		// generate the updated INI
-		file.puts(options().output_ini());
+		// generate the updated CONF
+		file.puts(options().output_conf());
 		file.close();
 	}
 	else
-		machine().popmessage(_("**Error saving ui.ini**"));
+		machine().popmessage(_("**Error saving ui.conf**"));
 }
 
 //-------------------------------------------------
@@ -2162,16 +2162,16 @@ void mame_ui_manager::save_main_option()
 
 	// attempt to open the main ini file
 	{
-		emu_file file(machine().options().ini_path(), OPEN_FLAG_READ);
-		if (!file.open(std::string(emulator_info::get_configname()) + ".ini"))
+		emu_file file(machine().options().conf_path(), OPEN_FLAG_READ);
+		if (!file.open(std::string(emulator_info::get_configname()) + ".conf"))
 		{
 			try
 			{
-				options.parse_ini_file((util::core_file&)file, OPTION_PRIORITY_MAME_INI, OPTION_PRIORITY_MAME_INI < OPTION_PRIORITY_DRIVER_INI, true);
+				options.parse_conf_file((util::core_file&)file, OPTION_PRIORITY_MAME_CONF, OPTION_PRIORITY_MAME_CONF < OPTION_PRIORITY_DRIVER_CONF, true);
 			}
 			catch (options_error_exception &)
 			{
-				osd_printf_error("**Error loading %s.ini**\n", emulator_info::get_configname());
+				osd_printf_error("**Error loading %s.conf**\n", emulator_info::get_configname());
 				return;
 			}
 			catch (options_exception &)
@@ -2192,16 +2192,16 @@ void mame_ui_manager::save_main_option()
 
 	// attempt to open the output file
 	{
-		emu_file file(machine().options().ini_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-		if (!file.open(std::string(emulator_info::get_configname()) + ".ini"))
+		emu_file file(machine().options().conf_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+		if (!file.open(std::string(emulator_info::get_configname()) + ".conf"))
 		{
-			// generate the updated INI
-			file.puts(options.output_ini());
+			// generate the updated CONF
+			file.puts(options.output_conf());
 			file.close();
 		}
 		else
 		{
-			machine().popmessage(_("**Error saving %s.ini**"), emulator_info::get_configname());
+			machine().popmessage(_("**Error saving %s.conf**"), emulator_info::get_configname());
 			return;
 		}
 	}

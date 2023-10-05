@@ -14,7 +14,7 @@ If you are on Windows, the MAME executable will be called ``mame.exe``.
 If you are on Linux or MacOS, the MAME executable will be called ``mame``.
 
 
-Initial Setup: Creating mame.ini From Command Line on Windows
+Initial Setup: Creating mame.conf From Command Line on Windows
 -------------------------------------------------------------
 
 First, you will need to *cd* to the directory where you installed MAME into.
@@ -22,12 +22,12 @@ If, for instance, you have MAME installed in ``C:\Users\Public\MAME`` you will
 need to type ``cd C:\Users\Public\MAME`` into the command prompt.
 
 Then you have MAME create the config file by typing ``mame
--createconfig``.  MAME will then create the ``mame.ini`` file in the
+-createconfig``.  MAME will then create the ``mame.conf`` file in the
 MAME installation folder.  This file contains the default
 configuration settings for a new MAME installation.
 
 
-Initial Setup: Creating mame.ini From Command Line on Linux or MacOS
+Initial Setup: Creating mame.conf From Command Line on Linux or MacOS
 --------------------------------------------------------------------
 
 The steps for Linux and MacOS are similar to those of Windows. If you
@@ -42,7 +42,7 @@ For instance, ``cd /home/myusername/mame``
 Then you will type ``./mame -createconfig`` into
 your terminal of choice.
 
-You can then need to edit the ``mame.ini`` file in your favorite text editor,
+You can then need to edit the ``mame.conf`` file in your favorite text editor,
 e.g. *Notepad* on Windows or *vi* on Linux/MacOS, or you can change settings
 from inside of MAME.
 
@@ -60,9 +60,9 @@ or you can switch panes to the bottom one (default key is Tab), then press
 the menu accept button (default key is Return/Enter) to go into the
 Configuration menu.
 
-Choose **Save Configuration** to create the ``mame.ini`` file with default
+Choose **Save Configuration** to create the ``mame.conf`` file with default
 settings. From here, you can either continue to configure things from the
-graphical user interface or edit the ``mame.ini`` file in your favorite
+graphical user interface or edit the ``mame.conf`` file in your favorite
 text editor.
 
 

@@ -220,7 +220,7 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 
 	// because softlist evaluation relies on hashpath being populated, we are going to go through
 	// a special step to force it to be evaluated
-	mame_options::populate_hashpath_from_args_and_inis(m_options, args);
+	mame_options::populate_hashpath_from_args_and_confs(m_options, args);
 
 	// parse the command line, adding any system-specific options
 	try
@@ -252,10 +252,10 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 		return;
 	}
 
-	// read INI's, if appropriate
+	// read conf's, if appropriate
 	if (m_options.read_config())
 	{
-		mame_options::parse_standard_inis(m_options, option_errors);
+		mame_options::parse_standard_confs(m_options, option_errors);
 		m_osd.set_verbose(m_options.verbose());
 	}
 
@@ -1809,50 +1809,50 @@ void cli_frontend::execute_commands(std::string_view exename)
 		return;
 	}
 
-	// other commands need the INIs parsed
+	// other commands need the confs parsed
 	std::ostringstream option_errors;
-	mame_options::parse_standard_inis(m_options,option_errors);
+	mame_options::parse_standard_confs(m_options,option_errors);
 	if (option_errors.tellp() > 0)
 		osd_printf_error("%s\n", option_errors.str());
 
 	// createconfig?
 	if (m_options.command() == CLICOMMAND_CREATECONFIG)
 	{
-		// attempt to open the output file and generate the updated (mame).ini
+		// attempt to open the output file and generate the updated (mame).conf
 		emu_file file(OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-		if (file.open(std::string(emulator_info::get_configname()) + ".ini"))
-			throw emu_fatalerror("Unable to create file %s.ini\n",emulator_info::get_configname());
+		if (file.open(std::string(emulator_info::get_configname()) + ".conf"))
+			throw emu_fatalerror("Unable to create file %s.conf\n",emulator_info::get_configname());
 
-		file.puts(m_options.output_ini());
+		file.puts(m_options.output_conf());
 
-		// ui.ini
+		// ui.conf
 		ui_options ui_opts;
 		emu_file file_ui(OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-		if (file_ui.open("ui.ini"))
-			throw emu_fatalerror("Unable to create file ui.ini\n");
+		if (file_ui.open("ui.conf"))
+			throw emu_fatalerror("Unable to create file ui.conf\n");
 
-		file_ui.puts(ui_opts.output_ini());
+		file_ui.puts(ui_opts.output_conf());
 
-		// plugin.ini
+		// plugin.conf
 		plugin_options plugin_opts;
 		path_iterator iter(m_options.plugins_path());
 		std::string pluginpath;
 		while (iter.next(pluginpath))
 			plugin_opts.scan_directory(pluginpath, true);
 
-		std::string plugins(plugin_opts.output_ini());
+		std::string plugins(plugin_opts.output_conf());
 
 		// only update the file when it found plugins
 		if (!plugins.empty())
 		{
 			emu_file file_plugin(OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-			if (file_plugin.open("plugin.ini"))
-				throw emu_fatalerror("Unable to create file plugin.ini\n");
+			if (file_plugin.open("plugin.conf"))
+				throw emu_fatalerror("Unable to create file plugin.conf\n");
 
 			file_plugin.puts(plugins);
 		}
 		else
-			osd_printf_error("Skipped plugin.ini, could not find any plugins\n");
+			osd_printf_error("Skipped plugin.conf, could not find any plugins\n");
 
 		return;
 	}
@@ -1860,8 +1860,8 @@ void cli_frontend::execute_commands(std::string_view exename)
 	// showconfig?
 	if (m_options.command() == CLICOMMAND_SHOWCONFIG)
 	{
-		// print the INI text
-		printf("%s\n", m_options.output_ini().c_str());
+		// print the conf text
+		printf("%s\n", m_options.output_conf().c_str());
 		return;
 	}
 
@@ -1913,9 +1913,9 @@ void cli_frontend::display_help(std::string_view exename)
 			"Usage:  %1$s [machine] [media] [software] [options]\n"
 			"\n"
 			"        %1$s -showusage    for a list of options\n"
-			"        %1$s -showconfig   to show current configuration in %4$s.ini format\n"
+			"        %1$s -showconfig   to show current configuration in %4$s.conf format\n"
 			"        %1$s -listmedia    for a full list of supported media\n"
-			"        %1$s -createconfig to create a %4$s.ini file\n"
+			"        %1$s -createconfig to create a %4$s.conf file\n"
 			"\n"
 			"For usage instructions, please visit https://docs.mamedev.org/\n",
 			exename,

@@ -215,12 +215,12 @@ msgid "Crosshair Offset Y %1$1.3f"
 msgstr ""
 
 #: src/frontend/mame/ui/ui.cpp:2137
-msgid "**Error saving ui.ini**"
+msgid "**Error saving ui.conf**"
 msgstr ""
 
 #: src/frontend/mame/ui/ui.cpp:2196
 #, c-format
-msgid "**Error saving %s.ini**"
+msgid "**Error saving %s.conf**"
 msgstr ""
 
 #: src/frontend/mame/ui/ui.cpp:2200 src/frontend/mame/ui/miscmenu.cpp:773

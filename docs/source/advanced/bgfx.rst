@@ -58,7 +58,7 @@ You will need to have followed the initial MAME setup instructions elsewhere in
 this manual before beginning.  Official MAME distributions include BGFX as of
 MAME 0.172, so you don’t need to download any additional files.
 
-Open your ``mame.ini`` file in your text editor of choice (e.g. Notepad), and
+Open your ``mame.conf`` file in your text editor of choice (e.g. Notepad), and
 make sure the following options are set correctly:
 
 * ``video bgfx``
@@ -67,9 +67,9 @@ Now, you may want to take a moment to look below at the Configuration Settings
 section to see how to set up these next options.
 
 As explained in :ref:`advanced-multi-CFG`, MAME has a order in which it
-processes INI files.  The BGFX settings can be edited in ``mame.ini``, but to
+processes INI files.  The BGFX settings can be edited in ``mame.conf``, but to
 take full advantage of the power of MAME’s configuration files, you’ll want to
-copy the BGFX settings from ``mame.ini`` to one of the other configuration files
+copy the BGFX settings from ``mame.conf`` to one of the other configuration files
 and make changes there.
 
 In particular, you will want the ``bgfx_screen_chains`` to be specific to each
@@ -214,5 +214,5 @@ For systems using 3:4 vertical monitors, use these options::
   pillarboxed view will not be selected by default.  Use the video options menu
   to select the correct view.
 * You can add these settings to an INI file to have them apply to certain
-  systems automatically (e.g. **horizont.ini** or **vertical.ini**, or the INI
+  systems automatically (e.g. **horizont.conf** or **vertical.conf**, or the INI
   file for a specific system).

@@ -1016,7 +1016,7 @@ bool menu_select_game::load_available_machines()
 {
 	// try to load available drivers from file
 	emu_file file(ui().options().ui_path(), OPEN_FLAG_READ);
-	if (file.open(std::string(emulator_info::get_configname()) + "_avail.ini"))
+	if (file.open(std::string(emulator_info::get_configname()) + "_avail.conf"))
 		return false;
 
 	char rbuf[MAX_CHAR_INFO];
@@ -1068,11 +1068,11 @@ bool menu_select_game::load_available_machines()
 void menu_select_game::load_custom_filters()
 {
 	emu_file file(ui().options().ui_path(), OPEN_FLAG_READ);
-	if (!file.open(util::string_format("custom_%s_filter.ini", emulator_info::get_configname())))
+	if (!file.open(util::string_format("custom_%s_filter.conf", emulator_info::get_configname())))
 	{
 		machine_filter::ptr flt(machine_filter::create(file, m_persistent_data.filter_data()));
 		if (flt)
-			m_persistent_data.filter_data().set_filter(std::move(flt)); // not emplace/insert - could replace bogus filter from ui.ini line
+			m_persistent_data.filter_data().set_filter(std::move(flt)); // not emplace/insert - could replace bogus filter from ui.conf line
 		file.close();
 	}
 
@@ -1156,7 +1156,7 @@ void menu_select_game::filter_selected()
 					if (machine_filter::CUSTOM == new_type)
 					{
 						emu_file file(ui().options().ui_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-						if (!file.open(util::string_format("custom_%s_filter.ini", emulator_info::get_configname())))
+						if (!file.open(util::string_format("custom_%s_filter.conf", emulator_info::get_configname())))
 						{
 							filter.save_ini(file, 0);
 							file.close();

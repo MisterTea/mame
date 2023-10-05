@@ -1046,7 +1046,7 @@ private:
 	static bool include_clones_default(std::string_view name)
 	{
 		using namespace std::literals;
-		return util::streqlower(name, "category.ini"sv) || util::streqlower(name, "alltime.ini"sv);
+		return util::streqlower(name, "category.conf"sv) || util::streqlower(name, "alltime.conf"sv);
 	}
 
 	unsigned m_ini, m_group;

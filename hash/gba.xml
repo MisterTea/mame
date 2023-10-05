@@ -41714,7 +41714,7 @@ license:CC0-1.0
 		</part>
 	</software>
 
-	<!-- The video playback can be configured by placing a file named "play_yanmicro.ini" on the SD root folder, with the following content:
+	<!-- The video playback can be configured by placing a file named "play_yanmicro.conf" on the SD root folder, with the following content:
 	        Property        Value
 	        PLAY_YAN_Design     0 (default, pictogram mode) or 1 (Mario mode).
 	        PLAY_YAN_StartMode  0 (movie mode) or 1 (default, music mode).
