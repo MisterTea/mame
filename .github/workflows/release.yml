@@ -27,8 +27,12 @@ jobs:
                   # A file, directory or wildcard pattern that describes what to upload
                   path: mame/*
 
-            - name: zip
-              run: zip mamehub_ubuntu_beta.zip mame
+            - name: Archive Release
+              uses: thedoctor0/zip-release@0.7.1
+              with:
+                  type: "zip"
+                  filename: "mamehub_ubuntu_beta.zip"
+                  path: "mame"
 
             - name: Update mamehub beta tag
               uses: richardsimko/update-tag@v1
@@ -78,8 +82,12 @@ jobs:
                   # A file, directory or wildcard pattern that describes what to upload
                   path: mame/*
 
-            - name: zip
-              run: zip mamehub_mac_beta.zip mame
+            - name: Archive Release
+              uses: thedoctor0/zip-release@0.7.1
+              with:
+                  type: "zip"
+                  filename: "mamehub_mac_beta.zip"
+                  path: "mame"
 
             - name: Update mamehub beta tag
               uses: richardsimko/update-tag@v1
