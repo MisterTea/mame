@@ -150,16 +150,16 @@ void mame_machine_manager::start_luaengine()
 		{
 			// parse the file
 			// attempt to open the output file
-			emu_file file(options().ini_path(), OPEN_FLAG_READ);
-			if (!file.open("plugin.ini"))
+			emu_file file(options().conf_path(), OPEN_FLAG_READ);
+			if (!file.open("plugin.conf"))
 			{
 				try
 				{
-					m_plugins->parse_ini_file((util::core_file&)file);
+					m_plugins->parse_conf_file((util::core_file&)file);
 				}
 				catch (options_exception &)
 				{
-					osd_printf_error("**Error loading plugin.ini**\n");
+					osd_printf_error("**Error loading plugin.conf**\n");
 				}
 			}
 		}
@@ -261,10 +261,10 @@ int mame_machine_manager::execute()
 		if (m_options.read_config())
 		{
 			// but first, revert out any potential game-specific INI settings from previous runs via the internal UI
-			m_options.revert(OPTION_PRIORITY_INI);
+			m_options.revert(OPTION_PRIORITY_CONF);
 
 			std::ostringstream errors;
-			mame_options::parse_standard_inis(m_options, errors, system);
+			mame_options::parse_standard_confs(m_options, errors, system);
 		}
 
 		// otherwise, perform validity checks before anything else

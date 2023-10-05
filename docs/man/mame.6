@@ -56,7 +56,7 @@ the core system rules.
 .\" *******************************************************
 .TP
 .B \-createconfig, \-cc
-Creates the default \fBmame.ini\fR file in the current directory. All the
+Creates the default \fBmame.conf\fR file in the current directory. All the
 configuration options (not commands) described below can be permanently
 changed by editing this configuration file.
 .TP
@@ -184,47 +184,47 @@ List available network adapters.
 Enables or disables the reading of the config files. When enabled
 (which is the default), MAME reads the following config files in order:
 .br
-1. \fBmame.ini\fR
+1. \fBmame.conf\fR
 .br
 the main configuration file
 .br
-2. \fIname\fB.ini\fR
+2. \fIname\fB.conf\fR
 .br
 where \fIname\fR is your executable name, i.e. mame unless you changed it
 (e.g. if you renamed mame to mame0137, the parsed file will be
-\fImame0137.ini\fR)
+\fImame0137.conf\fR)
 .br
-3. \fBdebug.ini\fR, if the debugger is enabled
+3. \fBdebug.conf\fR, if the debugger is enabled
 .br
-4. \fBvector.ini\fR, for vector games only
+4. \fBvector.conf\fR, for vector games only
 .br
-5. \fI[driver]\fB.ini\fR
+5. \fI[driver]\fB.conf\fR
 .br
 based on the source filename of the game driver
 .br
-6. \fI[parent]\fB.ini\fR
+6. \fI[parent]\fB.conf\fR
 .br
 for clones only, may be called recursively
 .br
-7. \fI[gamename]\fB.ini\fR
+7. \fI[gamename]\fB.conf\fR
 .br
 note this sometimes resolves to the same of the source driver
 .br
 The settings in the later ini's override those in the earlier ini's.
 So, for example, if you wanted to disable overlay effects in the
-vector games, you can create a vector.ini with the "effect none" line
+vector games, you can create a vector.conf with the "effect none" line
 in it, and it will override whatever effect value you have in your
-mame.ini. The default is ON (\-readconfig).
+mame.conf. The default is ON (\-readconfig).
 .TP
 .B \-[no]writeconfig, \-[no]wc
-Write configuration to \fI[driver]\fR.ini on exit.
+Write configuration to \fI[driver]\fR.conf on exit.
 Default is OFF (\-nowriteconfig).
 .\"
 .\" *******************************************************
 .SS Search path options
 .\" *******************************************************
 Be careful to use the path, directory and file options in
-mame.ini \fBONLY\fR. Otherwise, the outcome may be unpredictable and not
+mame.conf \fBONLY\fR. Otherwise, the outcome may be unpredictable and not
 consistent across releases.
 .TP
 .B \-rompath, \-rp, \-biospath, \-bp \fIpathname

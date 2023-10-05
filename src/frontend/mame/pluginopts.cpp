@@ -157,15 +157,15 @@ static core_options create_core_options(const plugin_options &plugin_opts)
 
 
 //-------------------------------------------------
-//  parse_ini_file
+//  parse_conf_file
 //-------------------------------------------------
 
-void plugin_options::parse_ini_file(util::core_file &inifile)
+void plugin_options::parse_conf_file(util::core_file &inifile)
 {
 	core_options opts = create_core_options(*this);
 
 	// parse the INI file
-	opts.parse_ini_file(inifile, OPTION_PRIORITY_NORMAL, true, true);
+	opts.parse_conf_file(inifile, OPTION_PRIORITY_NORMAL, true, true);
 
 	// and reflect these options back
 	for (plugin &p : m_plugins)
@@ -174,11 +174,11 @@ void plugin_options::parse_ini_file(util::core_file &inifile)
 
 
 //-------------------------------------------------
-//  output_ini
+//  output_conf
 //-------------------------------------------------
 
-std::string plugin_options::output_ini() const
+std::string plugin_options::output_conf() const
 {
 	core_options opts = create_core_options(*this);
-	return opts.output_ini();
+	return opts.output_conf();
 }

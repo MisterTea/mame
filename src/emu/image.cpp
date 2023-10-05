@@ -83,7 +83,7 @@ image_manager::image_manager(running_machine &machine)
 				// unload the bad image
 				image.unload();
 
-				// make sure it is removed from the ini file too
+				// make sure it is removed from the conf file too
 				machine.options().image_option(image.instance_name()).specify("");
 				if (machine.options().write_config())
 					write_config(machine.options(), nullptr, &machine.system());
@@ -176,7 +176,7 @@ void image_manager::config_save(config_type cfg_type, util::xml::data_node *pare
 
 /*-------------------------------------------------
     write_config - emit current option statuses as
-    INI files
+    CONF files
 -------------------------------------------------*/
 
 int image_manager::write_config(emu_options &options, const char *filename, const game_driver *gamedrv)
@@ -186,16 +186,16 @@ int image_manager::write_config(emu_options &options, const char *filename, cons
 
 	if (gamedrv != nullptr)
 	{
-		sprintf(buffer, "%s.ini", gamedrv->name);
+		sprintf(buffer, "%s.conf", gamedrv->name);
 		filename = buffer;
 	}
 
-	emu_file file(options.ini_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE);
+	emu_file file(options.conf_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE);
 	std::error_condition const filerr = file.open(filename);
 	if (!filerr)
 	{
-		std::string inistring = options.output_ini();
-		file.puts(inistring);
+		std::string confstring = options.output_conf();
+		file.puts(confstring);
 		retval = 0;
 	}
 	return retval;

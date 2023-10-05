@@ -12,7 +12,7 @@ for tape loops and similar.
 
 TODO:
 - Only supports single channel samples!
-- When mame.ini samplerate is close to the loaded sample(s) samplerate,
+- When mame.conf samplerate is close to the loaded sample(s) samplerate,
   (eg. 48000, with 44100Hz samples), things can sound quite bad. This is
   more an issue in sound.cpp resampler, not this device.
 - Maybe this should be part of the presentation layer (artwork etc.)

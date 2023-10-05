@@ -6,8 +6,8 @@
 @rem
 @rem    1. Create a fresh directory mametest/
 @rem    2. Copy this script into it (mametest/runtest.cmd)
-@rem    3. Copy a mame.ini with your ROM paths into it
-@rem        (mametest/mame.ini)
+@rem    3. Copy a mame.conf with your ROM paths into it
+@rem        (mametest/mame.conf)
 @rem    4. Copy a transparent crosshair cursor into it
 @rem        (mametest/cross.png)
 @rem

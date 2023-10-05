@@ -27,16 +27,16 @@ enum
 	OPTION_PRIORITY_SUBCMD = OPTION_PRIORITY_HIGH,
 	OPTION_PRIORITY_CMDLINE,
 
-	// INI-based options are NORMAL priority, in increasing order:
-	OPTION_PRIORITY_MAME_INI = OPTION_PRIORITY_NORMAL + 1,
-	OPTION_PRIORITY_DEBUG_INI,
-	OPTION_PRIORITY_ORIENTATION_INI,
-	OPTION_PRIORITY_SCREEN_INI,
-	OPTION_PRIORITY_SOURCE_INI,
-	OPTION_PRIORITY_GPARENT_INI,
-	OPTION_PRIORITY_PARENT_INI,
-	OPTION_PRIORITY_DRIVER_INI,
-	OPTION_PRIORITY_INI,
+	// CONF-based options are NORMAL priority, in increasing order:
+	OPTION_PRIORITY_MAME_CONF = OPTION_PRIORITY_NORMAL + 1,
+	OPTION_PRIORITY_DEBUG_CONF,
+	OPTION_PRIORITY_ORIENTATION_CONF,
+	OPTION_PRIORITY_SCREEN_CONF,
+	OPTION_PRIORITY_SOURCE_CONF,
+	OPTION_PRIORITY_GPARENT_CONF,
+	OPTION_PRIORITY_PARENT_CONF,
+	OPTION_PRIORITY_DRIVER_CONF,
+	OPTION_PRIORITY_CONF,
 };
 
 //**************************************************************************
@@ -51,13 +51,13 @@ class mame_options
 {
 public:
 	// parsing wrappers
-	static void parse_standard_inis(emu_options &options, std::ostream &error_stream, const game_driver *driver = nullptr);
+	static void parse_standard_confs(emu_options &options, std::ostream &error_stream, const game_driver *driver = nullptr);
 	static const game_driver *system(const emu_options &options);
-	static void populate_hashpath_from_args_and_inis(emu_options &options, const std::vector<std::string> &args);
+	static void populate_hashpath_from_args_and_confs(emu_options &options, const std::vector<std::string> &args);
 
 private:
-	// INI parsing helper
-	static void parse_one_ini(emu_options &options, const char *basename, int priority, std::ostream *error_stream = nullptr);
+	// CONF parsing helper
+	static void parse_one_conf(emu_options &options, const char *basename, int priority, std::ostream *error_stream = nullptr);
 };
 
 #endif  // MAME_FRONTEND_MAMEOPTS_H

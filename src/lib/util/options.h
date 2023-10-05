@@ -195,11 +195,11 @@ public:
 
 	// parsing/input
 	void parse_command_line(const std::vector<std::string> &args, int priority, bool ignore_unknown_options = false);
-	void parse_ini_file(util::core_file &inifile, int priority, bool ignore_unknown_options, bool always_override);
+	void parse_conf_file(util::core_file &inifile, int priority, bool ignore_unknown_options, bool always_override);
 	void copy_from(const core_options &that);
 
 	// output
-	std::string output_ini(const core_options *diff = nullptr) const;
+	std::string output_conf(const core_options *diff = nullptr) const;
 	std::string output_help() const;
 
 	// reading

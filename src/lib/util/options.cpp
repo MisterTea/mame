@@ -893,11 +893,11 @@ void core_options::parse_command_line(const std::vector<std::string> &args, int 
 
 
 //-------------------------------------------------
-//  parse_ini_file - parse a series of entries in
+//  parse_conf_file - parse a series of entries in
 //  an INI file
 //-------------------------------------------------
 
-void core_options::parse_ini_file(util::core_file &inifile, int priority, bool ignore_unknown_options, bool always_override)
+void core_options::parse_conf_file(util::core_file &inifile, int priority, bool ignore_unknown_options, bool always_override)
 {
 	std::ostringstream error_stream;
 	condition_type condition = condition_type::NONE;
@@ -1011,14 +1011,14 @@ void core_options::copy_from(const core_options &that)
 
 
 //-------------------------------------------------
-//  output_ini - output the options in INI format,
+//  output_conf - output the options in CONF format,
 //  only outputting entries that different from
 //  the optional diff
 //-------------------------------------------------
 
-std::string core_options::output_ini(const core_options *diff) const
+std::string core_options::output_conf(const core_options *diff) const
 {
-	// INI files are complete, so always start with a blank buffer
+	// CONF files are complete, so always start with a blank buffer
 	std::ostringstream buffer;
 	buffer.imbue(std::locale::classic());
 

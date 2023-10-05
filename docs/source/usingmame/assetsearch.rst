@@ -14,7 +14,7 @@ the files it needs.  You can change these settings by starting MAME without
 specifying a system, selecting **Configure Options** from the system selection
 menu, and then selecting **Configure Directories** (remember to select **Save
 Configuration** if you want to keep your changes).  You can also change settings
-by editing your mame.ini and ui.ini files directly, or specify settings on the
+by editing your mame.conf and ui.conf files directly, or specify settings on the
 command line.  For information on available options for controlling where MAME
 searches for files, see :ref:`mame-commandline-pathoptions`.
 

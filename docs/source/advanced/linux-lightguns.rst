@@ -43,7 +43,7 @@ In ``/etc/X11/xorg.conf.d/60-aimtrak.conf`` we will need:
 Configure MAME
 --------------
 
-Next, we'll need to configure MAME via ``mame.ini`` to use the new lightgun device(s).
+Next, we'll need to configure MAME via ``mame.conf`` to use the new lightgun device(s).
 
 * lightgun 1
 * lightgun_device lightgun

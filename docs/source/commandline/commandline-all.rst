@@ -150,7 +150,7 @@ Configuration Verbs
 
 **-createconfig** / **-cc**
 
-    Creates the default ``mame.ini`` file.  All the configuration options (not
+    Creates the default ``mame.conf`` file.  All the configuration options (not
     verbs) described below can be permanently changed by editing this
     configuration file.
 
@@ -1132,25 +1132,25 @@ Configuration Options
     Enables or disables the reading of the config files. When enabled (which is
     the default), MAME reads the following config files in order:
 
-      - ``mame.ini``
-      - ``debug.ini``                       (if the debugger is enabled)
-      - ``source/``\ *<driver>*\ ``.ini``   (based on the source filename of the driver)
-      - ``vertical.ini``                    (for systems with vertical monitor orientation)
-      - ``horizont.ini``                    (for systems with horizontal monitor orientation)
-      - ``arcade.ini``                      (for systems in source added with ``GAME()`` macro)
-      - ``console.ini``                     (for systems in source added with ``CONS()`` macro)
-      - ``computer.ini``                    (for systems in source added with ``COMP()`` macro)
-      - ``othersys.ini``                    (for systems in source added with ``SYST()`` macro)
-      - ``vector.ini``                      (for vector systems only)
-      - *<parent>*\ ``.ini``                (for clones only, may be called recursively)
-      - *<systemname>*\ ``.ini``
+      - ``mame.conf``
+      - ``debug.conf``                       (if the debugger is enabled)
+      - ``source/``\ *<driver>*\ ``.conf``   (based on the source filename of the driver)
+      - ``vertical.conf``                    (for systems with vertical monitor orientation)
+      - ``horizont.conf``                    (for systems with horizontal monitor orientation)
+      - ``arcade.conf``                      (for systems in source added with ``GAME()`` macro)
+      - ``console.conf``                     (for systems in source added with ``CONS()`` macro)
+      - ``computer.conf``                    (for systems in source added with ``COMP()`` macro)
+      - ``othersys.conf``                    (for systems in source added with ``SYST()`` macro)
+      - ``vector.conf``                      (for vector systems only)
+      - *<parent>*\ ``.conf``                (for clones only, may be called recursively)
+      - *<systemname>*\ ``.conf``
 
       (See :ref:`advanced-multi-CFG` for further details)
 
     The settings in the later INIs override those in the earlier INIs.  So, for
     example, if you wanted to disable overlay effects in the vector systems, you
-    can create a ``vector.ini`` with line ``effect none`` in it, and it will
-    override whatever ``effect`` value you have in your ``mame.ini``.
+    can create a ``vector.conf`` with line ``effect none`` in it, and it will
+    override whatever ``effect`` value you have in your ``mame.conf``.
 
     The default is ON (**-readconfig**).
 
@@ -2612,7 +2612,7 @@ Core Artwork Options
             mame coco -fallback_artwork suprmrio
 
 .. Tip:: You can use **fallback_artwork <artwork name>** in
-         ``horizontal.ini`` and ``vertical.ini`` to specify different
+         ``horizontal.conf`` and ``vertical.conf`` to specify different
          fallback artwork choices for horizontal and vertical systems.
 
 
@@ -3299,7 +3299,7 @@ Core Input Options
     of the current system.
 
     Generally you will want to set up the **-joystick_map** setting in the
-    per-system ``<system>.ini`` file as opposed to the main ``MAME.INI``
+    per-system ``<system>.conf`` file as opposed to the main ``MAME.INI``
     file so that the mapping only affects the systems you want it to.  See
     :ref:`Multiple Configuration Files <advanced-multi-CFG>` for further
     details on per-system configuration.

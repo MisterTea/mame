@@ -43,8 +43,8 @@ public:
 	plugin *find(const std::string &name);
 
 	// INI functionality
-	void parse_ini_file(util::core_file &inifile);
-	std::string output_ini() const;
+	void parse_conf_file(util::core_file &inifile);
+	std::string output_conf() const;
 
 private:
 	std::list<plugin> m_plugins;

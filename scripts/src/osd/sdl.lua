@@ -121,7 +121,7 @@ newoption {
 
 newoption {
 	trigger = "SDL_INI_PATH",
-	description = "Default search path for .ini files",
+	description = "Default search path for .conf files",
 }
 
 newoption {

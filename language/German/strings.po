@@ -224,13 +224,13 @@ msgid "Crosshair Offset Y %1$1.3f"
 msgstr "Fadenkreuzversatz Y %1$1.3f"
 
 #: src/frontend/mame/ui/ui.cpp:2137
-msgid "**Error saving ui.ini**"
-msgstr "**Fehler beim Speichern von ui.ini**"
+msgid "**Error saving ui.conf**"
+msgstr "**Fehler beim Speichern von ui.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2196
 #, c-format
-msgid "**Error saving %s.ini**"
-msgstr "**Fehler beim Speichern von %s.ini**"
+msgid "**Error saving %s.conf**"
+msgstr "**Fehler beim Speichern von %s.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2200 src/frontend/mame/ui/miscmenu.cpp:773
 msgid ""
@@ -2045,7 +2045,7 @@ msgid ""
 "docs folder for information on setting up and using %2$s."
 msgstr ""
 "Keine System ROMs gefunden. Bitte prüfen Sie die Einstellung zum Ordner für "
-"ROMs in der %1$s.ini Datei.\n"
+"ROMs in der %1$s.conf Datei.\n"
 "\n"
 "Wenn dies Ihre erste Verwendung von %2$s ist, konsultieren Sie bitte die "
 "Datei %2$s.pdf file im docs Ordner bzgl. Informationen zur Konfiguration und "

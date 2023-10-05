@@ -220,13 +220,13 @@ msgid "Crosshair Offset Y %1$1.3f"
 msgstr "十字准星位移 Y %1$1.3f"
 
 #: src/frontend/mame/ui/ui.cpp:2137
-msgid "**Error saving ui.ini**"
-msgstr "**保存 ui.ini 时错误**"
+msgid "**Error saving ui.conf**"
+msgstr "**保存 ui.conf 时错误**"
 
 #: src/frontend/mame/ui/ui.cpp:2196
 #, c-format
-msgid "**Error saving %s.ini**"
-msgstr "**保存 %s.ini 时错误**"
+msgid "**Error saving %s.conf**"
+msgstr "**保存 %s.conf 时错误**"
 
 #: src/frontend/mame/ui/ui.cpp:2200 src/frontend/mame/ui/miscmenu.cpp:773
 msgid ""
@@ -2025,7 +2025,7 @@ msgid ""
 "If this is your first time using %2$s, please see the %2$s.pdf file in the "
 "docs folder for information on setting up and using %2$s."
 msgstr ""
-"找不到系统 ROM, 请检查 %1$s.ini 档案中指定的 ROM 路径设定。\n"
+"找不到系统 ROM, 请检查 %1$s.conf 档案中指定的 ROM 路径设定。\n"
 "\n"
 "如果是首次使用 %2$s, 请参阅 docs 目录中的 %2$s.pdf 以取得设定 %2$s 的相关信"
 "息\n"

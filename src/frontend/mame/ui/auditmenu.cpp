@@ -60,7 +60,7 @@ menu_audit::menu_audit(mame_ui_manager &mui, render_container &container)
 	set_heading(_("Audit Media"));
 
 	std::string filename(emulator_info::get_configname());
-	filename += "_avail.ini";
+	filename += "_avail.conf";
 	m_prompt = util::string_format(_("Results will be saved to %1$s"), filename);
 }
 
@@ -237,7 +237,7 @@ void menu_audit::save_available_machines()
 {
 	// attempt to open the output file
 	emu_file file(ui().options().ui_path(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-	if (!file.open(std::string(emulator_info::get_configname()) + "_avail.ini"))
+	if (!file.open(std::string(emulator_info::get_configname()) + "_avail.conf"))
 	{
 		// generate header
 		file.printf("#\n%s%s\n#\n\n", UI_VERSION_TAG, emulator_info::get_bare_build_version());

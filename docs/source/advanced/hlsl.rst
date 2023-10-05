@@ -25,7 +25,7 @@ Getting Started with HLSL
 
 You will need to have followed the initial MAME setup instructions elsewhere in this manual before beginning. Official MAME distributions include HLSL by default, so you don't need to download any additional files.
 
-Open your ``mame.ini`` in your text editor of choice (e.g. Notepad), and make sure the following options are set correctly:
+Open your ``mame.conf`` in your text editor of choice (e.g. Notepad), and make sure the following options are set correctly:
 
 * **video d3d**
 * **filter 0**
@@ -56,9 +56,9 @@ Once you've found settings you like, write the numbers down on a notepad and exi
 Configuration Editing
 ---------------------
 
-As referenced in :ref:`advanced-multi-CFG`, MAME has a order in which it processes INI files. The HLSL settings can be edited in ``mame.ini``, but to take full advantage of the power of MAME's config files, you'll want to copy the HLSL settings from mame.ini to one of the other config files and make changes there.
+As referenced in :ref:`advanced-multi-CFG`, MAME has a order in which it processes INI files. The HLSL settings can be edited in ``mame.conf``, but to take full advantage of the power of MAME's config files, you'll want to copy the HLSL settings from mame.conf to one of the other config files and make changes there.
 
-For instance, once you've found HLSL settings you think are appropriate for Neo Geo games, you can put those settings into ``neogeo.ini`` so that all Neo-Geo games will be able to take advantage of those settings without needing to add it to every game INI manually.
+For instance, once you've found HLSL settings you think are appropriate for Neo Geo games, you can put those settings into ``neogeo.conf`` so that all Neo-Geo games will be able to take advantage of those settings without needing to add it to every game INI manually.
 
 
 Configuration Settings
@@ -275,7 +275,7 @@ Configuration Settings
 Vector Games
 ------------
 
-HLSL effects can also be used with vector games. Due to a wide variance of vector settings to optimize for each individual game, it is heavily suggested you add these to per-game INI files (e.g. tempest.ini)
+HLSL effects can also be used with vector games. Due to a wide variance of vector settings to optimize for each individual game, it is heavily suggested you add these to per-game INI files (e.g. tempest.conf)
 
 Shadowmasks were only present on color vector games, and should not be used on monochrome vector games. Additionally, vector games did not use scanlines, so that should also be turned off.
 

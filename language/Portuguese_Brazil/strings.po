@@ -226,13 +226,13 @@ msgid "Crosshair Offset Y %1$1.3f"
 msgstr "Deslocamento da Mira Y %1$1.3f"
 
 #: src/frontend/mame/ui/ui.cpp:2137
-msgid "**Error saving ui.ini**"
-msgstr "**Houve um erro ao salvar o ui.ini**"
+msgid "**Error saving ui.conf**"
+msgstr "**Houve um erro ao salvar o ui.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2196
 #, c-format
-msgid "**Error saving %s.ini**"
-msgstr "**Houve um erro ao salvar o %s.ini**"
+msgid "**Error saving %s.conf**"
+msgstr "**Houve um erro ao salvar o %s.conf**"
 
 #: src/frontend/mame/ui/ui.cpp:2200 src/frontend/mame/ui/miscmenu.cpp:773
 msgid ""
@@ -2047,7 +2047,7 @@ msgid ""
 "docs folder for information on setting up and using %2$s."
 msgstr ""
 "Não foram encontradas ROMs do sistema. Verifique a configuração do rompath "
-"especificada no arquivo %1$s.ini.\n"
+"especificada no arquivo %1$s.conf.\n"
 "\n"
 "Se esta é a primeira vez que usa o %2$s por favor veja o arquivo %2$s.pdf na "
 "pasta docs pra informações sobre configurar e usar o %2$s."

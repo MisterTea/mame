@@ -223,13 +223,13 @@ msgid "Crosshair Offset Y %1$1.3f"
 msgstr "Зміщення прицілу Y %1$1.3f"
 
 #: src/frontend/mame/ui/ui.cpp:2137
-msgid "**Error saving ui.ini**"
-msgstr "**Помилка збереження ui.ini.**"
+msgid "**Error saving ui.conf**"
+msgstr "**Помилка збереження ui.conf.**"
 
 #: src/frontend/mame/ui/ui.cpp:2196
 #, c-format
-msgid "**Error saving %s.ini**"
-msgstr "**Помилка збереження %s.ini.**"
+msgid "**Error saving %s.conf**"
+msgstr "**Помилка збереження %s.conf.**"
 
 #: src/frontend/mame/ui/ui.cpp:2200 src/frontend/mame/ui/miscmenu.cpp:773
 msgid ""
@@ -2038,7 +2038,7 @@ msgid ""
 "docs folder for information on setting up and using %2$s."
 msgstr ""
 "Не знайдено системних ROM'ів. Перевір указане налаштування шляху ROM'ів у "
-"%1$s.ini.\n"
+"%1$s.conf.\n"
 "\n"
 "При першому використанні %2$s переглянь %2$s.pdf у теці \"docs\" для "
 "отримання відомостей налаштування та використання %2$s."

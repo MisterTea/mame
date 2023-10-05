@@ -39,7 +39,7 @@ body:
 - type: textarea
   attributes:
     label: INI configuration details
-    description: Copy your mame.ini here.
+    description: Copy your mame.conf here.
     placeholder: |
       #
       # CORE CONFIGURATION OPTIONS

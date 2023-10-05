@@ -43,7 +43,7 @@ select **Configure Options** from the system selection menu, and then select
 **Plugins**.  You will need to completely exit MAME and start it again for
 changes to the enabled plugins to take effect.  You can also use the
 :ref:`plugin option <mame-commandline-plugin>` on the command line, or change
-the settings in the **plugin.ini** file.
+the settings in the **plugin.conf** file.
 
 If an enabled plugin needs additional configuration, or if it needs to show
 information, a **Plugin Options** item will appear in the main menu (accessed by
