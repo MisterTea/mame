@@ -59,7 +59,7 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
 
   time_t curRealTime = time(NULL);
   auto timestamp = ui_manager.machine().machine_time().to_msec();
-  if (timestamp >= 1000) {
+  if (timestamp >= 1000 && netCommon) {
     auto values = netCommon->getAllInputValues(timestamp, std::string("CHAT"));
     for (auto value : values) {
       auto userId = value.first;
