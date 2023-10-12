@@ -126,7 +126,10 @@ jobs:
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.conf mame.conf.sample && popd
+                  pushd mame
+                  MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=c:/msys64/mingw64/bin/python.exe vs2019
+                  MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=c:/msys64/mingw64/bin/python.exe vs2019
+                  rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.conf mame.conf.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v2
