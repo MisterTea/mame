@@ -118,6 +118,7 @@ jobs:
             - uses: msys2/setup-msys2@v2
               with:
                   update: true
+                  location: D:\
 
             - shell: msys2 {0}
               run: |
@@ -127,8 +128,9 @@ jobs:
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
                   pushd mame
-                  MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=D:/a/_temp/setup-msys2/mingw64/bin/python.exe vs2019
-                  MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=D:/a/_temp/setup-msys2/mingw64/bin/python.exe vs2019
+                  find /d/
+                  MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=D:/mingw64/bin/python.exe vs2019
+                  MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=D:/mingw64/bin/python.exe vs2019
                   rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.conf mame.conf.sample && popd
 
             - name: Upload mame binary
