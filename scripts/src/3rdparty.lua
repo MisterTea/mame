@@ -2002,12 +2002,12 @@ project "wga"
             --"-fsanitize=thread"
 		}
 		flags {
-			"Symbols",
+			--"Symbols",
 		}
 
     configuration { "vs*" }
 		flags {
-			"Symbols",
+			--"Symbols",
 		}
 		
   configuration { }
