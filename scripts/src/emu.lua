@@ -12,10 +12,22 @@
 project ("emu")
 uuid ("e6fa15e4-a354-4526-acef-13c8e80fcacf")
 kind (LIBTYPE)
+
+configuration { "gmake or ninja" }
+buildoptions_cpp {
+	"-Wno-strict-prototypes",
+	"-no-pie -g",
+	--"-fsanitize=thread"
+}
+flags {
+	"Symbols",
+}
+
 configuration { "vs*" }
 flags {
 	"Symbols",
 }
+
 
 addprojectflags()
 precompiledheaders()

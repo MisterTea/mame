@@ -265,11 +265,11 @@ function toolchain(_buildDir, _subDir)
 
 	configuration { "vs*" }
 	includedirs {
-    MAME_DIR .. "3rdparty/sodium/msvc/include",
-	"C:\\Program Files\\OpenSSL-Win64\\include"
+    	MAME_DIR .. "3rdparty/sodium/msvc/include",
+		MAME_DIR .. "3rdparty/OpenSSL-Win64/include"
 	}
 	libdirs {
-		"C:\\Program Files\\OpenSSL-Win64\\lib\\VC\\static"
+		MAME_DIR .. "3rdparty/OpenSSL-Win64/lib/VC/static"
 	}
 	links {
 		"libsodium",

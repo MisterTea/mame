@@ -1998,7 +1998,11 @@ project "wga"
 	configuration { "gmake or ninja" }
 		buildoptions_cpp {
 			"-Wno-strict-prototypes",
+			"-no-pie -g",
             --"-fsanitize=thread"
+		}
+		flags {
+			"Symbols",
 		}
 
     configuration { "vs*" }
