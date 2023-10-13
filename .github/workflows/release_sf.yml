@@ -1,0 +1,113 @@
+name: Release_Sf
+
+on:
+    workflow_dispatch:
+
+jobs:
+    build_and_release_linux:
+        runs-on: self-hosted-linux
+
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  submodules: "recursive"
+                  path: "mame"
+
+            - name: make
+              run: pushd mame && make -j2 && popd
+
+            - name: Update mamehub beta tag
+              uses: rickstaa/action-create-tag@v1
+              id: "tag_create"
+              with:
+                tag: "mamehub_beta_2"
+                tag_exists_error: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Cleanup
+              run: rm -Rf mame/build mame/.git mame/src mame/3rdparty
+
+            - name: Upload mame binary
+              uses: actions/upload-artifact@v2
+              with:
+                  # Artifact name
+                  name: mamehub_ubuntu_beta
+                  # A file, directory or wildcard pattern that describes what to upload
+                  path: mame/*
+
+            - name: Archive Release
+              uses: thedoctor0/zip-release@0.7.1
+              with:
+                  type: "zip"
+                  filename: "mamehub_ubuntu_beta.zip"
+                  path: "mame"
+
+            - name: Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  body: |
+                      New mamehub version.
+                  files: mamehub_ubuntu_beta.zip
+                  fail_on_unmatched_files: true
+                  tag_name: mamehub_beta_2
+
+    build_and_release_windows_msvc:
+        runs-on: self-hosted-windows
+
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  submodules: "recursive"
+                  path: "mame"
+
+            - uses: actions/checkout@v2
+              with:
+                  repository: jedisct1/libsodium
+                  ref: stable
+                  path: "libsodium"
+
+            - name: Add msbuild to PATH
+              uses: microsoft/setup-msbuild@v1.0.2
+
+            - uses: msys2/setup-msys2@v2
+              with:
+                  update: true
+
+            - name: Setup deps
+              shell: msys2 {0}
+              run: |
+                  pacman -Syu --noconfirm zip make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5
+                  #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-libs-9.3.0-2-any.pkg.tar.xz
+                  #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
+                  #pacman -U --noconfirm /tmp/*.tar.xz
+                  pushd libsodium && ./configure --enable-static --disable-shared && make -j`nproc` && make install && popd
+
+            - name: Build
+              shell: msys2 {0}
+              run: |
+                  pushd mame
+                  export PATH="/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin:$PATH"
+                  echo $PATH
+                  rm -Rf .git
+                  MINGW64=/mingw64 make -j`nproc` MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019 || MINGW64=/mingw64 make -j`nproc` MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019
+                  rm -Rf build src 3rdparty
+                  popd
+                  zip -r mamehub_windows_msvc_beta.zip mame
+
+            - name: Upload mame binary
+              uses: actions/upload-artifact@v2
+              with:
+                  # Artifact name
+                  name: mamehub_windows_msvc_beta
+                  # A file, directory or wildcard pattern that describes what to upload
+                  path: mame/*
+
+            - name: Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  body: |
+                      New mamehub version.
+                  files: mamehub_windows_msvc_beta.zip
+                  fail_on_unmatched_files: true
+                  tag_name: mamehub_beta_2
