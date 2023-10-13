@@ -82,7 +82,7 @@ jobs:
                   update: true
             - shell: msys2 {0}
               run: |
-                  pacman -Syu --noconfirm make mingw-w64-x86_64-python2 mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5
+                  pacman -Syu --noconfirm make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-libs-9.3.0-2-any.pkg.tar.xz
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
@@ -118,15 +118,20 @@ jobs:
             - uses: msys2/setup-msys2@v2
               with:
                   update: true
+                  location: D:\
 
             - shell: msys2 {0}
               run: |
-                  pacman -Syu --noconfirm make mingw-w64-x86_64-python2 mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5
+                  pacman -Syu --noconfirm make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-libs-9.3.0-2-any.pkg.tar.xz
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.conf mame.conf.sample && popd
+                  pushd mame
+                  export PATH="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin:$PATH"
+                  echo $PATH
+                  MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=D:/msys64/mingw64/bin/python.exe vs2019 || MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=D:/msys64/mingw64/bin/python.exe vs2019
+                  rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.conf mame.conf.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v2
