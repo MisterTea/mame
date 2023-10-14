@@ -8,9 +8,6 @@ jobs:
         runs-on: self-hosted-linux
 
         steps:
-            - name: Update OS
-              run: sudo apt update -y && sudo apt-get install -y git build-essential python3 libsdl2-dev libsdl2-ttf-dev libfontconfig-dev libpulse-dev qtbase5-dev qtbase5-dev-tools qtchooser qt5-qmake p7zip-full libsodium-dev
-
             - uses: actions/checkout@v2
               with:
                   submodules: "recursive"
