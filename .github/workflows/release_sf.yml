@@ -35,9 +35,11 @@ jobs:
                   path: "mame"
 
             - name: Update mamehub beta tag
-              uses: richardsimko/update-tag@v1.0.8
+              uses: rickstaa/action-create-tag@v1
+              id: "tag_create"
               with:
-                  tag_name: mamehub_beta_2
+                tag: "mamehub_beta_2"
+                tag_exists_error: false
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -102,9 +104,11 @@ jobs:
                   path: "mame"
 
             - name: Update mamehub beta tag
-              uses: richardsimko/update-tag@v1.0.8
+              uses: rickstaa/action-create-tag@v1
+              id: "tag_create"
               with:
-                  tag_name: mamehub_beta_2
+                tag: "mamehub_beta_2"
+                tag_exists_error: false
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
