@@ -35,7 +35,7 @@ jobs:
                   path: "mame"
 
             - name: Update mamehub beta tag
-              uses: richardsimko/update-tag@v1
+              uses: richardsimko/update-tag@v1.0.8
               with:
                   tag_name: mamehub_beta_2
               env:
@@ -90,7 +90,7 @@ jobs:
                   path: "mame"
 
             - name: Update mamehub beta tag
-              uses: richardsimko/update-tag@v1
+              uses: richardsimko/update-tag@v1.0.8
               with:
                   tag_name: mamehub_beta_2
               env:
@@ -193,7 +193,7 @@ jobs:
                   path: "mame"
 
             - name: Update mamehub beta tag
-              uses: richardsimko/update-tag@v1
+              uses: richardsimko/update-tag@v1.0.8
               with:
                   tag_name: mamehub_beta_2
               env:
