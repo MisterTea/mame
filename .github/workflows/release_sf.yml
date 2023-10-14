@@ -5,7 +5,7 @@ on:
 
 jobs:
     build_and_release_windows_msvc:
-        runs-on: jjg-windows
+        runs-on: self-hosted
 
         steps:
             - uses: actions/checkout@v2
