@@ -16,7 +16,7 @@ kind (LIBTYPE)
 configuration { "gmake or ninja" }
 buildoptions_cpp {
 	"-Wno-strict-prototypes",
-	"-no-pie -g",
+	"-g3",
 	--"-fsanitize=thread"
 }
 flags {
