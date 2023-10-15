@@ -16,6 +16,13 @@ jobs:
                   submodules: "recursive"
                   path: "mame"
 
+            - name: Update mamehub beta tag
+              uses: richardsimko/update-tag@v1.0.8
+              with:
+                  tag_name: mamehub_beta_2
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
             - name: make
               run: pushd mame && make -j2 && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.conf mame.conf.sample && popd
 
@@ -33,13 +40,6 @@ jobs:
                   type: "zip"
                   filename: "mamehub_ubuntu_beta.zip"
                   path: "mame"
-
-            - name: Update mamehub beta tag
-              uses: richardsimko/update-tag@v1.0.8
-              with:
-                  tag_name: mamehub_beta_2
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Release
               uses: softprops/action-gh-release@v1
@@ -88,13 +88,6 @@ jobs:
                   type: "zip"
                   filename: "mamehub_mac_beta.zip"
                   path: "mame"
-
-            - name: Update mamehub beta tag
-              uses: richardsimko/update-tag@v1.0.8
-              with:
-                  tag_name: mamehub_beta_2
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Release
               uses: softprops/action-gh-release@v1
@@ -191,13 +184,6 @@ jobs:
                   type: "zip"
                   filename: "mamehub_windows_msvc_beta.zip"
                   path: "mame"
-
-            - name: Update mamehub beta tag
-              uses: richardsimko/update-tag@v1.0.8
-              with:
-                  tag_name: mamehub_beta_2
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Release
               uses: softprops/action-gh-release@v1
