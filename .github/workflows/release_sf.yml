@@ -90,7 +90,7 @@ jobs:
                   MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019 || MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019
                   rm -Rf build src 3rdparty
                   popd
-                  zip mamehub_windows_msvc_beta.zip mame
+                  zip -r mamehub_windows_msvc_beta.zip mame
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v2
