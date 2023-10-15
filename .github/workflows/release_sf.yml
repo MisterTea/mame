@@ -14,7 +14,19 @@ jobs:
                   path: "mame"
 
             - name: make
-              run: pushd mame && make -j2 && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.conf mame.conf.sample && popd
+              run: pushd mame && make -j2 && popd
+
+            - name: Update mamehub beta tag
+              uses: rickstaa/action-create-tag@v1
+              id: "tag_create"
+              with:
+                tag: "mamehub_beta_2"
+                tag_exists_error: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Cleanup
+              run: rm -Rf mame/build mame/.git mame/src mame/3rdparty
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v2
@@ -30,15 +42,6 @@ jobs:
                   type: "zip"
                   filename: "mamehub_ubuntu_beta.zip"
                   path: "mame"
-
-            - name: Update mamehub beta tag
-              uses: rickstaa/action-create-tag@v1
-              id: "tag_create"
-              with:
-                tag: "mamehub_beta_2"
-                tag_exists_error: false
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Release
               uses: softprops/action-gh-release@v1
