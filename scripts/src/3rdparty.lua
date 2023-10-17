@@ -1996,20 +1996,30 @@ project "wga"
 	kind "StaticLib"
 
 	configuration { "gmake or ninja" }
-		buildoptions_cpp {
-			"-Wno-strict-prototypes",
-			"-g3",
-            --"-fsanitize=thread"
-		}
-		flags {
-			--"Symbols",
-		}
-
-    configuration { "vs*" }
-		flags {
-			--"Symbols",
-		}
-		
+	buildoptions_cpp {
+		"-Wno-strict-prototypes",
+		"-g3",
+		--"-fsanitize=thread"
+	}
+	flags {
+		"Symbols",
+	}
+	
+	configuration { "mingw*" }
+	buildoptions_cpp {
+		"-g3",
+		"-no-pie",
+	}
+	flags {
+		"Symbols",
+	}
+	
+	
+	configuration { "vs*" }
+	flags {
+		"Symbols",
+	}
+			
   configuration { }
   
 	includedirs {

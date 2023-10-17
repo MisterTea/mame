@@ -157,20 +157,30 @@ Common::Common(const string &_userId, const string &privateKeyString,
     wga::ALL_RPC_FLAKY = true;
   }
 
+  bool localLobby = (lobbyHostname == "self");
+
+  if (userId == "none") {
+    if (localLobby) {
+      userId = "Server";
+    } else {
+      userId = "Client";
+    }
+  }
+
   auto startConnectTime =
       chrono::duration_cast<chrono::microseconds>(
           chrono::high_resolution_clock::now().time_since_epoch())
           .count();
   netEngine.reset(new wga::NetEngine());
-  // privateKey =
-  // wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString +
-  //"/" + userId);
-  privateKey = wga::CryptoHandler::makePrivateKeyFromB64(privateKeyString);
+  if (privateKeyString == "none") {
+    privateKey = wga::CryptoHandler::makePrivateKeyFromPassword(userId);
+  } else {
+    privateKey = wga::CryptoHandler::makePrivateKeyFromB64(privateKeyString);
+  }
   publicKey = wga::CryptoHandler::makePublicFromPrivate(privateKey);
   LOG(INFO) << "Using public key: "
             << wga::CryptoHandler::keyToString(publicKey);
 
-  bool localLobby = (lobbyHostname == "self");
   if (localLobby) {
     LOG(INFO) << "Running local lobby for id " << userId;
     server.reset(new wga::SingleGameServer(netEngine, lobbyPort, userId,

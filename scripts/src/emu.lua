@@ -20,12 +20,22 @@ buildoptions_cpp {
 	--"-fsanitize=thread"
 }
 flags {
-	--"Symbols",
+	"Symbols",
 }
+
+configuration { "mingw*" }
+buildoptions_cpp {
+	"-g3",
+	"-no-pie",
+}
+flags {
+	"Symbols",
+}
+
 
 configuration { "vs*" }
 flags {
-	--"Symbols",
+	"Symbols",
 }
 
 

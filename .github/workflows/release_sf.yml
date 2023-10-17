@@ -17,13 +17,12 @@ jobs:
               run: pushd mame && make -j2 && popd
 
             - name: Update mamehub beta tag
-              uses: rickstaa/action-create-tag@v1
-              id: "tag_create"
+              uses: richardsimko/update-tag@v1.0.10
               with:
-                tag: "mamehub_beta_2"
-                tag_exists_error: false
+                  tag_name: mamehub_beta_2
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
             - name: Cleanup
               run: rm -Rf mame/build mame/.git mame/src mame/3rdparty
@@ -72,7 +71,7 @@ jobs:
 
             - uses: msys2/setup-msys2@v2
               with:
-                  update: true
+                  release: false
 
             - name: Setup deps
               shell: msys2 {0}
@@ -87,7 +86,7 @@ jobs:
               shell: msys2 {0}
               run: |
                   pushd mame
-                  export PATH="/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin:$PATH"
+                  export PATH="/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin:$PATH"
                   echo $PATH
                   rm -Rf .git
                   MINGW64=/mingw64 make -j`nproc` MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019 || MINGW64=/mingw64 make -j`nproc` MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019

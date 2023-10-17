@@ -31,7 +31,10 @@ MODERN_WIN_API = 1
 # SDL_INI_PATH = .;$HOME/.mame/;ini;
 # SDL2_MULTIAPI = 1
 # NO_USE_MIDI = 1
-# NO_USE_PORTAUDIO = 1
+
+# This doesn't work on msvc so just skip it
+NO_USE_PORTAUDIO = 1
+
 # NO_USE_PULSEAUDIO = 1
 # USE_TAPTUN = 1
 # USE_PCAP = 1

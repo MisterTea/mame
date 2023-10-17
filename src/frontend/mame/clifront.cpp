@@ -273,13 +273,9 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
   // Set up client/server as appropriate
   if (m_options.mamehub()) {
     string userId = m_options.user_id();
-    if (userId.length() == 0) {
+    if (userId == "none") {
       if (std::string(m_options.lobby_host()) == "lobby.mamehub.com") {
         throw emu_fatalerror("You are missing your user id");
-      }
-      userId = string(16,'0');
-      for (int a=0;a<16;a++) {
-        userId[a] += (rand()%10);
       }
     }
     deleteNetCommon();

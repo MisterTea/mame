@@ -99,7 +99,7 @@ jobs:
                   tag_name: mamehub_beta_2
 
     build_and_release_windows:
-        runs-on: windows-latest
+        runs-on: windows-2019
 
         steps:
             - uses: actions/checkout@v2
@@ -116,6 +116,8 @@ jobs:
             - uses: msys2/setup-msys2@v2
               with:
                   update: true
+                  release: false
+
             - shell: msys2 {0}
               run: |
                   pacman -Syu --noconfirm make mingw-w64-x86_64-python2 mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5
@@ -134,7 +136,7 @@ jobs:
                   path: mame/*
 
     build_and_release_windows_msvc:
-        runs-on: windows-latest
+        runs-on: windows-2019
 
         steps:
             - uses: actions/checkout@v2
@@ -154,7 +156,7 @@ jobs:
             - uses: msys2/setup-msys2@v2
               with:
                   update: true
-                  location: C:\
+                  release: false
 
             - shell: msys2 {0}
               run: |
@@ -164,7 +166,7 @@ jobs:
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
                   pushd mame
-                  export PATH="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin:$PATH"
+                  export PATH="/c/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin:$PATH"
                   echo $PATH
                   rm -Rf .git
                   MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019 || MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019
