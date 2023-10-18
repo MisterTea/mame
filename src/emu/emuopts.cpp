@@ -237,6 +237,7 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_LOBBY_PORT,               "443",         core_options::option_type::INTEGER,    "Lobby port" },
 	{ OPTION_FAKE_LAG,               "0",         core_options::option_type::BOOLEAN,    "Add fake lag and clock skew" },
 	{ OPTION_CANDY,               "0",         core_options::option_type::BOOLEAN,    "Candy mode" },
+	{ OPTION_MINIMUM_LATENCY,               "100",         core_options::option_type::INTEGER,    "Minimum action latency" },
 
 	{ nullptr }
 };

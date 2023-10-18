@@ -268,7 +268,7 @@ double predictedPingVariance = 10.0;
 int numPingSamples = 0;
 
 int Common::getLargestPing() {
-  return max(35, 10 + int(ceil(myPeer->getHalfPingUpperBound() / 1000.0)));
+  return max(35, int(ceil(myPeer->getHalfPingUpperBound() / 1000.0)));
 }
 
 string Common::getLatencyString() {
@@ -318,7 +318,13 @@ string Common::getStatisticsString() {
   }
   return retval;
   */
-  return "TODO";
+  std::stringstream result;
+  vector<int> myPlayersOneBased;
+  for (auto& it : myPlayers) {
+    myPlayersOneBased.push_back(it+1);
+  }
+  std::copy(myPlayersOneBased.begin(), myPlayersOneBased.end(), std::ostream_iterator<int>(result, "/"));
+  return string("Controlling Players: ") + result.str();
 }
 
 /*

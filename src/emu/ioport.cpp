@@ -2427,7 +2427,7 @@ void ioport_manager::frame_update()
 
   if(netCommon) {
     // Calculate the time that the new inputs will take effect
-    int delayFromPing = max(50,min(600,netCommon->getLargestPing()));
+    int delayFromPing = max(machine().options().minimum_latency(),min(600,netCommon->getLargestPing()));
     //attoseconds_t attosecondsToLead = 0;
     //attosecondsToLead = ATTOSECONDS_PER_MILLISECOND*delayFromPing;
     auto futureInputTime = netCommon->getCurrentTime()/1000 + delayFromPing;
