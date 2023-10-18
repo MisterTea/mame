@@ -130,7 +130,7 @@ jobs:
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
                   pushd mame
-                  export PATH="/c/Program Files/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin:$PATH"
+                  export PATH="/c/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/MSBuild/Current/Bin:$PATH"
                   echo $PATH
                   rm -Rf .git
                   MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019 || MINGW64=/mingw64 make -j2 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019

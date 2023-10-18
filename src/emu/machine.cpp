@@ -359,8 +359,11 @@ int running_machine::run(bool quiet)
       attotime machineTimeBefore = machine_time();
 
 			// execute CPUs if not paused
-			if (!m_paused)
+			if (!m_paused) {
+				// Update forces
+				netCommon->updateForces({});
 				m_scheduler.timeslice();
+			}
 			// otherwise, just pump video updates through
 			else
 				m_video->frame_update();

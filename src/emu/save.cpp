@@ -202,10 +202,15 @@ void save_manager::save_memory(device_t *device, const char *module, const char 
 	else
 		totalname = string_format("%s/%X/%s", module, index, name);
 
+	if(netCommon) {
+		u8 *data = reinterpret_cast<u8 *>(val);
+		for (u32 b = 0; blockcount > b; ++b, data += stride) {
+			netCommon->createMemoryBlock(totalname + "/" + std::to_string(b), data, valsize, valcount);
+		}
+	}
+	
 	// insert us into the list
 	m_entry_list.emplace_back(std::make_unique<state_entry>(val, std::move(totalname), device, module, tag ? tag : "", index, valsize, valcount, blockcount, stride));
-
-	if(netCommon) netCommon->createMemoryBlock(totalname, (unsigned char*)val,valsize*valcount);
 }
 
 

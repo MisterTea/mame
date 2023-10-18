@@ -47,12 +47,17 @@ class MemoryBlock {
  public:
   std::string name;
   unsigned char *data;
-  int size;
+  int valSize;
+  int count;
   bool ownsMemory;
 
-  MemoryBlock(const std::string &_name, int _size);
-  MemoryBlock(const std::string &_name, unsigned char *_data, int _size);
+  MemoryBlock(const std::string &_name, int _valSize, int _count);
+  MemoryBlock(const std::string &_name, unsigned char *_data, int _valSize, int _count);
   ~MemoryBlock();
+
+  inline int size() {
+    return valSize * count;
+  }
 
  private:
   MemoryBlock(MemoryBlock const &);
@@ -113,7 +118,7 @@ class CommonBase {
   virtual int getLargestPing() = 0;
 
   virtual void createMemoryBlock(const std::string &name, unsigned char *ptr,
-                                 int size) = 0;
+                                 int valSize, int count) = 0;
 
   virtual std::string getLatencyString() = 0;
 
@@ -146,6 +151,9 @@ class CommonBase {
 
   virtual std::map<std::string, std::string> getAllInputValues(
       int64_t ts, const std::string &key) = 0;
+
+  virtual std::unordered_map<std::string, std::map<std::string, std::string>> getAllInputValuesWithPrefix(
+      int64_t ts, const std::string &keyPrefix) = 0;
 
   virtual unordered_map<string, string> getStateChanges(
       const unordered_map<string, string> &inputMap) = 0;

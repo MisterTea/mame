@@ -2351,6 +2351,8 @@ void ioport_manager::frame_update_callback()
 //  per-frame input port updating
 //-------------------------------------------------
 
+extern int chatEnabled;
+
 void ioport_manager::frame_update()
 {
 	auto profile = g_profiler.start(PROFILER_INPUT);
@@ -2401,6 +2403,11 @@ void ioport_manager::frame_update()
 			bool pressed = false;
 			for (auto it : field.seq_mamehub(SEQ_TYPE_STANDARD)) {
 				pressed |= machine().input().seq_pressed(it);
+			}
+
+			if (chatEnabled) {
+				// Disregard any key presses when in chat mode
+				pressed = false;
 			}
 	  string key = std::string("INPUT/") + field.mamehub_id();
 	  auto it = inputData.find(key);

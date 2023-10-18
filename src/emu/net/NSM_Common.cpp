@@ -122,18 +122,18 @@ void lzmaUncompress(unsigned char *destBuf, int destSize, unsigned char *srcBuf,
   }
 }
 
-MemoryBlock::MemoryBlock(const std::string &_name, int _size)
-    : name(_name), size(_size), ownsMemory(true) {
-  data = (unsigned char *)malloc(_size);
+MemoryBlock::MemoryBlock(const std::string &_name, int _valSize, int _count)
+    : name(_name), valSize(_valSize), count(_count), ownsMemory(true) {
+  data = (unsigned char *)malloc(_valSize*_count);
   if (!data) {
     throw std::runtime_error("Ran out of memory");
   }
-  memset(data, 0, _size);
+  memset(data, 0, _valSize*_count);
 }
 
 MemoryBlock::MemoryBlock(const std::string &_name, unsigned char *_data,
-                         int _size)
-    : name(_name), data(_data), size(_size), ownsMemory(false) {}
+                         int _valSize, int _count)
+    : name(_name), data(_data), valSize(_valSize), count(_count), ownsMemory(false) {}
 
 MemoryBlock::~MemoryBlock() {
   if (ownsMemory) {
@@ -157,10 +157,11 @@ Common::Common(const string &_userId, const string &privateKeyString,
     wga::ALL_RPC_FLAKY = true;
   }
 
+  bool noLobby = (lobbyHostname == "none");
   bool localLobby = (lobbyHostname == "self");
 
   if (userId == "none") {
-    if (localLobby) {
+    if (localLobby || noLobby) {
       userId = "Server";
     } else {
       userId = "Client";
@@ -181,15 +182,15 @@ Common::Common(const string &_userId, const string &privateKeyString,
   LOG(INFO) << "Using public key: "
             << wga::CryptoHandler::keyToString(publicKey);
 
-  if (localLobby) {
+  if (localLobby || noLobby) {
     LOG(INFO) << "Running local lobby for id " << userId;
     server.reset(new wga::SingleGameServer(netEngine, lobbyPort, userId,
-                                           publicKey, "Server", 2));
+                                           publicKey, "Server", noLobby?1:2));
     server->start();
   }
 
   myPeer.reset(new wga::MyPeer(userId, privateKey, _port,
-                               localLobby ? "" : lobbyHostname, lobbyPort,
+                               (localLobby || noLobby) ? "" : lobbyHostname, lobbyPort,
                                userId));
   if (myPeer->isHosting()) {
     LOG(INFO) << "Hosting game: " << gameName;
@@ -198,10 +199,6 @@ Common::Common(const string &_userId, const string &privateKeyString,
     LOG(INFO) << "Joining game: ";
     myPeer->join();
   }
-  if (myPeer->getPosition() == -1) {
-    LOGFATAL << "Somehow didn't get my player position";
-  }
-  myPlayers = {myPeer->getPosition()};
 
   netEngine->start();
   myPeer->start();
@@ -209,6 +206,12 @@ Common::Common(const string &_userId, const string &privateKeyString,
     LOG(INFO) << "Waiting for initialization for peer...";
     wga::microsleep(1000 * 1000);
   }
+
+  myPlayers = {myPeer->getPosition()};
+  if (myPeer->getPosition() == -1) {
+    LOGFATAL << "Somehow didn't get my player position";
+  }
+
   if (myPeer->isHosting()) {
     machineTimeShift =
         (chrono::duration_cast<chrono::microseconds>(
@@ -250,13 +253,13 @@ Common::~Common() {
 }
 
 void Common::createMemoryBlock(const std::string &name, unsigned char *ptr,
-                               int size) {
+                               int valSize, int count) {
   if (blocks.size() == 39) {
     // throw ("OOPS");
   }
   // printf("Creating memory block at %X with size %d\n",ptr,size);
-  blocks.push_back(shared_ptr<MemoryBlock>(new MemoryBlock(name, ptr, size)));
-  initialBlocks.push_back(shared_ptr<MemoryBlock>(new MemoryBlock(name, size)));
+  blocks.push_back(shared_ptr<MemoryBlock>(new MemoryBlock(name, ptr, valSize, count)));
+  initialBlocks.push_back(shared_ptr<MemoryBlock>(new MemoryBlock(name, valSize, count)));
 }
 
 time_t lastSecondChecked = 0;
@@ -371,7 +374,7 @@ string Common::getStatisticsString() {
 
 template <class T>
 void addLocations(const vector<shared_ptr<MemoryBlock>> &blocks,
-                  unsigned int value,
+                  T value,
                   const set<BlockValueLocation> &locationsToIntersect,
                   vector<BlockValueLocation> &newLocations,
                   const vector<pair<unsigned char *, int>> &ramBlocks) {
@@ -379,16 +382,20 @@ void addLocations(const vector<shared_ptr<MemoryBlock>> &blocks,
   for (int a = 0; a < (int)blocks.size(); a++) {
     // LOG(INFO) << "ON BLOCK: " << a << " WITH SIZE " << blocks[a].size <<
     // endl;
-    for (int b = 0; b < int(blocks[a]->size); b++) {
+    if (blocks[a]->valSize != sizeof(T)) {
+      continue;
+    }
+    for (int b = 0; b < int(blocks[a]->count); b++) {
       // LOG(INFO) << "BLOCK INDEX: " << b << endl;
       // if(b<=(int(blocks[a].size)-sizeof(T)))
       // LOG(INFO) << "IN RANGE\n";
       // LOG(INFO) << "VALUE: " << *((T*)(blocks[a].data+b)) << endl;
-      if (b > (int(blocks[a]->size) - sizeof(T))) continue;
-      if ((((T)value) == *((T *)(blocks[a]->data + b)))) {
+      //if (b > (int(blocks[a]->size) - sizeof(T))) continue;
+
+      if (value == 0 || ((value) == *((T *)(blocks[a]->data + (b*blocks[a]->valSize))))) {
         bool doNotAdd = false;
         if (!doNotAdd) {
-          BlockValueLocation bvl(0, a, b, sizeof(T), 0);
+          BlockValueLocation bvl(0, a, b*blocks[a]->valSize, sizeof(T), 0);
           if (locationsToIntersect.empty() == false) {
             doNotAdd = false;
             if (locationsToIntersect.find(bvl) == locationsToIntersect.end())
@@ -443,10 +450,10 @@ vector<BlockValueLocation> Common::getLocationsWithValue(
   addLocations<unsigned int>(blocks, value, locationsSet, newLocations,
                              ramBlocks);
   // addLocations<signed int>(blocks,value,locationsSet,newLocations);
-  addLocations<unsigned short>(blocks, value, locationsSet, newLocations,
+  addLocations<unsigned short>(blocks, (unsigned short)value, locationsSet, newLocations,
                                ramBlocks);
   // addLocations<signed short>(blocks,value,locationsSet,newLocations);
-  addLocations<unsigned char>(blocks, value, locationsSet, newLocations,
+  addLocations<unsigned char>(blocks, (unsigned char)value, locationsSet, newLocations,
                               ramBlocks);
   // addLocations<signed char>(blocks,value,locationsSet,newLocations);
   // addSubByteLocations(blocks,value,locationsSet,newLocations);
@@ -560,10 +567,10 @@ vector<uint8_t> Common::computeChecksum(running_machine *machine) {
     MemoryBlock &initialBlock = *(initialBlocks[blockIndex]);
     uint8_t blockChecksum = 0;
 
-    for (int a = 0; a < block.size; a++) {
+    for (int a = 0; a < block.size(); a++) {
       blockChecksum = blockChecksum ^ block.data[a];
     }
-    memcpy(initialBlock.data, block.data, block.size);
+    memcpy(initialBlock.data, block.data, block.size());
     blockChecksums.push_back(blockChecksum);
     printf("BLOCK %d CHECKSUM: %d\n", blockIndex, int(blockChecksum));
   }
@@ -593,6 +600,31 @@ std::map<std::string, std::string> Common::getAllInputValues(
   } else {
     return allInputData.at(key);
   }
+}
+
+std::unordered_map<std::string, std::map<std::string, std::string>> Common::getAllInputValuesWithPrefix(
+    int64_t ts, const std::string &keyPrefix) {
+  std::unordered_map<std::string, std::map<std::string, std::string>>
+      allInputData;
+  if (cachedInputValues.first == ts) {
+    allInputData = cachedInputValues.second;
+  } else {
+    allInputData = myPeer->getAllInputValues(ts);
+    int livingPeerCount = myPeer->getLivingPeerCount();
+    if (livingPeerCount == 0 && myPeer->getTotalPeerCount() > 1) {
+      return {};
+    }
+    cachedInputValues = make_pair(ts, allInputData);
+  }
+
+  std::unordered_map<std::string, std::map<std::string, std::string>> retval;
+  for (auto& it : allInputData) {
+    if (it.first.compare(0, keyPrefix.length(), keyPrefix) == 0) {
+      retval[it.first] = it.second;
+    }
+  }
+
+  return retval;
 }
 
 bool Common::isHosting() { return myPeer->isHosting(); }

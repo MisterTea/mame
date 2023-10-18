@@ -41,7 +41,25 @@ extern int initialSyncPercentComplete;
 
 extern bool waitingForClientCatchup;
 
+std::set<std::string> seenForces;
+
 mamehub_manager::mamehub_manager() {}
+
+// for string delimiter
+inline std::vector<std::string> SplitForceString(std::string s, std::string delimiter) {
+    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+    std::string token;
+    std::vector<std::string> res;
+
+    while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+        token = s.substr (pos_start, pos_end - pos_start);
+        pos_start = pos_end + delim_len;
+        res.push_back (token);
+    }
+
+    res.push_back (s.substr (pos_start));
+    return res;
+}
 
 void mamehub_manager::ui(mame_ui_manager& ui_manager,
                          render_container& container) {
@@ -60,26 +78,58 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
   time_t curRealTime = time(NULL);
   auto timestamp = ui_manager.machine().machine_time().to_msec();
   if (timestamp >= 1000 && netCommon) {
-    auto values = netCommon->getAllInputValues(timestamp, std::string("CHAT"));
-    for (auto value : values) {
-      auto userId = value.first;
-      auto chat = value.second;
-      if (lastChatFromUserId.find(userId) != lastChatFromUserId.end() &&
-          lastChatFromUserId[userId] == chat) {
-        // Already processed
-        continue;
+
+    {
+      auto values = netCommon->getAllInputValues(timestamp, std::string("CHAT"));
+      for (auto value : values) {
+        auto userId = value.first;
+        auto chat = value.second;
+        if (lastChatFromUserId.find(userId) != lastChatFromUserId.end() &&
+            lastChatFromUserId[userId] == chat) {
+          // Already processed
+          continue;
+        }
+        lastChatFromUserId[userId] = chat;
+        auto slashPos = chat.find('/');
+        if (slashPos == string::npos) {
+          LOGFATAL << "Somehow got a bad chat: " << chat;
+        }
+        auto chatWithoutCounter = chat.substr(slashPos + 1);
+        if (userIdColorMap.find(userId) == userIdColorMap.end()) {
+          int index = min(int(userIdColorMap.size()), 14);
+          userIdColorMap[userId] = index;
+        }
+        chatLogs.push_back(ChatLog(curRealTime, chatWithoutCounter, userId));
       }
-      lastChatFromUserId[userId] = chat;
-      auto slashPos = chat.find('/');
-      if (slashPos == string::npos) {
-        LOGFATAL << "Somehow got a bad chat: " << chat;
+    }
+
+    {
+	    auto valuesWithPrefix = netCommon->getAllInputValuesWithPrefix(timestamp, std::string("FORCE"));
+      for (auto &outerIt : valuesWithPrefix) {
+      for (auto &it : outerIt.second) {
+        //auto userId = it.first;
+        auto forceString = it.second;
+        if (seenForces.find(forceString) != seenForces.end()) {
+          // Already processed
+          continue;
+        }
+        seenForces.insert(forceString);
+		    LOG(INFO) << "GOT FORCE STRING " << forceString << endl;
+        auto splitString = SplitForceString(forceString, "_");
+        for (auto sit : splitString) {
+          LOG(INFO) << "GOT SPLIT STRING " << sit << endl;
+        }
+        BlockValueLocation locationToForce(
+          (unsigned char)stoi(splitString[0]),
+          stoi(splitString[1]),
+          stoi(splitString[2]),
+          stoi(splitString[3]),
+          stoi(splitString[4])
+        );
+        int value = stoi(splitString[5]);
+        netCommon->forceLocation(locationToForce,value);
       }
-      auto chatWithoutCounter = chat.substr(slashPos + 1);
-      if (userIdColorMap.find(userId) == userIdColorMap.end()) {
-        int index = min(int(userIdColorMap.size()), 14);
-        userIdColorMap[userId] = index;
       }
-      chatLogs.push_back(ChatLog(curRealTime, chatWithoutCounter, userId));
     }
   }
 
@@ -149,6 +199,8 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
   }
 }
 
+std::vector<BlockValueLocation> locationsToIntersect;
+
 bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
 #if 1
   /* if this was a UI_EVENT_CHAR event, post it */
@@ -164,7 +216,6 @@ bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
     LOG(INFO) << "HANDLING CHAT" << std::endl;
     if (event.ch == 13) {
       if (chatString.size()) {
-        static std::vector<BlockValueLocation> locationsToIntersect;
         if (chatString[0] == '/') {
           // This is a command
           if (chatString.size() > 1 && chatString[1] >= '1' &&
@@ -185,38 +236,39 @@ bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
                   */
           } else if (netCommon &&
                      std::string(&chatString[0], 5) == std::string("/find")) {
-            chatString.push_back(0);
-            std::vector<BlockValueLocation> locations;
-            // TODO: Fix forces
-            // if(netCommon) locations =
-            // netCommon->getLocationsWithValue(atoi(&chatString[6]),locationsToIntersect,machine.getRawMemoryRegions());
-            for (int a = 0; a < locations.size() && a < 100; a++) {
-              LOG(INFO) << locations[a].blockIndex << ' '
-                        << locations[a].memoryStart << ' '
-                        << locations[a].memorySize << std::endl;
+            if (chatString.size() == 5) {
+              // Reset forces
+              locationsToIntersect.clear();
+              machine.ui().popup_time(3, "Reset captured locations");
+            } else {
+              chatString.push_back(0);
+              std::vector<BlockValueLocation> locations;
+              locations = netCommon->getLocationsWithValue(atoi(&chatString[6]),locationsToIntersect,{});
+              for (int a = 0; a < locations.size() && a < 100; a++) {
+                LOG(INFO) << locations[a].blockIndex << ' '
+                          << locations[a].memoryStart << ' '
+                          << locations[a].memorySize << std::endl;
+              }
+              locationsToIntersect = locations;
+              machine.ui().popup_time(3, "Captured %d locations",
+                                      (int)locationsToIntersect.size());
             }
-            locationsToIntersect = locations;
-            machine.ui().popup_time(3, "Captured %d locations",
-                                    (int)locationsToIntersect.size());
           } else if (netCommon &&
                      std::string(&chatString[0], 6) == std::string("/force")) {
+            int value = stoi(std::string(chatString.begin(), chatString.end()).substr(7));
+            machine.ui().popup_time(3, "Forcing %d locations to %d", int(locationsToIntersect.size()), value);
             for (int a = 0; a < locationsToIntersect.size(); a++) {
-              // netCommon->forceLocation(locationsToIntersect[a],atoi(&chatString[7]));
-              std::string s = "00000000000000000";
+              //netCommon->forceLocation(locationsToIntersect[a],value);
               int value = atoi(&chatString[7]);
-              s[0] = 2;  // TODO: Don't need to set this anymore
-              memcpy(&(s[1]), &(locationsToIntersect[a].ramRegion),
-                     sizeof(int));
-              memcpy(&(s[2]), &(locationsToIntersect[a].blockIndex),
-                     sizeof(int));
-              memcpy(&(s[6]), &(locationsToIntersect[a].memoryStart),
-                     sizeof(int));
-              memcpy(&(s[10]), &(locationsToIntersect[a].memorySize),
-                     sizeof(int));
-              memcpy(&(s[14]), &(locationsToIntersect[a].memoryMask),
-                     sizeof(unsigned char));
-              memcpy(&(s[15]), &(value), sizeof(int));
-              netCommon->attachToNextInputs(string("FORCE/") + s, "1");
+              std::string s = to_string(int(locationsToIntersect[a].ramRegion)) +
+                "_" + to_string(locationsToIntersect[a].blockIndex) +
+                "_" + to_string(locationsToIntersect[a].memoryStart) +
+                "_" + to_string(locationsToIntersect[a].memorySize) +
+                "_" + to_string(int(locationsToIntersect[a].memoryMask)) +
+                "_" + to_string(value);
+
+              LOG(INFO) << "ATTACHING " << (string("FORCE/") + s) << endl;
+              netCommon->attachToNextInputs(string("FORCE/") + s, s);
             }
             locationsToIntersect.clear();
           } else if (netCommon &&

@@ -90,7 +90,7 @@ class Common : public CommonBase {
   virtual ~Common();
 
   virtual void createMemoryBlock(const std::string &name, unsigned char *ptr,
-                                 int size);
+                                 int valSize, int count);
 
   int getLargestPing();
 
@@ -143,6 +143,9 @@ class Common : public CommonBase {
 
   virtual std::map<std::string, std::string> getAllInputValues(
       int64_t ts, const std::string &key);
+
+  virtual std::unordered_map<std::string, std::map<std::string, std::string>> getAllInputValuesWithPrefix(
+      int64_t ts, const std::string &keyPrefix);
 
   virtual bool isHosting();
 
