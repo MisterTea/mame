@@ -33,7 +33,7 @@ jobs:
       - run:
           name: "Sodium build"
           command: |
-            C:\msys64\usr\bin\bash -lc "cd /c/Users/circleci/project && pushd libsodium && ./configure --enable-static --disable-shared && make -j`nproc` && make install && popd"
+            C:\msys64\usr\bin\bash -lc "cd /c/Users/circleci/project && ls && pushd libsodium && ./configure --enable-static --disable-shared && make -j`nproc` && make install && popd"
 
 
 # Orchestrate jobs using workflows
