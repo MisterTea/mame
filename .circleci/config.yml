@@ -41,6 +41,11 @@ jobs:
           command: |
             C:\msys64\usr\bin\bash -lc "cd /c/Users/circleci/project && ls && pushd libsodium && ./configure --enable-static --disable-shared && make -j`nproc` && make install && popd"
 
+      - run:
+          name: "MAME Build"
+          command: |
+            C:\msys64\usr\bin\bash -lc "cd /c/Users/circleci/project && MINGW64=/mingw64 make -j`nproc` MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019 || MINGW64=/mingw64 make -j`nproc` MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019"
+
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows
