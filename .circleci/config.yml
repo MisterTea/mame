@@ -14,6 +14,8 @@ jobs:
     # Add steps to the job
     # See: https://circleci.com/docs/configuration-reference/#steps
     steps:
+      - checkout
+
       - run:
           name: "Checkout libsodium"
           command: git clone --branch stable https://github.com/jedisct1/libsodium.git
@@ -33,7 +35,7 @@ jobs:
             C:\msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu'  # Normal update
 
             C:\msys64\usr\bin\bash -lc "pacman -Syu --noconfirm zip make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5"
-      - checkout
+
       - run:
           name: "Sodium build"
           command: |
