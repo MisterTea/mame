@@ -20,6 +20,14 @@ jobs:
             (New-Object System.Net.WebClient).DownloadFile('https://github.com/msys2/msys2-installer/releases/download/nightly-x86_64/msys2-base-x86_64-latest.sfx.exe', 'msys2.exe')
             .\msys2.exe -y -oC:\  # Extract to C:\msys64
             Remove-Item msys2.exe  # Delete the archive again
+
+            $env:CHERE_INVOKING = 'yes'  # Preserve the current working directory
+            $env:MSYSTEM = 'UCRT64'  # Start a 64 bit Mingw environment
+
+            # Update MSYS2
+            C:\msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu'  # Core update (in case any core packages are outdated)
+            C:\msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu'  # Normal update
+
             C:\msys64\usr\bin\bash -lc "pacman -Syu --noconfirm zip make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5"
       - checkout
       - run:
