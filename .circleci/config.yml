@@ -28,7 +28,7 @@ jobs:
             Remove-Item msys2.exe  # Delete the archive again
 
             $env:CHERE_INVOKING = 'yes'  # Preserve the current working directory
-            $env:MSYSTEM = 'UCRT64'  # Start a 64 bit Mingw environment
+            $env:MSYSTEM = 'MINGW64'  # Start a 64 bit Mingw environment
 
             # Update MSYS2
             C:\msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu'  # Core update (in case any core packages are outdated)
@@ -40,7 +40,7 @@ jobs:
           name: "Sodium build"
           command: |
             $env:CHERE_INVOKING = 'yes'  # Preserve the current working directory
-            $env:MSYSTEM = 'UCRT64'  # Start a 64 bit Mingw environment
+            $env:MSYSTEM = 'MINGW64'  # Start a 64 bit Mingw environment
             C:\msys64\usr\bin\bash -lc "cd /c/Users/circleci/project && ls && pushd libsodium && ./configure --enable-static --disable-shared && make -j`nproc` && make install && popd"
 
       - run:
