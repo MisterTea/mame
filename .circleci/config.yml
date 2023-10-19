@@ -2,10 +2,15 @@
 # See: https://circleci.com/docs/configuration-reference
 version: 2.1
 
+orbs:
+  win: circleci/windows@5.0 # The Windows orb gives you everything you need to start using the Windows executor.
+
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/configuration-reference/#jobs
 jobs:
   say-hello:
+    executor: win/server-2019
+
     # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/configuration-reference/#executor-job
     docker:
@@ -13,14 +18,17 @@ jobs:
     # Add steps to the job
     # See: https://circleci.com/docs/configuration-reference/#steps
     steps:
-      - checkout
       - run:
-          name: "Say hello"
+          name: "MSYS Setup"
           command: |
             (New-Object System.Net.WebClient).DownloadFile('https://github.com/msys2/msys2-installer/releases/download/nightly-x86_64/msys2-base-x86_64-latest.sfx.exe', 'msys2.exe')
             .\msys2.exe -y -oC:\  # Extract to C:\msys64
             Remove-Item msys2.exe  # Delete the archive again
             C:\msys64\usr\bin\bash -lc "pacman -Syu --noconfirm zip make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5"
+      - checkout
+      - run:
+          name: "Sodium build"
+          command: |
             C:\msys64\usr\bin\bash -lc "pushd libsodium && ./configure --enable-static --disable-shared && make -j`nproc` && make install && popd"
 
 
