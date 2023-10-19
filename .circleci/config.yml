@@ -48,7 +48,7 @@ jobs:
           command: |
             $env:CHERE_INVOKING = 'yes'  # Preserve the current working directory
             $env:MSYSTEM = 'MINGW64'  # Start a 64 bit Mingw environment
-            C:\msys64\usr\bin\bash -lc "cd /c/Users/circleci/project && export PATH="/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin:$PATH" && MINGW64=/mingw64 make -j4 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019 || MINGW64=/mingw64 make -j4 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019"
+            C:\msys64\usr\bin\bash -lc "cd /c/Users/circleci/project && export PATH=\"/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin:$PATH\" && MINGW64=/mingw64 make -j4 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019 || MINGW64=/mingw64 make -j4 MSBUILD=1 NO_USE_PORTAUDIO=1 PYTHON_EXECUTABLE=C:/msys64/mingw64/bin/python.exe vs2019"
 
 
 # Orchestrate jobs using workflows
