@@ -16,7 +16,13 @@ jobs:
       - checkout
       - run:
           name: "Say hello"
-          command: "echo Hello, World!"
+          command: |
+            (New-Object System.Net.WebClient).DownloadFile('https://github.com/msys2/msys2-installer/releases/download/nightly-x86_64/msys2-base-x86_64-latest.sfx.exe', 'msys2.exe')
+            .\msys2.exe -y -oC:\  # Extract to C:\msys64
+            Remove-Item msys2.exe  # Delete the archive again
+            C:\msys64\usr\bin\bash -lc "pacman -Syu --noconfirm zip make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5"
+            C:\msys64\usr\bin\bash -lc "pushd libsodium && ./configure --enable-static --disable-shared && make -j`nproc` && make install && popd"
+
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows
