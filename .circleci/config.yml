@@ -39,6 +39,8 @@ jobs:
       - run:
           name: "Sodium build"
           command: |
+            $env:CHERE_INVOKING = 'yes'  # Preserve the current working directory
+            $env:MSYSTEM = 'UCRT64'  # Start a 64 bit Mingw environment
             C:\msys64\usr\bin\bash -lc "cd /c/Users/circleci/project && ls && pushd libsodium && ./configure --enable-static --disable-shared && make -j`nproc` && make install && popd"
 
       - run:
