@@ -361,7 +361,9 @@ int running_machine::run(bool quiet)
 			// execute CPUs if not paused
 			if (!m_paused) {
 				// Update forces
-				netCommon->updateForces({});
+				if (netCommon) {
+					netCommon->updateForces({});
+				}
 				m_scheduler.timeslice();
 			}
 			// otherwise, just pump video updates through
