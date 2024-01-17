@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   rebuild:
-    runs-on: windows-2019
+    runs-on: windows-latest
     defaults:
       run:
         shell: msys2 {0}
