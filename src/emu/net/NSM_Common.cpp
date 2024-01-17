@@ -165,7 +165,12 @@ Common::Common(const string &_userId, const string &privateKeyString,
   // privateKey =
   // wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString +
   //"/" + userId);
-  privateKey = wga::CryptoHandler::makePrivateKeyFromB64(privateKeyString);
+  try {
+    privateKey = wga::CryptoHandler::makePrivateKeyFromB64(privateKeyString);
+  }
+  catch (std::runtime_error &ex) {
+    LOG(FATAL) << "Invalid private key: " << privateKeyString << " (error: " << ex.what() << " )";
+  }
   publicKey = wga::CryptoHandler::makePublicFromPrivate(privateKey);
   LOG(INFO) << "Using public key: "
             << wga::CryptoHandler::keyToString(publicKey);
