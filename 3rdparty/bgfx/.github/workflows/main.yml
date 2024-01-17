@@ -20,7 +20,7 @@ jobs:
           { config: Release, platform: x64, bindir: 'win64_vs2019' },
         ]
     name: msvc-${{ matrix.config }}-${{ matrix.platform }}
-    runs-on: windows-2019
+    runs-on: windows-latest
     steps:
       - name: Checkout bgfx
         uses: actions/checkout@v3

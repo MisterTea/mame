@@ -48,7 +48,7 @@ NO_USE_PORTAUDIO = 1
 # PROFILER = 1
 # SANITIZE = address
 
-# PTR64 = 1
+PTR64 = 1
 # BIGENDIAN = 1
 # NOASM = 1
 

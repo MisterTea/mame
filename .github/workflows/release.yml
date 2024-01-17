@@ -99,7 +99,7 @@ jobs:
                   tag_name: mamehub_beta_2
 
     build_and_release_windows:
-        runs-on: windows-2019
+        runs-on: windows-latest
 
         steps:
             - uses: actions/checkout@v2
@@ -136,7 +136,7 @@ jobs:
                   path: mame/*
 
     build_and_release_windows_msvc:
-        runs-on: windows-2019
+        runs-on: windows-latest
 
         steps:
             - uses: actions/checkout@v2

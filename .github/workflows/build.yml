@@ -63,7 +63,7 @@ jobs:
                   path: mame/*
 
     build_windows:
-        runs-on: windows-2019
+        runs-on: windows-latest
 
         steps:
             - uses: actions/checkout@v2
@@ -100,7 +100,7 @@ jobs:
                   path: mame/*
 
     build_windows_msvc:
-        runs-on: windows-2019
+        runs-on: windows-latest
 
         steps:
             - uses: actions/checkout@v2
