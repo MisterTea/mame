@@ -76,6 +76,9 @@ jobs:
                   repository: jedisct1/libsodium
                   ref: stable
                   path: "libsodium"
+            
+            - name: Install OpenSSL Full
+              run: choco install openssl
 
             - uses: msys2/setup-msys2@v2
               with:
@@ -111,6 +114,9 @@ jobs:
                   repository: jedisct1/libsodium
                   ref: stable
                   path: "libsodium"
+
+            - name: Install OpenSSL Full
+              run: choco install openssl
 
             - name: Add msbuild to PATH
               uses: microsoft/setup-msbuild@v1.0.2
