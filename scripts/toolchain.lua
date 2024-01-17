@@ -275,9 +275,9 @@ function toolchain(_buildDir, _subDir)
 		"libsodium",
 		"libssl64MT",
 		"libcrypto64MT",
-		"crypt32",
 		"Shlwapi",
 		"dbghelp",
+		"crypt32",
 	}
 
 	configuration { "vs*", "x32", "Debug" }
