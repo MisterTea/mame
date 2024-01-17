@@ -76,7 +76,7 @@ jobs:
                   repository: jedisct1/libsodium
                   ref: stable
                   path: "libsodium"
-
+            
             - uses: msys2/setup-msys2@v2
               with:
                   update: true

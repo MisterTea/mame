@@ -261,6 +261,7 @@ function toolchain(_buildDir, _subDir)
 		"ssl",
 		"crypto",
 		"dbghelp",
+		"crypt32",
 	}
 
 	configuration { "vs*" }
