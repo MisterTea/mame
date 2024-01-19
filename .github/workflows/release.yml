@@ -179,10 +179,8 @@ jobs:
                   path: mame/*
 
             - name: zip
+              shell: msys2 {0}
               run: zip mamehub_windows_msvc_beta.zip mame
-
-            - name: zip
-              run: zip mamehub_ubuntu_beta.zip mame
 
             - name: Update mamehub beta tag
               uses: richardsimko/update-tag@v1
