@@ -195,4 +195,4 @@ jobs:
                       New mamehub version.
                   files: mamehub_windows_msvc_beta.zip
                   fail_on_unmatched_files: true
-                  tag: mamehub_beta_2
+                  tag_name: mamehub_beta_2
