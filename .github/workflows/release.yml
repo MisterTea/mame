@@ -167,7 +167,7 @@ jobs:
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
+                  pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 && rm -Rf build .git src 3rdparty && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v2
@@ -179,7 +179,7 @@ jobs:
 
             - name: zip
               shell: msys2 {0}
-              run: zip mamehub_windows_msvc_beta.zip mame
+              run: zip -r mamehub_windows_msvc_beta.zip mame
 
             - name: Update mamehub beta tag
               uses: richardsimko/update-tag@v1
