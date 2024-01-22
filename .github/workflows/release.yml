@@ -28,7 +28,7 @@ jobs:
                   path: mame/*
 
             - name: zip
-              run: zip mamehub_ubuntu_beta.zip mame
+              run: zip -r mamehub_ubuntu_beta.zip mame
 
             - name: Update mamehub beta tag
               uses: richardsimko/update-tag@v1
@@ -44,7 +44,7 @@ jobs:
                       New mamehub version.
                   files: mamehub_ubuntu_beta.zip
                   fail_on_unmatched_files: true
-                  tag: mamehub_beta_2
+                  tag_name: mamehub_beta_2
 
     build_and_release_mac:
         runs-on: macos-latest
@@ -79,7 +79,7 @@ jobs:
                   path: mame/*
 
             - name: zip
-              run: zip mamehub_mac_beta.zip mame
+              run: zip -r mamehub_mac_beta.zip mame
 
             - name: Update mamehub beta tag
               uses: richardsimko/update-tag@v1
@@ -95,7 +95,7 @@ jobs:
                       New mamehub version.
                   files: mamehub_mac_beta.zip
                   fail_on_unmatched_files: true
-                  tag: mamehub_beta_2
+                  tag_name: mamehub_beta_2
 
     build_and_release_windows:
         runs-on: windows-latest
