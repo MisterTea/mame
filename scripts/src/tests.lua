@@ -47,6 +47,8 @@ project("mametests")
 
 	includedirs {
 		MAME_DIR .. "3rdparty/catch/single_include",
+		MAME_DIR .. "3rdparty/wga/peer/external/json/include",
+		MAME_DIR .. "src/frontend/mame",
 		MAME_DIR .. "src/osd",
 		MAME_DIR .. "src/emu",
 		MAME_DIR .. "src/lib/util",
@@ -67,5 +69,6 @@ project("mametests")
 		MAME_DIR .. "tests/lib/util/options.cpp",
 		MAME_DIR .. "tests/emu/attotime.cpp",
 		MAME_DIR .. "tests/emu/video/rgbutil.cpp",
+		MAME_DIR .. "tests/frontend/discord_lobby.cpp",
+		MAME_DIR .. "src/frontend/mame/discord_lobby.cpp",
 	}
-
