@@ -28,6 +28,7 @@ includedirs {
 	MAME_DIR .. "3rdparty/wga/peer/external",
 	MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
 	MAME_DIR .. "3rdparty/wga/peer/external/json/include",
+	MAME_DIR .. "3rdparty/discord_social_sdk/include",
 
 	MAME_DIR .. "src/osd",
 	MAME_DIR .. "src/emu",
@@ -62,6 +63,9 @@ if (_OPTIONS["osd"] == "sdl") then
 	defines {
 		"UI_SDL",
 	}
+	buildoptions {
+		backtick(sdlconfigcmd() .. " --cflags | sed 's:/SDL2::'"),
+	}
 end
 
 files {
@@ -71,6 +75,14 @@ files {
 	MAME_DIR .. "src/frontend/mame/cheat.h",
 	MAME_DIR .. "src/frontend/mame/clifront.cpp",
 	MAME_DIR .. "src/frontend/mame/clifront.h",
+	MAME_DIR .. "src/frontend/mame/discord_lobby.cpp",
+	MAME_DIR .. "src/frontend/mame/discord_lobby.h",
+	MAME_DIR .. "src/frontend/mame/discord_directory_server.cpp",
+	MAME_DIR .. "src/frontend/mame/discord_directory_server.h",
+	MAME_DIR .. "src/frontend/mame/discord_service.cpp",
+	MAME_DIR .. "src/frontend/mame/discord_service.h",
+	MAME_DIR .. "src/frontend/mame/discord_waiting_room.cpp",
+	MAME_DIR .. "src/frontend/mame/discord_waiting_room.h",
 	MAME_DIR .. "src/frontend/mame/infoxml.cpp",
 	MAME_DIR .. "src/frontend/mame/infoxml.h",
 	MAME_DIR .. "src/frontend/mame/iptseqpoll.cpp",

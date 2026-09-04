@@ -19,9 +19,11 @@ CommonBase *createNetCommon(const string &userId,
                             const string &privateKeyString,
                             unsigned short _port, const string &lobbyHostname,
                             unsigned short lobbyPort, int _unmeasuredNoise,
-                            const string &gameName, bool fakeLag) {
+                            const string &gameName, bool fakeLag,
+                            int directConnectTimeoutSeconds) {
   netCommon = new Common(userId, privateKeyString, _port, lobbyHostname,
-                         lobbyPort, _unmeasuredNoise, gameName, fakeLag);
+                         lobbyPort, _unmeasuredNoise, gameName, fakeLag,
+                         directConnectTimeoutSeconds);
   return netCommon;
 }
 
@@ -147,7 +149,8 @@ extern volatile bool memoryBlocksLocked;
 Common::Common(const string &_userId, const string &privateKeyString,
                unsigned short _port, const string &lobbyHostname,
                unsigned short lobbyPort, int _unmeasuredNoise,
-               const string &gameName, bool fakeLag)
+               const string &gameName, bool fakeLag,
+               int directConnectTimeoutSeconds)
     : userId(_userId),
       lastSendTime(0),
       unmeasuredNoise(_unmeasuredNoise),
@@ -200,9 +203,16 @@ Common::Common(const string &_userId, const string &privateKeyString,
 
   netEngine->start();
   myPeer->start();
+  auto const directConnectDeadline = chrono::steady_clock::now() +
+      chrono::seconds(directConnectTimeoutSeconds);
   while (!myPeer->initialized()) {
+    if (chrono::steady_clock::now() >= directConnectDeadline) {
+      throw runtime_error("Could not establish a direct connection to every player within " +
+                          to_string(directConnectTimeoutSeconds) +
+                          " seconds. MAMEHub will not use a relay.");
+    }
     LOG(INFO) << "Waiting for initialization for peer...";
-    wga::microsleep(1000 * 1000);
+    wga::microsleep(100 * 1000);
   }
   if (myPeer->isHosting()) {
     machineTimeShift =

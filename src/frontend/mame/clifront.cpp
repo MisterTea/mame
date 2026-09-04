@@ -19,6 +19,9 @@
 #include "luaengine.h"
 #include "mame.h"
 #include "mameopts.h"
+#include "discord_directory_server.h"
+#include "discord_service.h"
+#include "discord_waiting_room.h"
 #include "media_ident.h"
 #include "pluginopts.h"
 
@@ -43,6 +46,7 @@
 #include <tuple>
 #include <cctype>
 #include <iostream>
+#include <future>
 
 #include "NSM_Common.h"
 
@@ -273,6 +277,29 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
   // Set up client/server as appropriate
   if (m_options.mamehub()) {
     string userId = m_options.user_id();
+    std::unique_ptr<mamehub::discord_directory_server> discordDirectory;
+    if (m_options.discord_auth()) {
+      mamehub::discord_identity discordIdentity;
+      string discordError;
+      osd_printf_info("Waiting for Discord authorization...\n");
+      if (!mamehub::discord_service::instance().authenticate(discordIdentity, discordError)) {
+        throw emu_fatalerror(EMU_ERR_FATALERROR, "Discord authorization failed: %s", discordError.c_str());
+      }
+      userId = to_string(discordIdentity.id);
+      osd_printf_info("Signed in to Discord as %s\n", discordIdentity.display_name.c_str());
+      if (!*m_options.discord_lobby()) {
+        throw emu_fatalerror(EMU_ERR_INVALID_CONFIG, "A private lobby secret is required; use -discord_lobby <secret>");
+      }
+      string selectedGame;
+      if (m_options.discord_host()) {
+        selectedGame = m_options.system_name();
+        selectedGame += ";" + m_options.software_name();
+      }
+      discordDirectory = std::make_unique<mamehub::discord_directory_server>(
+          std::move(discordIdentity), m_options.discord_lobby(), selectedGame,
+          m_options.discord_host(), m_options.discord_players(),
+          (unsigned short)m_options.discord_directory_port());
+    }
     if (userId.length() == 0) {
       userId = string(16,'0');
       for (int a=0;a<16;a++) {
@@ -282,14 +309,30 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
     deleteNetCommon();
 	string gameString = m_options.system_name();
 	gameString += ";" + m_options.software_name();
-    createNetCommon(userId,
-      m_options.password(),
-      (unsigned short)m_options.port(),
-      m_options.lobby_host(),
-      (unsigned short)m_options.lobby_port(),
-      50,
-      gameString,
-	  m_options.fake_lag());
+	if (discordDirectory) {
+	  string const privateKey = m_options.password();
+	  unsigned short const peerPort = (unsigned short)m_options.port();
+	  unsigned short const directoryPort = discordDirectory->port();
+	  bool const fakeLag = m_options.fake_lag();
+	  int const connectTimeout = m_options.direct_connect_timeout();
+	  auto connection = std::async(std::launch::async, [userId, privateKey, peerPort, directoryPort, gameString, fakeLag, connectTimeout] {
+	    return createNetCommon(userId, privateKey, peerPort, "", directoryPort, 50, gameString, fakeLag, connectTimeout);
+	  });
+	  mamehub::show_discord_waiting_room(*discordDirectory, m_options.discord_host(), [&connection] {
+	    return connection.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+	  });
+	  connection.get();
+	} else {
+	  createNetCommon(userId,
+	    m_options.password(),
+	    (unsigned short)m_options.port(),
+	    m_options.lobby_host(),
+	    (unsigned short)m_options.lobby_port(),
+	    50,
+	    gameString,
+	    m_options.fake_lag(),
+	    m_options.direct_connect_timeout());
+	}
 	string gameName = netCommon->getGameName();
 	auto tokens = wga::split(gameName, ';');
 	if (tokens.size() > 2) {

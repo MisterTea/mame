@@ -121,6 +121,21 @@ end
 		"optional",
 		"emu",
 	}
+	configuration { "macosx" }
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
+		links { "discord_partner_sdk" }
+		linkoptions { "-Wl,-rpath,@loader_path/3rdparty/discord_social_sdk/lib/release" }
+	configuration { "linux" }
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
+		links { "discord_partner_sdk" }
+		linkoptions { "-Wl,-rpath,'$$ORIGIN/3rdparty/discord_social_sdk/lib/release'" }
+	configuration { "x64", "vs*" }
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
+		links { "discord_partner_sdk" }
+	configuration { "arm64", "vs*" }
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release/arm64" }
+		links { "discord_partner_sdk" }
+	configuration { }
 	links {
 		"osd_" .. _OPTIONS["osd"],
 	}

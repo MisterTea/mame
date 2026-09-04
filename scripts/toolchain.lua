@@ -312,9 +312,13 @@ function toolchain(_buildDir, _subDir)
 	includedirs {
 		"/usr/local/opt/libsodium/include",
 		"/usr/local/opt/openssl/include",
+		"/opt/homebrew/opt/libsodium/include",
+		"/opt/homebrew/opt/openssl@3/include",
 	}
 	libdirs {
-		"/usr/local/opt/openssl/lib"
+		"/usr/local/opt/openssl/lib",
+		"/opt/homebrew/opt/libsodium/lib",
+		"/opt/homebrew/opt/openssl@3/lib",
 	}
 	links {
 		"sodium",
@@ -735,4 +739,3 @@ function strip()
 
 	configuration {} -- reset configuration
 end
-
