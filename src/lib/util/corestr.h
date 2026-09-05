@@ -17,6 +17,7 @@
 #include <string_view>
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 
 

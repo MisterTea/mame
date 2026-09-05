@@ -27,8 +27,13 @@ discord_directory_server::discord_directory_server(discord_identity identity, st
 		if (message.lobby_id == m_discord_lobby_id)
 			m_lobby.receive(std::to_string(message.author_id), message.content);
 
-	if (m_hosting && !publish(m_lobby.make_host_message()))
-		throw std::runtime_error("Could not announce Discord lobby host");
+	if (m_hosting)
+	{
+		if (!publish(m_lobby.make_host_message()))
+			throw std::runtime_error("Could not announce Discord lobby host");
+	}
+	publish(m_lobby.make_join_message(m_identity.display_name, std::to_string(m_identity.id)));
+	publish(m_lobby.make_discovery_message(std::to_string(m_identity.id), { "127.0.0.1:" + std::to_string(m_port) }));
 
 	m_server.config.port = m_port;
 	m_server.resource["^/api/get_current_game_id/(.+)$"]["GET"] = [this] (auto response, auto)
@@ -75,6 +80,8 @@ discord_directory_server::discord_directory_server(discord_identity identity, st
 
 discord_directory_server::~discord_directory_server()
 {
+	if (!m_hosting)
+		publish(m_lobby.make_leave_message());
 	m_server.stop();
 	if (m_server_thread.joinable())
 		m_server_thread.join();
@@ -135,7 +142,7 @@ discord_waiting_room discord_directory_server::waiting_room()
 	discord_waiting_room result;
 	for (auto const &entry : m_lobby.members())
 		result.members.push_back(entry.second);
-	result.can_start = m_hosting && (int(result.members.size()) >= m_expected_players) && m_lobby.can_start();
+	result.can_start = m_hosting && (result.members.size() >= 2) && m_lobby.can_start();
 	result.started = m_lobby.started();
 	return result;
 }

@@ -116,7 +116,7 @@ bool discord_lobby::receive(std::string_view authenticated_sender_id, std::strin
 		}
 		else if (type == "join")
 		{
-			if (m_started)
+			if (m_started && (m_members.find(sender) == m_members.end()))
 			{
 				m_last_error = "lobby is closed to new players";
 				return false;
