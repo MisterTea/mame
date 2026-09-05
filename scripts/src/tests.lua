@@ -39,15 +39,33 @@ project("mametests")
 	configuration { }
 
 	links {
+		"frontend",
 		"utils",
 		ext_lib("expat"),
 		ext_lib("zlib"),
 		"ocore_" .. _OPTIONS["osd"],
 	}
 
+	configuration { "macosx" }
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
+		links { "discord_partner_sdk" }
+		linkoptions { "-Wl,-rpath,@loader_path/3rdparty/discord_social_sdk/lib/release" }
+	configuration { "linux" }
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
+		links { "discord_partner_sdk" }
+		linkoptions { "-Wl,-rpath,'$$ORIGIN/3rdparty/discord_social_sdk/lib/release'" }
+	configuration { "x64", "vs*" }
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
+		links { "discord_partner_sdk" }
+	configuration { "arm64", "vs*" }
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release/arm64" }
+		links { "discord_partner_sdk" }
+	configuration { }
+
 	includedirs {
 		MAME_DIR .. "3rdparty/catch/single_include",
 		MAME_DIR .. "3rdparty/wga/peer/external/json/include",
+		MAME_DIR .. "3rdparty/discord_social_sdk/include",
 		MAME_DIR .. "src/frontend/mame",
 		MAME_DIR .. "src/osd",
 		MAME_DIR .. "src/emu",
@@ -70,5 +88,4 @@ project("mametests")
 		MAME_DIR .. "tests/emu/attotime.cpp",
 		MAME_DIR .. "tests/emu/video/rgbutil.cpp",
 		MAME_DIR .. "tests/frontend/discord_lobby.cpp",
-		MAME_DIR .. "src/frontend/mame/discord_lobby.cpp",
 	}

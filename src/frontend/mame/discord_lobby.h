@@ -32,6 +32,7 @@ public:
 	std::string make_host_message() const;
 	std::string make_discovery_message(std::string_view public_key, std::vector<std::string> const &endpoints) const;
 	std::string make_start_message() const;
+	std::string make_leave_message() const;
 	bool receive(std::string_view authenticated_sender_id, std::string_view message);
 	bool can_start() const;
 	bool started() const { return m_started; }

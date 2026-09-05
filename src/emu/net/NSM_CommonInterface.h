@@ -129,6 +129,10 @@ class CommonBase {
 
   virtual int64_t getCurrentTime() = 0;
 
+  // Establish time zero after the selected game has finished loading on every
+  // peer.  Direct networking may be prepared earlier while the lobby UI runs.
+  virtual void startNetplayClock() = 0;
+
   virtual std::string getGameName() = 0;
 
   virtual std::vector<BlockValueLocation> getLocationsWithValue(

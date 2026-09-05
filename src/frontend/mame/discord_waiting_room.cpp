@@ -20,7 +20,7 @@ void headless_wait(discord_directory_server &directory, bool hosting, std::funct
 	while (!connection_finished())
 	{
 		auto room = directory.waiting_room();
-		if (hosting && room.can_start)
+		if (hosting && room.can_start && !room.started)
 		{
 			std::string error;
 			directory.start_game(error);
@@ -56,6 +56,11 @@ void show_discord_waiting_room(discord_directory_server &directory, bool hosting
 	while (!connection_finished())
 	{
 		auto room = directory.waiting_room();
+		if (hosting && room.can_start && !room.started && discord_service::is_mock_enabled())
+		{
+			std::string error;
+			directory.start_game(error);
+		}
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{

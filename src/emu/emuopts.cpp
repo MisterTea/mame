@@ -242,7 +242,8 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_DISCORD_HOST,            "0", core_options::option_type::BOOLEAN, "host the Discord lobby" },
 	{ OPTION_DISCORD_PLAYERS "(2-16)", "2", core_options::option_type::INTEGER, "players required before the host starts the direct mesh" },
 	{ OPTION_DISCORD_DIRECTORY_PORT "(1024-65535)", "5806", core_options::option_type::INTEGER, "local-only WGA compatibility directory port" },
-	{ OPTION_CANDY,               "0",         core_options::option_type::BOOLEAN,    "Candy mode" },
+	{ OPTION_DISCORD_MOCK,            "", core_options::option_type::STRING, "mock username for local multi-instance testing without Discord account" },
+	{ OPTION_CANDY,               "1",         core_options::option_type::BOOLEAN,    "Candy mode" },
 
 	{ nullptr }
 };
