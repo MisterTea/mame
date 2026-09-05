@@ -16,7 +16,30 @@
 #include <sstream>
 #include <sys/stat.h>
 #include <thread>
+
+#if defined(_WIN32)
+#include <direct.h>
+#include <io.h>
+#ifndef LOCK_SH
+#define LOCK_SH 1
+#endif
+#ifndef LOCK_EX
+#define LOCK_EX 2
+#endif
+#ifndef LOCK_UN
+#define LOCK_UN 8
+#endif
+inline int flock(int, int) { return 0; }
+#define mamehub_mkdir(d) _mkdir(d)
+#else
+#include <sys/file.h>
 #include <unistd.h>
+#define mamehub_mkdir(d) mkdir(d, 0777)
+#endif
+
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
 
 namespace mamehub {
 namespace {
@@ -62,8 +85,19 @@ std::string sanitize_filename(std::string const &input)
 
 std::string get_mock_dir()
 {
-	std::string dir = "/tmp/mamehub_mock";
-	mkdir(dir.c_str(), 0777);
+	std::string dir;
+#if defined(_WIN32)
+	char const *tmp = std::getenv("TEMP");
+	if (!tmp || !*tmp)
+		tmp = std::getenv("TMP");
+	if (tmp && *tmp)
+		dir = std::string(tmp) + "\\mamehub_mock";
+	else
+		dir = "mamehub_mock";
+#else
+	dir = "/tmp/mamehub_mock";
+#endif
+	mamehub_mkdir(dir.c_str());
 	return dir;
 }
 
@@ -129,13 +163,23 @@ std::string get_token_file_path()
 {
 	if (!s_token_file_override.empty())
 		return s_token_file_override;
+#if defined(_WIN32)
+	char const *userprofile = std::getenv("USERPROFILE");
+	if (userprofile && *userprofile)
+	{
+		std::string dir = std::string(userprofile) + "\\.mamehub";
+		mamehub_mkdir(dir.c_str());
+		return dir + "\\discord_token";
+	}
+#else
 	char const *home = std::getenv("HOME");
 	if (home && *home)
 	{
 		std::string dir = std::string(home) + "/.mamehub";
-		mkdir(dir.c_str(), 0755);
+		mamehub_mkdir(dir.c_str());
 		return dir + "/discord_token";
 	}
+#endif
 	return "discord_token";
 }
 
@@ -561,7 +605,7 @@ bool discord_service::send_lobby_message(std::uint64_t lobby_id, std::string con
 		}
 		std::string dir = get_mock_dir();
 		std::string path = dir + "/" + sanitize_filename(it->second) + ".log";
-		int fd = open(path.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0666);
+		int fd = open(path.c_str(), O_CREAT | O_WRONLY | O_APPEND | O_BINARY, 0666);
 		if (fd < 0)
 		{
 			error = "Failed to open mock lobby file";
@@ -606,7 +650,7 @@ bool discord_service::get_lobby_messages(std::uint64_t lobby_id, std::vector<dis
 		}
 		std::string dir = get_mock_dir();
 		std::string path = dir + "/" + sanitize_filename(it->second) + ".log";
-		int fd = open(path.c_str(), O_RDONLY);
+		int fd = open(path.c_str(), O_RDONLY | O_BINARY);
 		if (fd < 0)
 		{
 			messages.clear();
@@ -615,7 +659,7 @@ bool discord_service::get_lobby_messages(std::uint64_t lobby_id, std::vector<dis
 		flock(fd, LOCK_SH);
 		std::vector<char> buffer;
 		char buf[4096];
-		ssize_t bytes = 0;
+		int bytes = 0;
 		while ((bytes = read(fd, buf, sizeof(buf))) > 0)
 			buffer.insert(buffer.end(), buf, buf + bytes);
 		flock(fd, LOCK_UN);
@@ -689,13 +733,13 @@ void discord_service::pump()
 			std::uint64_t lobby_id = pair.first;
 			std::string const &secret = pair.second;
 			std::string path = dir + "/" + sanitize_filename(secret) + ".log";
-			int fd = open(path.c_str(), O_RDONLY);
+			int fd = open(path.c_str(), O_RDONLY | O_BINARY);
 			if (fd < 0)
 				continue;
 			flock(fd, LOCK_SH);
 			std::vector<char> buffer;
 			char buf[4096];
-			ssize_t bytes = 0;
+			int bytes = 0;
 			while ((bytes = read(fd, buf, sizeof(buf))) > 0)
 				buffer.insert(buffer.end(), buf, buf + bytes);
 			flock(fd, LOCK_UN);
