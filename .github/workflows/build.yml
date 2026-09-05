@@ -15,7 +15,7 @@ jobs:
             - name: Update OS
               run: sudo apt update -y && sudo apt-get install -y git build-essential python3 libsdl2-dev libsdl2-ttf-dev libfontconfig-dev libpulse-dev qtbase5-dev qtbase5-dev-tools qt5-qmake p7zip-full libsodium-dev
 
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
               with:
                   submodules: "recursive"
                   path: "mame"
@@ -24,7 +24,7 @@ jobs:
               run: pushd mame && make -j2 && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   # Artifact name
                   name: mamehub_ubuntu_beta
@@ -38,7 +38,7 @@ jobs:
             - name: Update OS
               run: brew install sdl2 sdl2_ttf openssl
 
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
               with:
                   submodules: "recursive"
                   path: "mame"
@@ -47,7 +47,7 @@ jobs:
               run: pushd mame && make USE_LIBSDL=1 VERBOSE=1 -j2 && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   # Artifact name
                   name: mamehub_mac_beta
@@ -58,12 +58,12 @@ jobs:
         runs-on: windows-latest
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
               with:
                   submodules: "recursive"
                   path: "mame"
 
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
               with:
                   repository: jedisct1/libsodium
                   ref: stable
@@ -85,7 +85,7 @@ jobs:
                   pushd mame && MINGW64=/mingw64 make -j2 VERBOSE=1 && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   # Artifact name
                   name: mamehub_windows_gcc_beta
@@ -96,12 +96,12 @@ jobs:
         runs-on: windows-latest
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
               with:
                   submodules: "recursive"
                   path: "mame"
 
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
               with:
                   repository: jedisct1/libsodium
                   ref: stable
@@ -127,7 +127,7 @@ jobs:
                   pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 VERBOSE=1 && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   # Artifact name
                   name: mamehub_windows_msvc_beta
