@@ -59,6 +59,7 @@ bool discord_discovery::ensure_connected()
 							open_lobby_info info;
 							info.secret = secret;
 							info.system_name = data.value("game", "");
+							info.software_name = data.value("software", "");
 							info.game_title = data.value("title", "");
 							info.host_name = data.value("host_name", "");
 							info.host_id = data.value("host_id", "");
@@ -90,7 +91,7 @@ bool discord_discovery::ensure_connected()
 	return true;
 }
 
-void discord_discovery::announce_lobby(std::string const &secret, std::string const &system_name, std::string const &game_title, std::string const &host_name, int players)
+void discord_discovery::announce_lobby(std::string const &secret, std::string const &system_name, std::string const &software_name, std::string const &game_title, std::string const &host_name, int players)
 {
 	std::lock_guard<std::mutex> guard(m_mutex);
 	if (!m_connected)
@@ -101,6 +102,7 @@ void discord_discovery::announce_lobby(std::string const &secret, std::string co
 		{ "type", "announce" },
 		{ "secret", secret },
 		{ "game", system_name },
+		{ "software", software_name },
 		{ "title", game_title },
 		{ "host_name", host_name },
 		{ "host_id", std::to_string(discord_service::instance().current_identity().id) },
@@ -146,12 +148,13 @@ void discord_discovery::query_lobbies()
 	discord_service::instance().send_lobby_message(m_directory_lobby_id, msg.dump(), error);
 }
 
-void discord_discovery::set_my_hosted_lobby(std::string secret, std::string system_name, std::string game_title, std::string host_name, int players)
+void discord_discovery::set_my_hosted_lobby(std::string secret, std::string system_name, std::string software_name, std::string game_title, std::string host_name, int players)
 {
 	std::lock_guard<std::mutex> guard(m_mutex);
 	m_hosting = true;
 	m_my_lobby.secret = std::move(secret);
 	m_my_lobby.system_name = std::move(system_name);
+	m_my_lobby.software_name = std::move(software_name);
 	m_my_lobby.game_title = std::move(game_title);
 	m_my_lobby.host_name = std::move(host_name);
 	m_my_lobby.host_id = std::to_string(discord_service::instance().current_identity().id);
@@ -167,6 +170,7 @@ void discord_discovery::set_my_hosted_lobby(std::string secret, std::string syst
 			{ "type", "announce" },
 			{ "secret", m_my_lobby.secret },
 			{ "game", m_my_lobby.system_name },
+			{ "software", m_my_lobby.software_name },
 			{ "title", m_my_lobby.game_title },
 			{ "host_name", m_my_lobby.host_name },
 			{ "host_id", m_my_lobby.host_id },
@@ -220,6 +224,7 @@ void discord_discovery::update()
 				{ "type", "announce" },
 				{ "secret", m_my_lobby.secret },
 				{ "game", m_my_lobby.system_name },
+				{ "software", m_my_lobby.software_name },
 				{ "title", m_my_lobby.game_title },
 				{ "host_name", m_my_lobby.host_name },
 				{ "host_id", m_my_lobby.host_id },
@@ -253,6 +258,7 @@ void discord_discovery::update()
 						open_lobby_info info;
 						info.secret = secret;
 						info.system_name = data.value("game", "");
+						info.software_name = data.value("software", "");
 						info.game_title = data.value("title", "");
 						info.host_name = data.value("host_name", "");
 						info.host_id = data.value("host_id", "");
@@ -282,6 +288,7 @@ void discord_discovery::update()
 						{ "type", "announce" },
 						{ "secret", m_my_lobby.secret },
 						{ "game", m_my_lobby.system_name },
+						{ "software", m_my_lobby.software_name },
 						{ "title", m_my_lobby.game_title },
 						{ "host_name", m_my_lobby.host_name },
 						{ "host_id", m_my_lobby.host_id },

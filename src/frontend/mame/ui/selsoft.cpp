@@ -409,6 +409,12 @@ menu_select_software::menu_select_software(mame_ui_manager &mui, render_containe
 	ui_globals::cur_sw_dats_total = 1;
 }
 
+menu_select_software::menu_select_software(mame_ui_manager &mui, render_container &container, ui_system_info const &system, select_callback cb)
+	: menu_select_software(mui, container, system)
+{
+	m_select_callback = std::move(cb);
+}
+
 //-------------------------------------------------
 //  dtor
 //-------------------------------------------------
@@ -590,10 +596,13 @@ void menu_select_software::populate()
 	if (m_search.empty())
 	{
 		// add an item to start empty or let the user use the file manager
-		item_append(
-				m_data->has_empty_start() ? _("[Start empty]") : _("[Use file manager]"),
-				0,
-				(void *)&m_data->swinfo()[0]);
+		if (!m_select_callback)
+		{
+			item_append(
+					m_data->has_empty_start() ? _("[Start empty]") : _("[Use file manager]"),
+					0,
+					(void *)&m_data->swinfo()[0]);
+		}
 
 		if (!flt)
 			std::copy(std::next(m_data->swinfo().begin()), m_data->swinfo().end(), std::back_inserter(m_displaylist));
@@ -628,7 +637,7 @@ void menu_select_software::populate()
 		if (reselect_last::software() == "[Start empty]" && !reselect_last::driver().empty())
 			old_software = 0;
 		else if (m_displaylist[curitem].get().shortname == reselect_last::software() && m_displaylist[curitem].get().listname == reselect_last::swlist())
-			old_software = curitem + 1;
+			old_software = curitem + (m_select_callback ? 0 : 1);
 
 		item_append(
 				m_displaylist[curitem].get().longname, m_displaylist[curitem].get().devicetype,
@@ -667,6 +676,12 @@ bool menu_select_software::inkey_select(const event *menu_event)
 	}
 	else if (ui_swinfo->startempty == 1)
 	{
+		if (m_select_callback)
+		{
+			stack_pop();
+			m_select_callback(*ui_swinfo->driver, *ui_swinfo);
+			return true;
+		}
 		if (!select_bios(*ui_swinfo->driver, true))
 		{
 			reselect_last::reselect(true);
@@ -683,6 +698,12 @@ bool menu_select_software::inkey_select(const event *menu_event)
 
 		if (audit_software_with_candy(machine(), auditor, *swlist, *swinfo, swaudit))
 		{
+			if (m_select_callback)
+			{
+				stack_pop();
+				m_select_callback(drivlist.driver(), *ui_swinfo);
+				return true;
+			}
 			if (!select_bios(*ui_swinfo, false) && !select_part(*swinfo, *ui_swinfo))
 			{
 				reselect_last::reselect(true);

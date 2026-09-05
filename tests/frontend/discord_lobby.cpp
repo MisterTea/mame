@@ -63,6 +63,10 @@ TEST_CASE("Once the host starts the game, the lobby is closed to new players", "
 	// New player tries to join an already-started lobby
 	REQUIRE_FALSE(host.receive("guest2", guest2.make_join_message("Guest 2", "guest2-key")));
 	REQUIRE(host.last_error() == "lobby is closed to new players");
+
+	// Existing members may re-register (crypto peer keys) after start
+	REQUIRE(host.receive("guest1", guest1.make_join_message("Guest 1", "guest1-crypto-key")));
+	REQUIRE(host.members().at("guest1").public_key == "guest1-crypto-key");
 }
 
 TEST_CASE("Players can leave the lobby before start", "[mamehub][discord]")
@@ -124,8 +128,8 @@ TEST_CASE("Decentralized discovery and lobby lifecycle over mock Discord transpo
 	REQUIRE(mamehub::discord_service::instance().authenticate(host_ident, err));
 	REQUIRE(mamehub::discord_discovery::instance().ensure_connected());
 
-	std::string const secret = "alice-sf2-lobby-secret";
-	mamehub::discord_discovery::instance().set_my_hosted_lobby(secret, "sf2", "Street Fighter II", "AliceHost", 1);
+	std::string const secret = "alice-snes-lobby-secret";
+	mamehub::discord_discovery::instance().set_my_hosted_lobby(secret, "snes", "snes:smw", "Super Mario World", "AliceHost", 1);
 
 	// Step 2: Guest connects to discovery and discovers Alice's lobby
 	mamehub::discord_service::reset_mock();
@@ -139,8 +143,9 @@ TEST_CASE("Decentralized discovery and lobby lifecycle over mock Discord transpo
 	auto open_lobbies = mamehub::discord_discovery::instance().get_open_lobbies();
 	REQUIRE(open_lobbies.size() == 1);
 	REQUIRE(open_lobbies[0].secret == secret);
-	REQUIRE(open_lobbies[0].system_name == "sf2");
-	REQUIRE(open_lobbies[0].game_title == "Street Fighter II");
+	REQUIRE(open_lobbies[0].system_name == "snes");
+	REQUIRE(open_lobbies[0].software_name == "snes:smw");
+	REQUIRE(open_lobbies[0].game_title == "Super Mario World");
 	REQUIRE(open_lobbies[0].host_name == "AliceHost");
 
 	// Step 3: Host starts the game and announces lobby closure
@@ -256,6 +261,5 @@ TEST_CASE("Analog control wire protocol serialization and parsing", "[mamehub][a
 	REQUIRE(dec_seq_key.substr(dec_seq_key.length() - 4) == "/DEC");
 	REQUIRE(inc_seq_key.substr(0, inc_seq_key.length() - 4) == base_id);
 }
-
 
 

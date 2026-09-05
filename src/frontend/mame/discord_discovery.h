@@ -19,6 +19,7 @@ struct open_lobby_info
 {
 	std::string secret;
 	std::string system_name;
+	std::string software_name;
 	std::string game_title;
 	std::string host_name;
 	std::string host_id;
@@ -33,13 +34,13 @@ public:
 	static discord_discovery &instance();
 
 	bool ensure_connected();
-	void announce_lobby(std::string const &secret, std::string const &system_name, std::string const &game_title, std::string const &host_name, int players);
+	void announce_lobby(std::string const &secret, std::string const &system_name, std::string const &software_name, std::string const &game_title, std::string const &host_name, int players);
 	void close_lobby(std::string const &secret);
 	void query_lobbies();
 	void update();
 	std::vector<open_lobby_info> get_open_lobbies();
 
-	void set_my_hosted_lobby(std::string secret, std::string system_name, std::string game_title, std::string host_name, int players);
+	void set_my_hosted_lobby(std::string secret, std::string system_name, std::string software_name, std::string game_title, std::string host_name, int players);
 	void clear_my_hosted_lobby();
 	void reset();
 

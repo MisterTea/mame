@@ -39,6 +39,7 @@ public:
 	discord_directory_server &operator=(discord_directory_server const &) = delete;
 
 	unsigned short port() const { return m_port; }
+	std::string const &host_id() const { return m_lobby.host_id(); }
 	discord_waiting_room waiting_room();
 	bool start_game(std::string &error);
 
