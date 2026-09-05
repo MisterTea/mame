@@ -17,7 +17,7 @@ jobs:
                   path: "mame"
 
             - name: make
-              run: pushd mame && make -j2 && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
+              run: pushd mame && make -j2 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.so . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
@@ -59,7 +59,7 @@ jobs:
                   path: "mame"
 
             - name: make mame
-              run: pushd mame && make USE_LIBSDL=1 VERBOSE=1 -j2 && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
+              run: pushd mame && make USE_LIBSDL=1 VERBOSE=1 -j2 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.dylib . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
@@ -116,7 +116,7 @@ jobs:
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 make -j2 && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
+                  pushd mame && MINGW64=/mingw64 make -j2 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
@@ -158,7 +158,7 @@ jobs:
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 && rm -Rf build .git src 3rdparty && popd
+                  pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4

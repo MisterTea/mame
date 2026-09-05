@@ -49,12 +49,18 @@ project("mametests")
 	configuration { "macosx" }
 		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
 		links { "discord_partner_sdk" }
-		linkoptions { "-Wl,-rpath,@loader_path/3rdparty/discord_social_sdk/lib/release" }
+		linkoptions {
+			"-Wl,-rpath,@loader_path",
+			"-Wl,-rpath,@loader_path/3rdparty/discord_social_sdk/lib/release",
+		}
 	configuration { "linux" }
 		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
 		links { "discord_partner_sdk" }
-		linkoptions { "-Wl,-rpath,'$$ORIGIN/3rdparty/discord_social_sdk/lib/release'" }
-	configuration { "x64", "vs*" }
+		linkoptions {
+			"-Wl,-rpath,'$$ORIGIN'",
+			"-Wl,-rpath,'$$ORIGIN/3rdparty/discord_social_sdk/lib/release'",
+		}
+	configuration { "windows" }
 		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
 		links { "discord_partner_sdk" }
 	configuration { "arm64", "vs*" }
