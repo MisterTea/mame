@@ -3,19 +3,19 @@ name: Build
 on:
     workflow_dispatch:
     push:
-        branches: [mamehub, mamehub_libretro]
+        branches: [master, mamehub, mamehub_libretro, mamehub_discord]
     pull_request:
-        branches: [mamehub, mamehub_libretro]
+        branches: [master, mamehub, mamehub_libretro, mamehub_discord]
 
 jobs:
     build_linux:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
 
         steps:
             - name: Update OS
-              run: sudo apt update -y && sudo apt-get install -y git build-essential python3 libsdl2-dev libsdl2-ttf-dev libfontconfig-dev libpulse-dev qtbase5-dev qtbase5-dev-tools qtchooser qt5-qmake p7zip-full libsodium-dev
+              run: sudo apt update -y && sudo apt-get install -y git build-essential python3 libsdl2-dev libsdl2-ttf-dev libfontconfig-dev libpulse-dev qtbase5-dev qtbase5-dev-tools qt5-qmake p7zip-full libsodium-dev
 
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
               with:
                   submodules: "recursive"
                   path: "mame"
@@ -24,7 +24,7 @@ jobs:
               run: pushd mame && make -j2 && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   # Artifact name
                   name: mamehub_ubuntu_beta
@@ -36,27 +36,18 @@ jobs:
 
         steps:
             - name: Update OS
-              run: brew update && brew install sdl2 sdl2_ttf openssl
+              run: brew install sdl2 sdl2_ttf openssl
 
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
               with:
                   submodules: "recursive"
                   path: "mame"
 
-            - uses: actions/checkout@v2
-              with:
-                  repository: spurious/SDL-mirror
-                  ref: release-2.0.12
-                  path: "sdl2"
-
-            - name: make sdl2
-              run: pushd sdl2 && ./configure --enable-static --disable-shared --prefix=$PWD/out && make && make install && popd
-
             - name: make mame
-              run: pushd mame && make USE_LIBSDL=1 VERBOSE=1 SDL_INSTALL_ROOT=$PWD/../sdl2/out -j2 && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
+              run: pushd mame && make USE_LIBSDL=1 VERBOSE=1 -j2 && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   # Artifact name
                   name: mamehub_mac_beta
@@ -67,12 +58,12 @@ jobs:
         runs-on: windows-latest
 
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
               with:
                   submodules: "recursive"
                   path: "mame"
 
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
               with:
                   repository: jedisct1/libsodium
                   ref: stable
@@ -86,7 +77,7 @@ jobs:
                   update: true
             - shell: msys2 {0}
               run: |
-                  pacman -Syu --noconfirm make mingw-w64-x86_64-python2 mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5
+                  pacman -Syu --noconfirm make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-libs-9.3.0-2-any.pkg.tar.xz
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
@@ -94,7 +85,7 @@ jobs:
                   pushd mame && MINGW64=/mingw64 make -j2 VERBOSE=1 && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   # Artifact name
                   name: mamehub_windows_gcc_beta
@@ -105,12 +96,12 @@ jobs:
         runs-on: windows-latest
 
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
               with:
                   submodules: "recursive"
                   path: "mame"
 
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
               with:
                   repository: jedisct1/libsodium
                   ref: stable
@@ -120,7 +111,7 @@ jobs:
               run: choco install openssl
 
             - name: Add msbuild to PATH
-              uses: microsoft/setup-msbuild@v1.0.2
+              uses: microsoft/setup-msbuild@v2
 
             - uses: msys2/setup-msys2@v2
               with:
@@ -128,7 +119,7 @@ jobs:
 
             - shell: msys2 {0}
               run: |
-                  pacman -Syu --noconfirm make mingw-w64-x86_64-python2 mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-qt5
+                  pacman -Syu --noconfirm make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-libs-9.3.0-2-any.pkg.tar.xz
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
@@ -136,7 +127,7 @@ jobs:
                   pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 VERBOSE=1 && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   # Artifact name
                   name: mamehub_windows_msvc_beta
