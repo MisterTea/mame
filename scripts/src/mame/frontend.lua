@@ -14,7 +14,6 @@ uuid ("e98e14c4-82a4-4988-ba29-01c90c817ab8")
 kind (LIBTYPE)
 
 addprojectflags()
-precompiledheaders()
 
 if (_OPTIONS["targetos"] ~= "asmjs") then
 	options {
@@ -204,8 +203,6 @@ files {
 	MAME_DIR .. "src/frontend/mame/ui/widgets.cpp",
 	MAME_DIR .. "src/frontend/mame/ui/widgets.h",
 }
-
-pchsource(MAME_DIR .. "src/frontend/mame/audit.cpp")
 
 dependency {
 	{ MAME_DIR .. "src/frontend/mame/ui/about.cpp", GEN_DIR .. "emu/copying.ipp" },
