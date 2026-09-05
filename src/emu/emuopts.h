@@ -209,6 +209,7 @@
 #define OPTION_DISCORD_HOST             "discord_host"
 #define OPTION_DISCORD_PLAYERS          "discord_players"
 #define OPTION_DISCORD_DIRECTORY_PORT   "discord_directory_port"
+#define OPTION_DISCORD_MOCK             "discord_mock"
 #define OPTION_CANDY					"candy"
 
 #define OPTION_HTTP                 "http"
@@ -505,6 +506,7 @@ public:
 	bool discord_host() const { return bool_value(OPTION_DISCORD_HOST); }
 	int discord_players() const { return int_value(OPTION_DISCORD_PLAYERS); }
 	int discord_directory_port() const { return int_value(OPTION_DISCORD_DIRECTORY_PORT); }
+	const char *discord_mock() const { return value(OPTION_DISCORD_MOCK); }
 
 	bool console() const { return bool_value(OPTION_CONSOLE); }
 

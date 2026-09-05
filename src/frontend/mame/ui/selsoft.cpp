@@ -659,8 +659,8 @@ bool menu_select_software::inkey_select(const event *menu_event)
 	drivlist.next();
 
 	// audit the system ROMs first to see if we're going to work
-	media_auditor::summary const sysaudit = auditor.audit_media(AUDIT_VALIDATE_FAST);
-	if (!audit_passed(sysaudit))
+	media_auditor::summary sysaudit;
+	if (!audit_system_with_candy(machine(), auditor, drivlist, sysaudit))
 	{
 		set_error(reset_options::REMEMBER_REF, make_system_audit_fail_text(auditor, sysaudit));
 		return true;
@@ -679,9 +679,9 @@ bool menu_select_software::inkey_select(const event *menu_event)
 		// now audit the software
 		software_list_device *swlist = software_list_device::find_by_name(*drivlist.config(), ui_swinfo->listname);
 		const software_info *swinfo = swlist->find(ui_swinfo->shortname);
-		media_auditor::summary const swaudit = auditor.audit_software(*swlist, *swinfo, AUDIT_VALIDATE_FAST);
+		media_auditor::summary swaudit;
 
-		if (audit_passed(swaudit))
+		if (audit_software_with_candy(machine(), auditor, *swlist, *swinfo, swaudit))
 		{
 			if (!select_bios(*ui_swinfo, false) && !select_part(*swinfo, *ui_swinfo))
 			{

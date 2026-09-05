@@ -23,6 +23,7 @@
 #include "drivenum.h"
 #include "emuopts.h"
 #include "fileio.h"
+#include "ui/selmenu.h"
 #include "mame.h"
 #include "uiinput.h"
 
@@ -184,9 +185,9 @@ bool simple_menu_select_game::inkey_select(const event &menu_event)
 		driver_enumerator enumerator(machine().options(), *driver);
 		enumerator.next();
 		media_auditor auditor(enumerator);
-		media_auditor::summary summary = auditor.audit_media(AUDIT_VALIDATE_FAST);
+		media_auditor::summary summary;
 
-		if (summary == media_auditor::CORRECT || summary == media_auditor::BEST_AVAILABLE || summary == media_auditor::NONE_NEEDED)
+		if (menu_select_launch::audit_system_with_candy(machine(), auditor, enumerator, summary))
 		{
 			// if everything looks good, schedule the new driver
 			mame_machine_manager::instance()->schedule_new_driver(*driver);

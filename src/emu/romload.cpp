@@ -29,7 +29,12 @@
 #include <fstream>
 
 #include "client_http.hpp"
+#pragma push_macro("SHA1")
+#undef SHA1
+#include "client_https.hpp"
+#pragma pop_macro("SHA1")
 using HttpClient = webpp::Client<webpp::HTTP>;
+using HttpsClient = webpp::Client<webpp::HTTPS>;
 
 #define LOG_LOAD 1
 #define LOG(...) do { if (LOG_LOAD) debugload(__VA_ARGS__); } while(0)
@@ -71,61 +76,6 @@ std::tuple<std::string, std::string, std::string, std::string> parse_url(const s
 		++query_i;
 	query_.assign(query_i, url_s.end());
 	return std::make_tuple(protocol_, host_, path_, query_);
-}
-
-void candy_mode(const std::string& baseName, const std::string& leafName, const char* mediaPath) {
-	// Candy mode
-	std::string contentString;
-	std::string url;
-	std::string filename;
-	if (leafName.empty()) {
-		url = std::string("http://archive.org/download/MAME220RomsOnlyMerged/") + baseName + std::string(".zip");
-		filename = baseName;
-	} else {
-		url = std::string("http://archive.org/download/MAME_0.202_Software_List_ROMs_merged/") + baseName + std::string(".zip/") + baseName + std::string("%2F") + leafName + std::string(".zip");
-		filename = baseName + std::string(PATH_SEPARATOR) + leafName;
-	}
-	while (true) {
-		auto urlTokens = parse_url(url);
-		std::string query = std::get<3>(urlTokens);
-		if (query.empty() == false) {
-			query = std::string("?") + query;
-		}
-		HttpClient client(std::get<1>(urlTokens));
-		auto r1 = client.request("GET", std::get<2>(urlTokens) + query);
-		std::cout << "Made request to " << url << " with response " << r1->status_code << std::endl;
-		if (r1->status_code == "302 Found" || r1->status_code == "301 Moved Permanently") {
-			for (auto it : r1->header) {
-				std::cout << it.first << " " << it.second << std::endl;
-			}
-			std::string newUrl;
-			auto its = r1->header.equal_range("Location");
-			for (auto it = its.first; it != its.second; ++it) {
-				newUrl = it->second;
-			}
-			url = newUrl;
-		}
-		else if (r1->status_code == "200 OK") {
-			contentString = { std::istreambuf_iterator<char>(r1->content),
-									 std::istreambuf_iterator<char>() };
-			break;
-		} else {
-			return;
-		}
-	}
-	//std::ofstream outfile(std::string("roms/") + driver_list::driver(drv).name + std::string(".zip"), std::ofstream::binary);
-	//outfile << r1->content.rdbuf();
-	//outfile.close();
-
-	auto image_file = std::make_unique<emu_file>(mediaPath, OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-	auto filerr = image_file->open(filename + std::string(".zip"));
-	if (!filerr) {
-		//std::string contentString = r1->content.rdbuf();
-		std::cout << "Saving file of size " << contentString.size() << " to path " << std::endl;
-		image_file->write(contentString.c_str(), contentString.length());
-	}
-	image_file->close();
-
 }
 
 auto next_parent_system(game_driver const &system)
@@ -273,6 +223,94 @@ std::error_condition do_open_disk(const emu_options &options, std::initializer_l
 }
 
 } // anonymous namespace
+
+void candy_mode(const std::string& baseName, const std::string& leafName, const char* mediaPath) {
+	// Candy mode
+	std::string contentString;
+	std::string url;
+	std::string filename;
+	if (leafName.empty()) {
+		url = std::string("http://archive.org/download/MAME220RomsOnlyMerged/") + baseName + std::string(".zip");
+		filename = baseName;
+	} else {
+		url = std::string("http://archive.org/download/MAME_0.202_Software_List_ROMs_merged/") + baseName + std::string(".zip/") + baseName + std::string("%2F") + leafName + std::string(".zip");
+		filename = baseName + std::string(PATH_SEPARATOR) + leafName;
+	}
+	int redirects = 0;
+	while (redirects < 10) {
+		auto urlTokens = parse_url(url);
+		std::string protocol = std::get<0>(urlTokens);
+		std::string host = std::get<1>(urlTokens);
+		std::string path = std::get<2>(urlTokens);
+		std::string query = std::get<3>(urlTokens);
+		if (!query.empty()) {
+			query = std::string("?") + query;
+		}
+
+		std::string status_code;
+		std::string newUrl;
+		std::map<std::string, std::string> headers = {
+			{ "User-Agent", "Mozilla/5.0 (MAMEHub; Macintosh; Mac OS X) AppleWebKit/537.36" }
+		};
+
+		try {
+			if (protocol == "https") {
+				HttpsClient client(host, false);
+				auto r1 = client.request("GET", path + query, "", headers);
+				status_code = r1->status_code;
+				std::cout << "Made request to " << url << " with response " << status_code << std::endl;
+				if (status_code.rfind("30", 0) == 0) {
+					auto its = r1->header.equal_range("Location");
+					for (auto it = its.first; it != its.second; ++it) {
+						newUrl = it->second;
+					}
+				} else if (status_code.rfind("200", 0) == 0) {
+					contentString = { std::istreambuf_iterator<char>(r1->content),
+									  std::istreambuf_iterator<char>() };
+					break;
+				} else {
+					return;
+				}
+			} else {
+				HttpClient client(host);
+				auto r1 = client.request("GET", path + query, "", headers);
+				status_code = r1->status_code;
+				std::cout << "Made request to " << url << " with response " << status_code << std::endl;
+				if (status_code.rfind("30", 0) == 0) {
+					auto its = r1->header.equal_range("Location");
+					for (auto it = its.first; it != its.second; ++it) {
+						newUrl = it->second;
+					}
+				} else if (status_code.rfind("200", 0) == 0) {
+					contentString = { std::istreambuf_iterator<char>(r1->content),
+									  std::istreambuf_iterator<char>() };
+					break;
+				} else {
+					return;
+				}
+			}
+		} catch (std::exception const &e) {
+			std::cout << "Candy mode request error for " << url << ": " << e.what() << std::endl;
+			return;
+		}
+
+		if (newUrl.empty())
+			return;
+		url = newUrl;
+		redirects++;
+	}
+
+	if (contentString.empty())
+		return;
+
+	auto image_file = std::make_unique<emu_file>(mediaPath, OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+	auto filerr = image_file->open(filename + std::string(".zip"));
+	if (!filerr) {
+		std::cout << "Saving file of size " << contentString.size() << " to path " << filename << ".zip" << std::endl;
+		image_file->write(contentString.c_str(), contentString.length());
+	}
+	image_file->close();
+}
 
 
 /***************************************************************************

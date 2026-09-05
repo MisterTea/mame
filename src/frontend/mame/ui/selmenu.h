@@ -38,6 +38,9 @@ public:
 
 	virtual ~menu_select_launch() override;
 
+	static bool audit_system_with_candy(running_machine &machine, media_auditor &auditor, driver_enumerator &enumerator, media_auditor::summary &summary);
+	static bool audit_software_with_candy(running_machine &machine, media_auditor &auditor, software_list_device &swlist, software_info const &swinfo, media_auditor::summary &summary);
+
 protected:
 	static inline constexpr std::size_t MAX_ICONS_RENDER = 128;
 	static inline constexpr std::size_t MAX_VISIBLE_SEARCH = 200;

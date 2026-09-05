@@ -858,6 +858,30 @@ bool input_manager::seq_pressed(const input_seq &seq)
     if (timestamp < 1000) {
       return false;
     }
+    const std::string &key = seq.mamehub_input_key();
+    if (key.length() > 4 && key.compare(key.length() - 4, 4, "/INC") == 0) {
+      std::string base = key.substr(0, key.length() - 4);
+      auto values = netCommon->getAllInputValues(timestamp, std::string("ANALOG/") + base);
+      for (const auto& s : values) {
+        int rawval = 0, iclass = 0, inc = 0, dec = 0;
+        if (sscanf(s.second.c_str(), "%d:%d:%d:%d", &rawval, &iclass, &inc, &dec) >= 3) {
+          if (inc != 0) return true;
+        }
+      }
+      return false;
+    }
+    if (key.length() > 4 && key.compare(key.length() - 4, 4, "/DEC") == 0) {
+      std::string base = key.substr(0, key.length() - 4);
+      auto values = netCommon->getAllInputValues(timestamp, std::string("ANALOG/") + base);
+      for (const auto& s : values) {
+        int rawval = 0, iclass = 0, inc = 0, dec = 0;
+        if (sscanf(s.second.c_str(), "%d:%d:%d:%d", &rawval, &iclass, &inc, &dec) >= 4) {
+          if (dec != 0) return true;
+        }
+      }
+      return false;
+    }
+
     auto values = netCommon->getAllInputValues(timestamp, std::string("INPUT/") + seq.mamehub_input_key());
     if (values.empty()) {
         std::cout << "All peers have left, exiting" << std::endl;
@@ -925,9 +949,30 @@ bool input_manager::seq_pressed(const input_seq &seq)
 
 s32 input_manager::seq_axis_value(const input_seq &seq, input_item_class &itemclass)
 {
+	itemclass = ITEM_CLASS_INVALID;
+
+	if (netCommon && !seq.mamehub_input_key().empty()) {
+		auto timestamp = machine().machine_time().to_msec();
+		if (timestamp < 1000) {
+			return 0;
+		}
+		auto values = netCommon->getAllInputValues(timestamp, std::string("ANALOG/") + seq.mamehub_input_key());
+		for (const auto& s : values) {
+			if (!s.second.empty() && s.second != "0:0:0:0") {
+				int rawval = 0, iclass = 0, inc = 0, dec = 0;
+				if (sscanf(s.second.c_str(), "%d:%d:%d:%d", &rawval, &iclass, &inc, &dec) >= 2) {
+					if (iclass != static_cast<int>(ITEM_CLASS_INVALID)) {
+						itemclass = static_cast<input_item_class>(iclass);
+						return static_cast<s32>(rawval);
+					}
+				}
+			}
+		}
+		return 0;
+	}
+
 	// start with zero result and no valid classes
 	s32 result = 0;
-	itemclass = ITEM_CLASS_INVALID;
 	input_item_class itemclasszero = ITEM_CLASS_INVALID;
 
 	// iterate over all of the codes

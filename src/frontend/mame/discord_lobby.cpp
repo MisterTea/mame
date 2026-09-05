@@ -67,6 +67,12 @@ std::string discord_lobby::make_start_message() const
 	return result.dump();
 }
 
+std::string discord_lobby::make_leave_message() const
+{
+	auto result = envelope("leave", m_lobby_id, m_local_discord_id);
+	return result.dump();
+}
+
 bool discord_lobby::validate_envelope(std::string_view authenticated_sender_id, std::string const &sender, std::string const &lobby, int protocol)
 {
 	if (protocol != PROTOCOL_VERSION)
@@ -110,6 +116,11 @@ bool discord_lobby::receive(std::string_view authenticated_sender_id, std::strin
 		}
 		else if (type == "join")
 		{
+			if (m_started)
+			{
+				m_last_error = "lobby is closed to new players";
+				return false;
+			}
 			if (data.at("game").get<std::string>() != m_game_name)
 			{
 				m_last_error = "player selected a different game";
@@ -117,6 +128,12 @@ bool discord_lobby::receive(std::string_view authenticated_sender_id, std::strin
 			}
 			auto &member = m_members[sender];
 			member = { sender, data.at("name").get<std::string>(), data.at("key").get<std::string>(), { }, false };
+		}
+		else if (type == "leave")
+		{
+			m_members.erase(sender);
+			if (sender == m_host_discord_id)
+				m_host_discord_id.clear();
 		}
 		else if (type == "discovery")
 		{

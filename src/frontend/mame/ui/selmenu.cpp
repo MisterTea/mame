@@ -2642,6 +2642,50 @@ std::string menu_select_launch::make_software_audit_fail_text(media_auditor cons
 	return str.str();
 }
 
+bool menu_select_launch::audit_system_with_candy(running_machine &machine, media_auditor &auditor, driver_enumerator &enumerator, media_auditor::summary &summary)
+{
+	summary = auditor.audit_media(AUDIT_VALIDATE_FAST);
+	if (audit_passed(summary))
+		return true;
+
+	if (machine.options().candy())
+	{
+		std::set<std::string> downloaded;
+		for (device_t &device : device_enumerator(enumerator.config()->root_device()))
+		{
+			for (std::string const &path : device.searchpath())
+			{
+				if (downloaded.insert(path).second)
+				{
+					auto pathLocation = path.find(PATH_SEPARATOR);
+					if (pathLocation == std::string::npos)
+						candy_mode(path, std::string(""), machine.options().media_path());
+					else
+						candy_mode(path.substr(0, pathLocation), path.substr(pathLocation + 1), machine.options().media_path());
+				}
+			}
+		}
+		summary = auditor.audit_media(AUDIT_VALIDATE_FAST);
+		return audit_passed(summary);
+	}
+	return false;
+}
+
+bool menu_select_launch::audit_software_with_candy(running_machine &machine, media_auditor &auditor, software_list_device &swlist, software_info const &swinfo, media_auditor::summary &summary)
+{
+	summary = auditor.audit_software(swlist, swinfo, AUDIT_VALIDATE_FAST);
+	if (audit_passed(summary))
+		return true;
+
+	if (machine.options().candy())
+	{
+		candy_mode(swlist.list_name(), std::string(swinfo.shortname()), machine.options().media_path());
+		summary = auditor.audit_software(swlist, swinfo, AUDIT_VALIDATE_FAST);
+		return audit_passed(summary);
+	}
+	return false;
+}
+
 
 void menu_select_launch::make_audit_fail_text(std::ostream &str, media_auditor const &auditor, media_auditor::summary summary)
 {

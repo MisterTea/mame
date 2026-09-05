@@ -712,7 +712,8 @@ void video_manager::update_throttle(attotime emutime) {
                                                          // attoseconds
       //currentTicks/osd_ticks_per_second(),
       //(currentTicks%osd_ticks_per_second())*attoseconds_per_tick);
-      LOG_EVERY_N(300, INFO) << "Time difference: " << expectedEmulationTime.to_msec() << " vs " << emutime.to_msec();
+      if (emutime != attotime::zero)
+        LOG_EVERY_N(300, INFO) << "Time difference: " << expectedEmulationTime.to_msec() << " vs " << emutime.to_msec();
 
       if (expectedEmulationTime < emutime) {
         if (SKIP_OSD) {

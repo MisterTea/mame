@@ -337,6 +337,11 @@ int running_machine::run(bool quiet)
 		if (m_saveload_schedule != saveload_schedule::NONE)
 			handle_saveload();
 
+		// Direct networking is prepared from the lobby, but the shared clock
+		// must not start until this game has loaded on every peer.
+		if (netCommon)
+			netCommon->startNetplayClock();
+
 		export_http_api();
 
 #if defined(__EMSCRIPTEN__)

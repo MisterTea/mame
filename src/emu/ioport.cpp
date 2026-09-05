@@ -923,6 +923,11 @@ const input_seq &ioport_field::seq_real(bool checkMapping, input_seq_type seqtyp
 
 const input_seq ioport_field::seq_peers(input_seq_type seqtype) const noexcept {
 	if (netCommon) {
+		if (seqtype == SEQ_TYPE_INCREMENT) {
+			return input_seq(mamehub_id() + "/INC");
+		} else if (seqtype == SEQ_TYPE_DECREMENT) {
+			return input_seq(mamehub_id() + "/DEC");
+		}
 		return input_seq(mamehub_id());
 	} else {
 		return seq_real(false, seqtype);
@@ -1327,13 +1332,13 @@ void ioport_field::frame_update(ioport_value &result)
 	if (m_live->lockout)
 	{
 		// use just the digital value
-		if (m_digital_value)
+		if (m_digital_value && !netCommon)
 			result |= m_mask;
 		return;
 	}
 
 	// if the state changed, look for switch down/switch up
-	bool curstate = m_digital_value || machine().input().seq_pressed(seq_peers(SEQ_TYPE_STANDARD));
+	bool curstate = (netCommon ? false : m_digital_value) || machine().input().seq_pressed(seq_peers(SEQ_TYPE_STANDARD));
 	bool changed = false;
 	if (curstate != m_live->last)
 	{
@@ -1383,7 +1388,8 @@ void ioport_field::frame_update(ioport_value &result)
 		curstate = false;
 
 	// additional logic to restrict digital joysticks
-	if (curstate && !m_digital_value && m_live->joystick != nullptr && m_way != 16 && !machine().options().joystick_contradictory())
+	bool is_digital = netCommon ? false : m_digital_value;
+	if (curstate && !is_digital && m_live->joystick != nullptr && m_way != 16 && !machine().options().joystick_contradictory())
 	{
 		u8 mask = (m_way == 4) ? m_live->joystick->current4way() : m_live->joystick->current();
 		if (!(mask & (1 << m_live->joydir)))
@@ -1878,6 +1884,9 @@ ioport_manager::ioport_manager(running_machine &machine)
 }
 
 const attotime inputStartTime(1,0);
+static uint64_t s_mamehub_frame_count = 0;
+static uint32_t s_mamehub_cumulative_hash = 2166136261u;
+static std::map<uint64_t, uint32_t> s_mamehub_past_hashes;
 
 //-------------------------------------------------
 //  initialize - walk the configured ports and
@@ -1886,6 +1895,10 @@ const attotime inputStartTime(1,0);
 
 time_t ioport_manager::initialize()
 {
+	s_mamehub_frame_count = 0;
+	s_mamehub_cumulative_hash = 2166136261u;
+	s_mamehub_past_hashes.clear();
+
 	// add an exit callback and a frame callback
 	machine().add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(&ioport_manager::exit, this));
 	machine().add_notifier(MACHINE_NOTIFY_FRAME, machine_notify_delegate(&ioport_manager::frame_update_callback, this));
@@ -2393,27 +2406,161 @@ void ioport_manager::frame_update()
 		}
 	}
 
-  std::unordered_map<string,string> inputData;
-	// Store physical inputs
+	// Log inputs and update cumulative hash for this frame
+	s_mamehub_frame_count++;
+	std::string pressed_inputs_str = "";
+	uint32_t frame_hash = 2166136261u;
+	for (auto &port : m_portlist)
+	{
+		for (auto &field : port.second->fields()) {
+			if (!field.is_analog() && (port.second->live().digital & field.mask())) {
+				if (!pressed_inputs_str.empty()) pressed_inputs_str += ",";
+				pressed_inputs_str += field.mamehub_id();
+				for (char c : field.mamehub_id()) {
+					frame_hash ^= (uint8_t)c;
+					frame_hash *= 16777619u;
+				}
+				frame_hash ^= 0xff;
+				frame_hash *= 16777619u;
+			}
+			else if (field.is_analog() && field.live().analog != nullptr) {
+				s32 accum = field.live().analog->m_accum;
+				if (accum != 0) {
+					if (!pressed_inputs_str.empty()) pressed_inputs_str += ",";
+					pressed_inputs_str += field.mamehub_id() + ":" + std::to_string(accum);
+					for (char c : field.mamehub_id()) {
+						frame_hash ^= (uint8_t)c;
+						frame_hash *= 16777619u;
+					}
+					frame_hash ^= (uint32_t)accum;
+					frame_hash *= 16777619u;
+				}
+			}
+		}
+	}
+	s_mamehub_cumulative_hash ^= frame_hash;
+	s_mamehub_cumulative_hash *= 16777619u;
+
+	osd_printf_info("[INPUT_FRAME] frame=%llu emu_ms=%lld hash=%08x inputs=[%s]\n",
+		(unsigned long long)s_mamehub_frame_count,
+		(long long)curtime.to_msec(),
+		s_mamehub_cumulative_hash,
+		pressed_inputs_str.c_str());
+
+	// If netplay is active, exchange and verify sync hashes
+	if (netCommon && curtime.to_msec() >= inputStartTime.to_msec()) {
+		auto myPlayers = netCommon->getMyPlayers();
+		if (!myPlayers.empty()) {
+			int myPlayer = *myPlayers.begin();
+
+			// Every 60 frames (~1 sec), record and attach sync hash
+			if (s_mamehub_frame_count % 60 == 0) {
+				s_mamehub_past_hashes[s_mamehub_frame_count] = s_mamehub_cumulative_hash;
+				std::string syncKey = "SYNC_HASH/" + std::to_string(myPlayer) + "/" + std::to_string(s_mamehub_frame_count);
+				netCommon->attachToNextInputs(syncKey, std::to_string(s_mamehub_cumulative_hash));
+			}
+
+			// Check past frames that should have arrived by now (>120 frames / ~2 sec ago)
+			auto it_hash = s_mamehub_past_hashes.begin();
+			while (it_hash != s_mamehub_past_hashes.end() && it_hash->first + 120 <= s_mamehub_frame_count) {
+				uint64_t check_frame = it_hash->first;
+				uint32_t our_hash = it_hash->second;
+				int peerPlayer = (myPlayer == 0) ? 1 : 0;
+				std::string checkKey = "SYNC_HASH/" + std::to_string(peerPlayer) + "/" + std::to_string(check_frame);
+				auto peerVals = netCommon->getAllInputValues(curtime.to_msec(), checkKey);
+				if (!peerVals.empty()) {
+					uint32_t peer_hash = (uint32_t)std::stoul(peerVals.begin()->second);
+					if (peer_hash != our_hash) {
+						osd_printf_error("FATAL: INPUT DESYNC DETECTED at frame %llu! Local hash: %08x, Remote hash: %08x\n",
+							(unsigned long long)check_frame, our_hash, peer_hash);
+						LOG(FATAL) << "INPUT DESYNC DETECTED at frame " << check_frame << " (local: " << our_hash << " remote: " << peer_hash << ")";
+						throw emu_fatalerror("INPUT DESYNC DETECTED at frame %llu", (unsigned long long)check_frame);
+					}
+					it_hash = s_mamehub_past_hashes.erase(it_hash);
+				} else {
+					++it_hash;
+				}
+			}
+		}
+	}
+
+	std::unordered_map<string,string> inputData;
+	std::set<int> myPlayers = netCommon ? netCommon->getMyPlayers() : std::set<int>();
+
+	// Store inputs
 	for (auto &port : m_portlist)
 	{
 		for (auto& field : port.second->fields()) {
-			bool pressed = false;
-			for (auto it : field.seq_mamehub(SEQ_TYPE_STANDARD)) {
-				pressed |= machine().input().seq_pressed(it);
+			int player = field.mamehub_player();
+			bool my_control = (!netCommon || myPlayers.count(player));
+
+			if (field.is_analog()) {
+				s32 rawvalue = 0;
+				input_item_class itemclass = ITEM_CLASS_INVALID;
+				bool inc = false;
+				bool dec = false;
+
+				if (my_control) {
+					if (field.live().analog != nullptr && field.live().analog->m_use_adjoverride) {
+						rawvalue = field.live().analog->m_adjoverride;
+						itemclass = ITEM_CLASS_ABSOLUTE;
+					} else {
+						rawvalue = machine().input().seq_axis_value(field.seq_real(false, SEQ_TYPE_STANDARD), itemclass);
+						inc = machine().input().seq_pressed(field.seq_real(false, SEQ_TYPE_INCREMENT));
+						dec = machine().input().seq_pressed(field.seq_real(false, SEQ_TYPE_DECREMENT));
+
+						auto it_map = playerFieldMap.find(&field);
+						if (it_map != playerFieldMap.end()) {
+							for (auto it2 : it_map->second) {
+								if (rawvalue == 0 && itemclass == ITEM_CLASS_INVALID) {
+									rawvalue = machine().input().seq_axis_value(it2->seq_real(false, SEQ_TYPE_STANDARD), itemclass);
+								}
+								inc |= machine().input().seq_pressed(it2->seq_real(false, SEQ_TYPE_INCREMENT));
+								dec |= machine().input().seq_pressed(it2->seq_real(false, SEQ_TYPE_DECREMENT));
+								if (it2->live().analog != nullptr && it2->live().analog->m_use_adjoverride) {
+									rawvalue = it2->live().analog->m_adjoverride;
+									itemclass = ITEM_CLASS_ABSOLUTE;
+								}
+							}
+						}
+					}
+				}
+
+				string akey = std::string("ANALOG/") + field.mamehub_id();
+				char abuf[64];
+				snprintf(abuf, sizeof(abuf), "%d:%d:%d:%d", (int)rawvalue, (int)itemclass, inc ? 1 : 0, dec ? 1 : 0);
+				inputData[akey] = abuf;
+			} else {
+				bool pressed = false;
+				if (my_control) {
+					if (field.digital_value()) {
+						pressed = true;
+					}
+					auto it_map = playerFieldMap.find(&field);
+					if (it_map != playerFieldMap.end()) {
+						for (auto it2 : it_map->second) {
+							if (it2->digital_value()) {
+								pressed = true;
+							}
+						}
+					}
+				}
+				for (auto it : field.seq_mamehub(SEQ_TYPE_STANDARD)) {
+					pressed |= machine().input().seq_pressed(it);
+				}
+				string key = std::string("INPUT/") + field.mamehub_id();
+				auto it = inputData.find(key);
+				if (it != inputData.end()) {
+					// Resolve conflicts by allowing any pressed input through
+					if (pressed) {
+						inputData[key] = "1";
+					}
+				} else {
+					inputData[key] = pressed ? "1" : "0";
+				}
 			}
-	  string key = std::string("INPUT/") + field.mamehub_id();
-	  auto it = inputData.find(key);
-	  if (it != inputData.end()) {
-		  // Resolve conflicts by allowing any pressed input through
-		if(pressed) {
-			inputData[key] = "1";
 		}
-	  } else {
-      	inputData[key] = pressed?"1":"0";
-	  }
-    }
-  }
+	}
 
   attotime curMachineTime = machine().machine_time();
   //LOG(INFO) << "AT TIME " << curMachineTime.seconds << "." << curMachineTime.attoseconds << endl;
@@ -4231,7 +4378,7 @@ void analog_field::read(ioport_value &result)
 		return;
 
 	// if set programmatically, only use the override value
-	if (m_use_adjoverride)
+	if (m_use_adjoverride && !netCommon)
 	{
 		result = m_adjoverride;
 		return;

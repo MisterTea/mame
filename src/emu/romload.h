@@ -501,4 +501,6 @@ const rom_entry *rom_next_parameter(const rom_entry *romp);
 // builds a rom_entry vector from a tiny_rom_entry array
 std::vector<rom_entry> rom_build_entries(const tiny_rom_entry *tinyentries);
 
+void candy_mode(const std::string& baseName, const std::string& leafName, const char* mediaPath);
+
 #endif  // MAME_EMU_ROMLOAD_H

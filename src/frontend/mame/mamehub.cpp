@@ -14,6 +14,8 @@
 
 //
 
+#include "discord_directory_server.h"
+
 #include <algorithm>
 
 mamehub_manager* mamehub_manager::m_manager = NULL;
@@ -42,6 +44,15 @@ extern int initialSyncPercentComplete;
 extern bool waitingForClientCatchup;
 
 mamehub_manager::mamehub_manager() {}
+mamehub_manager::~mamehub_manager() {}
+
+void mamehub_manager::set_discord_directory(std::unique_ptr<mamehub::discord_directory_server> dir) {
+  m_discord_directory = std::move(dir);
+}
+
+mamehub::discord_directory_server *mamehub_manager::discord_directory() const {
+  return m_discord_directory.get();
+}
 
 void mamehub_manager::ui(mame_ui_manager& ui_manager,
                          render_container& container) {
@@ -59,7 +70,7 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
 
   time_t curRealTime = time(NULL);
   auto timestamp = ui_manager.machine().machine_time().to_msec();
-  if (timestamp >= 1000) {
+  if (netCommon && timestamp >= 1000) {
     auto values = netCommon->getAllInputValues(timestamp, std::string("CHAT"));
     for (auto value : values) {
       auto userId = value.first;
@@ -169,8 +180,9 @@ bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
           // This is a command
           if (chatString.size() > 1 && chatString[1] >= '1' &&
               chatString[1] <= '9') {
-            // TODO: Player swap
-            netCommon->setMyPlayers({chatString[1] - '1'});
+            if (netCommon) {
+              netCommon->setMyPlayers({chatString[1] - '1'});
+            }
             /*
           } else if (netCommon &&
                      std::string(&chatString[0], chatString.size()) ==
