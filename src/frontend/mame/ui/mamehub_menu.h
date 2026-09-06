@@ -33,6 +33,8 @@ public:
 protected:
 	virtual void populate() override;
 	virtual bool handle(event const *ev) override;
+	virtual bool custom_mouse_down() override;
+	virtual void menu_activated() override;
 };
 
 // First level of host selection: Arcade or a machine with software lists.
@@ -84,6 +86,8 @@ protected:
 	virtual void populate() override;
 	virtual bool handle(event const *ev) override;
 	virtual void custom_render(void *selectedref, float top, float bottom, float x, float y, float x2, float y2) override;
+	virtual bool custom_mouse_down() override;
+	virtual bool custom_ui_back() override;
 
 private:
 	void begin_peer_connection();

@@ -180,6 +180,11 @@ menu_mamehub_main::menu_mamehub_main(mame_ui_manager &mui, render_container &con
 	set_heading(_("MAMEHub Netplay (Discord)"));
 }
 
+void menu_mamehub_main::menu_activated()
+{
+	reset(reset_options::SELECT_FIRST);
+}
+
 void menu_mamehub_main::force_menu(mame_ui_manager &mui, render_container &container)
 {
 	menu::stack_reset(mui);
@@ -210,6 +215,38 @@ bool menu_mamehub_main::handle(event const *ev)
 	if (ev && (IPT_UI_SELECT == ev->iptkey))
 	{
 		switch (uintptr_t(ev->itemref))
+		{
+		case ITEM_HOST:
+			menu::stack_push<menu_mamehub_machine>(ui(), container());
+			return true;
+
+		case ITEM_JOIN:
+			menu::stack_push<menu_mamehub_join>(ui(), container());
+			return true;
+
+		case ITEM_OFFLINE:
+			menu::stack_push<menu_select_game>(ui(), container(), nullptr);
+			return true;
+
+		case ITEM_OPTIONS:
+			menu::stack_push<menu_simple_game_options>(ui(), container(), [this] () { reset(reset_options::REMEMBER_REF); });
+			return true;
+
+		case ITEM_EXIT:
+			machine().schedule_exit();
+			return true;
+		}
+	}
+	return false;
+}
+
+bool menu_mamehub_main::custom_mouse_down()
+{
+	int const h = hover();
+	if (h >= 0 && h < item_count() && is_selectable(item(h)))
+	{
+		set_selected_index(h);
+		switch (uintptr_t(item(h).ref()))
 		{
 		case ITEM_HOST:
 			menu::stack_push<menu_mamehub_machine>(ui(), container());
@@ -419,6 +456,8 @@ menu_mamehub_lobby::menu_mamehub_lobby(mame_ui_manager &mui, render_container &c
 	unsigned short dir_port = (unsigned short)ui().machine().options().discord_directory_port();
 	int expected_players = ui().machine().options().discord_players();
 
+	set_needs_prev_menu_item(false);
+
 	try
 	{
 		if (!mamehub::discord_discovery::instance().ensure_connected())
@@ -447,6 +486,8 @@ menu_mamehub_lobby::menu_mamehub_lobby(mame_ui_manager &mui, render_container &c
 	, m_host_name(std::move(host_name))
 	, m_last_poll(std::chrono::steady_clock::now())
 {
+	set_needs_prev_menu_item(false);
+
 	auto const identity = mamehub::discord_service::instance().current_identity();
 	unsigned short dir_port = (unsigned short)ui().machine().options().discord_directory_port();
 	int expected_players = ui().machine().options().discord_players();
@@ -469,6 +510,11 @@ menu_mamehub_lobby::~menu_mamehub_lobby()
 	{
 		mamehub::discord_discovery::instance().close_lobby(m_secret);
 		mamehub::discord_discovery::instance().clear_my_hosted_lobby();
+	}
+	if (!m_transitioning)
+	{
+		abortNetCommon();
+		deleteNetCommon();
 	}
 }
 
@@ -588,6 +634,22 @@ void menu_mamehub_lobby::populate()
 
 bool menu_mamehub_lobby::handle(event const *ev)
 {
+	if (m_transitioning)
+	{
+		if (m_connection.valid())
+		{
+			mamehub::discord_service::instance().pump();
+			bool const ready = (m_connection.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready);
+			bool const timed_out = (std::chrono::steady_clock::now() >= m_connect_deadline);
+			if (ready || timed_out)
+			{
+				finish_connection();
+				return true;
+			}
+		}
+		return false;
+	}
+
 	if (ev && (IPT_UI_SELECT == ev->iptkey))
 	{
 		switch (uintptr_t(ev->itemref))
@@ -606,6 +668,34 @@ bool menu_mamehub_lobby::handle(event const *ev)
 	return false;
 }
 
+bool menu_mamehub_lobby::custom_mouse_down()
+{
+	int const h = hover();
+	if (h >= 0 && h < item_count() && is_selectable(item(h)))
+	{
+		set_selected_index(h);
+		auto ref = uintptr_t(item(h).ref());
+		if (ref == ITEM_START_GAME)
+		{
+			if (m_is_host)
+				start_game_as_host();
+			return true;
+		}
+		else if (ref == ITEM_CANCEL_LOBBY || ref == ITEM_LEAVE_LOBBY)
+		{
+			leave_and_pop();
+			return true;
+		}
+	}
+	return false;
+}
+
+bool menu_mamehub_lobby::custom_ui_back()
+{
+	leave_and_pop();
+	return true;
+}
+
 void menu_mamehub_lobby::leave_and_pop()
 {
 	if (m_is_host)
@@ -613,8 +703,10 @@ void menu_mamehub_lobby::leave_and_pop()
 		mamehub::discord_discovery::instance().close_lobby(m_secret);
 		mamehub::discord_discovery::instance().clear_my_hosted_lobby();
 	}
+	abortNetCommon();
+	deleteNetCommon();
 	m_directory_server.reset();
-	stack_pop();
+	stack_pop_to_special_main();
 }
 
 void menu_mamehub_lobby::begin_peer_connection()

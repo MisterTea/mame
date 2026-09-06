@@ -861,6 +861,15 @@ protected:
 			}
 			break;
 
+		case INPUT_EVENT_DEFOCUS:
+			{
+				std::lock_guard<std::mutex> scope_lock(m_module_lock);
+				for (auto &device : devicelist())
+					device->reset();
+				return true;
+			}
+			break;
+
 		default:
 			break;
 		}
