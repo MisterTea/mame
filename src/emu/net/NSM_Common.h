@@ -150,6 +150,8 @@ class Common : public CommonBase {
       int64_t ts, const std::string &key);
 
   virtual bool isHosting();
+  virtual void signalGameOver() override;
+  virtual bool isGameOver() override;
 
  protected:
   int64_t machineTimeShift;

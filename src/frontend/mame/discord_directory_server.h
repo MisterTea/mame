@@ -32,7 +32,7 @@ struct discord_waiting_room
 class discord_directory_server
 {
 public:
-	discord_directory_server(discord_identity identity, std::string secret, std::string game_name, bool hosting, int expected_players, unsigned short port);
+	discord_directory_server(discord_identity identity, std::string secret, std::string game_name, bool hosting, int expected_players, unsigned short port, std::string announcement_game = { });
 	~discord_directory_server();
 
 	discord_directory_server(discord_directory_server const &) = delete;
@@ -54,6 +54,8 @@ private:
 	bool m_hosting;
 	int m_expected_players;
 	unsigned short m_port;
+	std::string m_announcement_game;
+	bool m_announcement_sent = false;
 	discord_lobby m_lobby;
 	std::mutex m_mutex;
 	SimpleWeb::Server<SimpleWeb::HTTP> m_server;

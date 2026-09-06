@@ -17,6 +17,12 @@ TEST_CASE("Discord lobby requires authenticated, ready peers", "[mamehub][discor
 
 	REQUIRE(host.receive("host", host.make_discovery_message("host-key", { "192.0.2.1:5805", "198.51.100.1:62000" })));
 	REQUIRE(host.receive("guest", guest.make_discovery_message("guest-key", { "192.0.2.2:5805" })));
+	REQUIRE(host.can_connect());
+	REQUIRE_FALSE(host.can_start());
+
+	REQUIRE(host.receive("host", host.make_ready_message()));
+	REQUIRE_FALSE(host.can_start());
+	REQUIRE(host.receive("guest", guest.make_ready_message()));
 	REQUIRE(host.can_start());
 	REQUIRE(host.receive("host", host.make_start_message()));
 	REQUIRE(host.started());
@@ -54,6 +60,10 @@ TEST_CASE("Once the host starts the game, the lobby is closed to new players", "
 	REQUIRE(host.receive("guest1", guest1.make_join_message("Guest 1", "guest1-key")));
 	REQUIRE(host.receive("host", host.make_discovery_message("host-key", { "192.0.2.1:5805" })));
 	REQUIRE(host.receive("guest1", guest1.make_discovery_message("guest1-key", { "192.0.2.2:5805" })));
+	REQUIRE(host.can_connect());
+	REQUIRE_FALSE(host.can_start());
+	REQUIRE(host.receive("host", host.make_ready_message()));
+	REQUIRE(host.receive("guest1", guest1.make_ready_message()));
 	REQUIRE(host.can_start());
 
 	// Host starts the game
@@ -82,6 +92,48 @@ TEST_CASE("Players can leave the lobby before start", "[mamehub][discord]")
 	REQUIRE(host.receive("guest", guest.make_leave_message()));
 	REQUIRE(host.members().size() == 1);
 	REQUIRE_FALSE(host.can_start());
+}
+
+TEST_CASE("Publishing endpoints does not make a Discord lobby ready to start", "[mamehub][discord]")
+{
+	mamehub::discord_lobby host("lobby-1", "host", "host", "sf2");
+	mamehub::discord_lobby guest("lobby-1", "guest", "host", "sf2");
+
+	REQUIRE(host.receive("host", host.make_join_message("Host", "host-key")));
+	REQUIRE(host.receive("guest", guest.make_join_message("Guest", "guest-key")));
+	REQUIRE_FALSE(host.receive("guest", guest.make_ready_message()));
+	REQUIRE(host.last_error() == "player became ready before publishing endpoints");
+
+	REQUIRE(host.receive("host", host.make_discovery_message("host-key", { "192.0.2.1:5805" })));
+	REQUIRE(host.receive("guest", guest.make_discovery_message("guest-key", { "192.0.2.2:5805" })));
+	REQUIRE(host.can_connect());
+	REQUIRE_FALSE(host.can_start());
+	REQUIRE_FALSE(host.receive("host", host.make_start_message()));
+	REQUIRE(host.last_error() == "host tried to start before every player was ready");
+
+	REQUIRE(host.receive("host", host.make_ready_message()));
+	REQUIRE_FALSE(host.can_start());
+	REQUIRE(host.receive("guest", guest.make_ready_message()));
+	REQUIRE(host.can_start());
+}
+
+TEST_CASE("The host controls the expected Discord lobby player count", "[mamehub][discord]")
+{
+	mamehub::discord_lobby host("lobby-1", "host", "host", "xmen", 3);
+	mamehub::discord_lobby guest("lobby-1", "guest1", "", "");
+	mamehub::discord_lobby guest2("lobby-1", "guest2", "host", "xmen", 3);
+
+	REQUIRE(guest.receive("host", host.make_host_message()));
+	REQUIRE(guest.expected_players() == 3);
+	REQUIRE(guest.receive("host", host.make_join_message("Host", "host-key")));
+	REQUIRE(guest.receive("guest1", guest.make_join_message("Guest 1", "guest1-key")));
+	REQUIRE(guest.receive("host", host.make_discovery_message("host-key", { "192.0.2.1:5805" })));
+	REQUIRE(guest.receive("guest1", guest.make_discovery_message("guest1-key", { "192.0.2.2:5805" })));
+	REQUIRE_FALSE(guest.can_connect());
+
+	REQUIRE(guest.receive("guest2", guest2.make_join_message("Guest 2", "guest2-key")));
+	REQUIRE(guest.receive("guest2", guest2.make_discovery_message("guest2-key", { "192.0.2.3:5805" })));
+	REQUIRE(guest.can_connect());
 }
 
 TEST_CASE("Mock Discord service supports local loopback messaging without Discord account", "[mamehub][discord][mock]")
@@ -261,5 +313,3 @@ TEST_CASE("Analog control wire protocol serialization and parsing", "[mamehub][a
 	REQUIRE(dec_seq_key.substr(dec_seq_key.length() - 4) == "/DEC");
 	REQUIRE(inc_seq_key.substr(0, inc_seq_key.length() - 4) == base_id);
 }
-
-

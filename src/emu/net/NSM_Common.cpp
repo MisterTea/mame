@@ -219,6 +219,7 @@ Common::Common(const string &_userId, const string &privateKeyString,
     LOG(INFO) << "Waiting for initialization for peer...";
     wga::microsleep(100 * 1000);
   }
+  myPeer->markReady();
   if (myPeer->getPosition() == -1) {
     LOGFATAL << "Somehow didn't get my player position";
   }
@@ -298,6 +299,9 @@ void Common::startNetplayClock() {
     remaining = machineTimeShift - wga::GlobalClock::currentTimeMicros();
   }
   netplayClockStarted.store(true);
+  if (myPeer) {
+    myPeer->resetReachabilityTimers();
+  }
   LOG(INFO) << "Netplay clock started at time 0";
 }
 
@@ -594,11 +598,10 @@ unordered_map<string, string> Common::getStateChanges(
 
 void Common::sendInputs(int64_t inputTimeMs,
                         unordered_map<string, string> inputMap) {
-  if (myPeer->getLivingPeerCount() == 0 && myPeer->getTotalPeerCount() > 1) {
-    LOG(INFO) << "Finished!";
-    cout << "FINISHED" << endl;
-    myPeer->shutdown();
-    exit(0);
+  if (isGameOver() || (myPeer->getLivingPeerCount() == 0 && myPeer->getTotalPeerCount() > 1)) {
+    LOG(INFO) << "Finished - game over detected";
+    signalGameOver();
+    return;
   }
   if (inputTimeMs <= 1) {
     VLOG(1) << "SKIPPING FIRST INPUT BLOCK" << endl;
@@ -639,14 +642,21 @@ vector<uint8_t> Common::computeChecksum(running_machine *machine) {
 
 std::map<std::string, std::string> Common::getAllInputValues(
     int64_t ts, const std::string &key) {
+  if (isGameOver()) {
+    return {};
+  }
   std::unordered_map<std::string, std::map<std::string, std::string>>
       allInputData;
   if (cachedInputValues.first == ts) {
     allInputData = cachedInputValues.second;
   } else {
     allInputData = myPeer->getAllInputValues(ts);
+    if (isGameOver()) {
+      return {};
+    }
     int livingPeerCount = myPeer->getLivingPeerCount();
     if (livingPeerCount == 0 && myPeer->getTotalPeerCount() > 1) {
+      signalGameOver();
       return {};
     }
     cachedInputValues = make_pair(ts, allInputData);
@@ -660,3 +670,16 @@ std::map<std::string, std::string> Common::getAllInputValues(
 }
 
 bool Common::isHosting() { return myPeer->isHosting(); }
+
+void Common::signalGameOver() {
+  if (myPeer) {
+    myPeer->signalGameOver();
+  }
+}
+
+bool Common::isGameOver() {
+  if (!myPeer) {
+    return true;
+  }
+  return myPeer->isGameOver();
+}

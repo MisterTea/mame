@@ -10,7 +10,7 @@
 namespace mamehub {
 namespace {
 
-constexpr int PROTOCOL_VERSION = 1;
+constexpr int PROTOCOL_VERSION = 2;
 using json = nlohmann::json;
 
 json envelope(std::string_view type, std::string const &lobby_id, std::string const &sender_id)
@@ -28,11 +28,12 @@ bool valid_endpoint(std::string const &endpoint)
 
 } // anonymous namespace
 
-discord_lobby::discord_lobby(std::string lobby_id, std::string local_discord_id, std::string host_discord_id, std::string game_name) :
+discord_lobby::discord_lobby(std::string lobby_id, std::string local_discord_id, std::string host_discord_id, std::string game_name, int expected_players) :
 	m_lobby_id(std::move(lobby_id)),
 	m_local_discord_id(std::move(local_discord_id)),
 	m_host_discord_id(std::move(host_discord_id)),
-	m_game_name(std::move(game_name))
+	m_game_name(std::move(game_name)),
+	m_expected_players(expected_players)
 {
 }
 
@@ -49,6 +50,7 @@ std::string discord_lobby::make_host_message() const
 {
 	auto result = envelope("host", m_lobby_id, m_local_discord_id);
 	result["game"] = m_game_name;
+	result["players"] = m_expected_players;
 	return result.dump();
 }
 
@@ -58,6 +60,11 @@ std::string discord_lobby::make_discovery_message(std::string_view public_key, s
 	result["key"] = public_key;
 	result["endpoints"] = endpoints;
 	return result.dump();
+}
+
+std::string discord_lobby::make_ready_message() const
+{
+	return envelope("ready", m_lobby_id, m_local_discord_id).dump();
 }
 
 std::string discord_lobby::make_start_message() const
@@ -112,7 +119,14 @@ bool discord_lobby::receive(std::string_view authenticated_sender_id, std::strin
 				m_last_error = "lobby already has another host";
 				return false;
 			}
+			int const expected_players = data.at("players").get<int>();
+			if (expected_players < 2)
+			{
+				m_last_error = "host selected an invalid player count";
+				return false;
+			}
 			m_host_discord_id = sender;
+			m_expected_players = expected_players;
 		}
 		else if (type == "join")
 		{
@@ -127,7 +141,7 @@ bool discord_lobby::receive(std::string_view authenticated_sender_id, std::strin
 				return false;
 			}
 			auto &member = m_members[sender];
-			member = { sender, data.at("name").get<std::string>(), data.at("key").get<std::string>(), { }, false };
+			member = { sender, data.at("name").get<std::string>(), data.at("key").get<std::string>(), { }, false, false };
 		}
 		else if (type == "leave")
 		{
@@ -151,6 +165,16 @@ bool discord_lobby::receive(std::string_view authenticated_sender_id, std::strin
 				return false;
 			}
 			found->second.endpoints = endpoints;
+			found->second.endpoints_ready = true;
+		}
+		else if (type == "ready")
+		{
+			auto found = m_members.find(sender);
+			if ((found == m_members.end()) || !found->second.endpoints_ready)
+			{
+				m_last_error = "player became ready before publishing endpoints";
+				return false;
+			}
 			found->second.ready = true;
 		}
 		else if (type == "start")
@@ -176,9 +200,14 @@ bool discord_lobby::receive(std::string_view authenticated_sender_id, std::strin
 	return true;
 }
 
+bool discord_lobby::can_connect() const
+{
+	return (int(m_members.size()) >= m_expected_players) && std::all_of(m_members.begin(), m_members.end(), [] (auto const &entry) { return entry.second.endpoints_ready; });
+}
+
 bool discord_lobby::can_start() const
 {
-	return (m_members.size() >= 2) && std::all_of(m_members.begin(), m_members.end(), [] (auto const &entry) { return entry.second.ready; });
+	return (int(m_members.size()) >= m_expected_players) && std::all_of(m_members.begin(), m_members.end(), [] (auto const &entry) { return entry.second.ready; });
 }
 
 } // namespace mamehub
