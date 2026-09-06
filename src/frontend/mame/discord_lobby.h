@@ -18,6 +18,7 @@ struct lobby_member
 	std::string display_name;
 	std::string public_key;
 	std::vector<std::string> endpoints;
+	bool endpoints_ready = false;
 	bool ready = false;
 };
 
@@ -26,19 +27,22 @@ struct lobby_member
 class discord_lobby
 {
 public:
-	discord_lobby(std::string lobby_id, std::string local_discord_id, std::string host_discord_id, std::string game_name);
+	discord_lobby(std::string lobby_id, std::string local_discord_id, std::string host_discord_id, std::string game_name, int expected_players = 2);
 
 	std::string make_join_message(std::string_view display_name, std::string_view public_key) const;
 	std::string make_host_message() const;
 	std::string make_discovery_message(std::string_view public_key, std::vector<std::string> const &endpoints) const;
+	std::string make_ready_message() const;
 	std::string make_start_message() const;
 	std::string make_leave_message() const;
 	bool receive(std::string_view authenticated_sender_id, std::string_view message);
+	bool can_connect() const;
 	bool can_start() const;
 	bool started() const { return m_started; }
 	bool is_host() const { return !m_host_discord_id.empty() && (m_local_discord_id == m_host_discord_id); }
 	std::string const &host_id() const { return m_host_discord_id; }
 	std::string const &game_name() const { return m_game_name; }
+	int expected_players() const { return m_expected_players; }
 	std::string const &last_error() const { return m_last_error; }
 	std::map<std::string, lobby_member> const &members() const { return m_members; }
 
@@ -49,6 +53,7 @@ private:
 	std::string m_local_discord_id;
 	std::string m_host_discord_id;
 	std::string m_game_name;
+	int m_expected_players;
 	std::map<std::string, lobby_member> m_members;
 	std::string m_last_error;
 	bool m_started = false;

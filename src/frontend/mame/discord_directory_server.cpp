@@ -2,19 +2,53 @@
 
 #include "discord_directory_server.h"
 
+#include "Headers.hpp"
+
 #include <stdexcept>
 
 namespace mamehub {
 
 using json = nlohmann::json;
 
-discord_directory_server::discord_directory_server(discord_identity identity, std::string secret, std::string game_name, bool hosting, int expected_players, unsigned short port) :
+namespace {
+
+void announce_game_async(std::string game, std::string host, int players)
+{
+	std::thread([game = std::move(game), host = std::move(host), players] ()
+	{
+		try
+		{
+			HttpsClient client("lobby.mamehub.com");
+			client.config.timeout = 3;
+			client.config.timeout_connect = 3;
+			SimpleWeb::CaseInsensitiveMultimap headers;
+			headers.emplace("Content-Type", "application/json");
+			json const body = {
+				{ "game", game },
+				{ "host", host },
+				{ "players", players }
+			};
+			auto const response = client.request("POST", "/api/lobby-announcement", body.dump(), headers);
+			if (response->status_code.compare(0, 3, "200") != 0)
+				LOG(WARNING) << "Lobby announcement service returned " << response->status_code;
+		}
+		catch (std::exception const &ex)
+		{
+			LOG(WARNING) << "Lobby announcement failed: " << ex.what();
+		}
+	}).detach();
+}
+
+} // anonymous namespace
+
+discord_directory_server::discord_directory_server(discord_identity identity, std::string secret, std::string game_name, bool hosting, int expected_players, unsigned short port, std::string announcement_game) :
 	m_identity(std::move(identity)),
 	m_secret(std::move(secret)),
 	m_hosting(hosting),
 	m_expected_players(expected_players),
 	m_port(port),
-	m_lobby(m_secret, std::to_string(m_identity.id), m_hosting ? std::to_string(m_identity.id) : std::string(), std::move(game_name))
+	m_announcement_game(announcement_game.empty() ? game_name : std::move(announcement_game)),
+	m_lobby(m_secret, std::to_string(m_identity.id), m_hosting ? std::to_string(m_identity.id) : std::string(), std::move(game_name), expected_players)
 {
 	std::string error;
 	if (!discord_service::instance().create_or_join_lobby(m_secret, m_discord_lobby_id, error))
@@ -33,7 +67,6 @@ discord_directory_server::discord_directory_server(discord_identity identity, st
 			throw std::runtime_error("Could not announce Discord lobby host");
 	}
 	publish(m_lobby.make_join_message(m_identity.display_name, std::to_string(m_identity.id)));
-	publish(m_lobby.make_discovery_message(std::to_string(m_identity.id), { "127.0.0.1:" + std::to_string(m_port) }));
 
 	m_server.config.port = m_port;
 	m_server.resource["^/api/get_current_game_id/(.+)$"]["GET"] = [this] (auto response, auto)
@@ -72,6 +105,15 @@ discord_directory_server::discord_directory_server(discord_identity identity, st
 			throw std::runtime_error("Local Discord member has not joined");
 		if (!publish(m_lobby.make_discovery_message(found->second.public_key, data.at("endpoints").get<std::vector<std::string>>())))
 			throw std::runtime_error("Could not publish Discord endpoint information");
+		response->write(SimpleWeb::StatusCode::success_ok, json({ { "status", "OK" } }).dump());
+	};
+	m_server.resource["^/api/ready$"]["POST"] = [this] (auto response, auto request)
+	{
+		json const data = json::parse(request->content.string());
+		if (data.at("peerId").get<std::string>() != std::to_string(m_identity.id))
+			throw std::runtime_error("Discord ready identity mismatch");
+		if (!publish(m_lobby.make_ready_message()))
+			throw std::runtime_error("Could not publish Discord peer readiness");
 		response->write(SimpleWeb::StatusCode::success_ok, json({ { "status", "OK" } }).dump());
 	};
 
@@ -129,7 +171,7 @@ json discord_directory_server::game_info()
 	}
 	return {
 		{ "gameName", m_lobby.game_name() },
-		{ "ready", m_lobby.started() },
+		{ "ready", m_lobby.can_connect() },
 		{ "peerData", peers },
 		{ "hostId", m_lobby.host_id() }
 	};
@@ -142,7 +184,7 @@ discord_waiting_room discord_directory_server::waiting_room()
 	discord_waiting_room result;
 	for (auto const &entry : m_lobby.members())
 		result.members.push_back(entry.second);
-	result.can_start = m_hosting && (result.members.size() >= 2) && m_lobby.can_start();
+	result.can_start = m_hosting && m_lobby.can_start();
 	result.started = m_lobby.started();
 	return result;
 }
@@ -165,6 +207,11 @@ bool discord_directory_server::start_game(std::string &error)
 	{
 		error = "Could not publish the Discord start message";
 		return false;
+	}
+	if (!m_announcement_sent)
+	{
+		m_announcement_sent = true;
+		announce_game_async(m_announcement_game, m_identity.display_name, m_expected_players);
 	}
 	return true;
 }

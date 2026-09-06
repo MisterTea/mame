@@ -882,10 +882,16 @@ bool input_manager::seq_pressed(const input_seq &seq)
       return false;
     }
 
+    if (netCommon->isGameOver()) {
+      machine().schedule_exit();
+      return false;
+    }
+
     auto values = netCommon->getAllInputValues(timestamp, std::string("INPUT/") + seq.mamehub_input_key());
-    if (values.empty()) {
-        std::cout << "All peers have left, exiting" << std::endl;
-        machine().schedule_exit();
+    if (netCommon->isGameOver()) {
+      std::cout << "All peers have left or game over, exiting" << std::endl;
+      machine().schedule_exit();
+      return false;
     }
     for (const auto& s : values) {
       if (s.second == std::string("1")) {

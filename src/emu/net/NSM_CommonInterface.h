@@ -159,6 +159,8 @@ class CommonBase {
   virtual void createInitialBlocks(running_machine *machine) {}
 
   virtual bool isHosting() = 0;
+  virtual void signalGameOver() = 0;
+  virtual bool isGameOver() = 0;
 };
 
 CommonBase *createNetCommon(const string &userId,

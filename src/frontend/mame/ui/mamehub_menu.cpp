@@ -425,7 +425,7 @@ menu_mamehub_lobby::menu_mamehub_lobby(mame_ui_manager &mui, render_container &c
 			throw emu_fatalerror("Failed to connect to lobby discovery");
 
 		m_directory_server = std::make_unique<mamehub::discord_directory_server>(
-			identity, m_secret, m_system_name + ";" + m_software_name, true, expected_players, dir_port);
+			identity, m_secret, m_system_name + ";" + m_software_name, true, expected_players, dir_port, m_game_title);
 
 		mamehub::discord_discovery::instance().set_my_hosted_lobby(
 			m_secret, m_system_name, m_software_name, m_game_title, m_host_name, 1);
@@ -739,4 +739,3 @@ void menu_mamehub_lobby::finish_connection()
 }
 
 } // namespace ui
-

@@ -23,6 +23,9 @@
 #include "fileio.h"
 #include "luaengine.h"
 #include "mameopts.h"
+#include "mamehub.h"
+#include "discord_discovery.h"
+#include "NSM_CommonInterface.h"
 #include "pluginopts.h"
 #include "rendlay.h"
 #include "validity.h"
@@ -301,8 +304,17 @@ int mame_machine_manager::execute()
 			if (machine.exit_pending())
 			{
 				m_options.set_system_name("");
+				m_options.set_value(OPTION_SOFTWARENAME, "", OPTION_PRIORITY_CMDLINE);
+				m_options.set_software("");
 				m_options.set_value(OPTION_BIOS, "", OPTION_PRIORITY_CMDLINE);
 			}
+		}
+
+		if (!is_empty)
+		{
+			deleteNetCommon();
+			mamehub_manager::instance()->reset();
+			mamehub::discord_discovery::instance().reset();
 		}
 
 		if (machine.exit_pending() && (!started_empty || is_empty))

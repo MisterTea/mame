@@ -28,6 +28,7 @@ public:
   bool handleChat(running_machine& machine, ui_event& event);
   void set_discord_directory(std::unique_ptr<mamehub::discord_directory_server> dir);
   mamehub::discord_directory_server *discord_directory() const;
+  void reset();
 private:
   static mamehub_manager* m_manager;
   std::unique_ptr<mamehub::discord_directory_server> m_discord_directory;

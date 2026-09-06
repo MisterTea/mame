@@ -54,6 +54,16 @@ mamehub::discord_directory_server *mamehub_manager::discord_directory() const {
   return m_discord_directory.get();
 }
 
+void mamehub_manager::reset() {
+  m_discord_directory.reset();
+  chatLogs.clear();
+  chatString.clear();
+  chatEnabled = false;
+  chatCounter = 0;
+  lastChatFromUserId.clear();
+  userIdColorMap.clear();
+}
+
 void mamehub_manager::ui(mame_ui_manager& ui_manager,
                          render_container& container) {
   if (statsVisible) {

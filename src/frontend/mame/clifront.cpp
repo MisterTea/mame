@@ -269,7 +269,8 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
   el::Configurations defaultConf = wga::LogHandler::SetupLogHandler(&argc, &argv);
   defaultConf.setGlobally(el::ConfigurationType::Filename, "MAMEHub.log");
   defaultConf.setGlobally(el::ConfigurationType::ToFile, "true");
-  el::Loggers::setVerboseLevel(0);
+  defaultConf.setGlobally(el::ConfigurationType::ToStandardOutput, m_options.verbose() ? "true" : "false");
+  el::Loggers::setVerboseLevel(m_options.verbose() ? 2 : 0);
 
   // Reconfigure default logger to apply settings above
   el::Loggers::reconfigureLogger("default", defaultConf);

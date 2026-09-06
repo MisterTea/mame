@@ -2484,6 +2484,11 @@ void ioport_manager::frame_update()
 		}
 	}
 
+	if (netCommon && netCommon->isGameOver()) {
+		machine().schedule_exit();
+		return;
+	}
+
 	std::unordered_map<string,string> inputData;
 	std::set<int> myPlayers = netCommon ? netCommon->getMyPlayers() : std::set<int>();
 
