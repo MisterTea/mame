@@ -155,8 +155,8 @@ protected:
 	void reset_parent(reset_options options) { m_parent->reset(options); }
 
 	template <typename T> T *topmost_menu() const { return m_global_state.topmost_menu<T>(); }
-	template <typename T> static T *topmost_menu(mame_ui_manager &ui) { return get_global_state(ui).topmost_menu<T>(); }
 	void stack_pop() { m_global_state.stack_pop(); }
+	void stack_pop_to_special_main() { m_global_state.stack_pop_to_special_main(); }
 	void stack_reset() { m_global_state.stack_reset(); }
 	bool stack_has_special_main_menu() const { return m_global_state.stack_has_special_main_menu(); }
 
@@ -388,6 +388,7 @@ private:
 
 		void stack_push(std::unique_ptr<menu> &&menu);
 		void stack_pop();
+		void stack_pop_to_special_main();
 		void stack_reset();
 		void clear_free_list();
 		bool stack_has_special_main_menu() const;

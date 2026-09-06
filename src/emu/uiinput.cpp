@@ -315,6 +315,7 @@ void ui_input_manager::push_window_defocus_event(render_target *target)
 	ui_event event = { ui_event::type::NONE };
 	event.event_type = ui_event::type::WINDOW_DEFOCUS;
 	event.target = target;
+	m_current_mouse_down = false;
 	push_event(event);
 }
 

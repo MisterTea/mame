@@ -146,6 +146,13 @@ void menu::global_state::stack_pop()
 }
 
 
+void menu::global_state::stack_pop_to_special_main()
+{
+	while (m_stack && !m_stack->is_special_main_menu())
+		stack_pop();
+}
+
+
 void menu::global_state::stack_reset()
 {
 	while (m_stack)
@@ -1235,6 +1242,12 @@ void menu::select_last_item()
 
 void menu::validate_selection(int scandir)
 {
+	if (m_items.empty())
+	{
+		m_selected = -1;
+		return;
+	}
+
 	// clamp to be in range
 	if (m_selected < 0)
 		m_selected = 0;
@@ -1242,8 +1255,16 @@ void menu::validate_selection(int scandir)
 		m_selected = m_items.size() - 1;
 
 	// skip past unselectable items
+	int const initial_selected = m_selected;
 	while (!is_selectable(m_items[m_selected]))
+	{
 		m_selected = (m_selected + m_items.size() + scandir) % m_items.size();
+		if (m_selected == initial_selected)
+		{
+			m_selected = -1;
+			return;
+		}
+	}
 }
 
 

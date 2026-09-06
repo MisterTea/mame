@@ -269,12 +269,13 @@ start_and_sync() {
 
   echo "Waiting for netplay clock to start in session $sess..."
   local synced=0
-  for w in $(seq 1 45); do
+  for w in $(seq 1 75); do
     alive "$HOST_PID" || die "Host died after start in session $sess"
     alive "$JOIN_PID" || die "Guest died after start in session $sess"
     local cur_frames=$(rg -c '\[INPUT_FRAME\] frame=1 ' "$HOST_LOG" 2>/dev/null || echo 0)
     local cur_clocks=$(rg -c 'Netplay clock started' "$ROOT/MAMEHub.log" 2>/dev/null || echo 0)
-    if [[ "${cur_frames:-0}" -ge "$sess" ]] || [[ "${cur_clocks:-0}" -ge "$sess" ]]; then
+    local expected_frames=$((sess + 1))
+    if [[ "${cur_clocks:-0}" -ge "$sess" ]] || [[ "${cur_frames:-0}" -ge "$expected_frames" ]]; then
       synced=1
       echo "Netplay clock / gameplay started in session $sess at t=${w}s (frames=$cur_frames clocks=$cur_clocks)"
       break

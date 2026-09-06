@@ -21,19 +21,32 @@ constexpr int64_t NETPLAY_START_LEAD_MICROS = 3 * 1000 * 1000;
 } // anonymous namespace
 
 CommonBase *netCommon = NULL;
+static std::atomic<bool> s_abortNetCommon{false};
+
+void abortNetCommon() {
+  s_abortNetCommon.store(true);
+}
+
 CommonBase *createNetCommon(const string &userId,
                             const string &privateKeyString,
                             unsigned short _port, const string &lobbyHostname,
                             unsigned short lobbyPort, int _unmeasuredNoise,
                             const string &gameName, bool fakeLag,
                             int directConnectTimeoutSeconds) {
-  netCommon = new Common(userId, privateKeyString, _port, lobbyHostname,
-                         lobbyPort, _unmeasuredNoise, gameName, fakeLag,
-                         directConnectTimeoutSeconds);
-  return netCommon;
+  s_abortNetCommon.store(false);
+  try {
+    netCommon = new Common(userId, privateKeyString, _port, lobbyHostname,
+                           lobbyPort, _unmeasuredNoise, gameName, fakeLag,
+                           directConnectTimeoutSeconds);
+    return netCommon;
+  } catch (...) {
+    netCommon = NULL;
+    throw;
+  }
 }
 
 void deleteNetCommon() {
+  abortNetCommon();
   if (netCommon) {
     delete netCommon;
   }
@@ -211,6 +224,13 @@ Common::Common(const string &_userId, const string &privateKeyString,
   auto const directConnectDeadline = chrono::steady_clock::now() +
       chrono::seconds(directConnectTimeoutSeconds);
   while (!myPeer->initialized()) {
+    if (s_abortNetCommon.load()) {
+      LOG(INFO) << "NetCommon initialization cancelled by user";
+      myPeer->shutdown();
+      server.reset();
+      netEngine->shutdown();
+      throw runtime_error("NetCommon initialization cancelled");
+    }
     if (chrono::steady_clock::now() >= directConnectDeadline) {
       throw runtime_error("Could not establish a direct connection to every player within " +
                           to_string(directConnectTimeoutSeconds) +

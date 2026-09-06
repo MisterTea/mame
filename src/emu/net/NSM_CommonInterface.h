@@ -170,6 +170,7 @@ CommonBase *createNetCommon(const string &userId,
                             const string &gameName, bool fakeLag,
                             int directConnectTimeoutSeconds = 10);
 void deleteNetCommon();
+void abortNetCommon();
 string makePrivateKey();
 
 extern CommonBase *netCommon;
