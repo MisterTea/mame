@@ -9,6 +9,7 @@
 *********************************************************************/
 
 #include "emu.h"
+#include "config.h"
 #include "ui/menu.h"
 
 #include "ui/ui.h"
@@ -76,6 +77,7 @@ menu::global_state::global_state(mame_ui_manager &ui)
 	, m_stack()
 	, m_free()
 	, m_hide(false)
+	, m_in_stack_reset(false)
 {
 	render_manager &render(ui.machine().render());
 
@@ -142,21 +144,32 @@ void menu::global_state::stack_pop()
 		menu->m_parent = std::move(m_free);
 		m_free = std::move(menu);
 		m_ui.machine().ui_input().reset();
+
+		if (!m_in_stack_reset && m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+			m_ui.machine().configuration().save_settings();
 	}
 }
 
 
 void menu::global_state::stack_pop_to_special_main()
 {
+	m_in_stack_reset = true;
 	while (m_stack && !m_stack->is_special_main_menu())
 		stack_pop();
+	m_in_stack_reset = false;
+	if (m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+		m_ui.machine().configuration().save_settings();
 }
 
 
 void menu::global_state::stack_reset()
 {
+	m_in_stack_reset = true;
 	while (m_stack)
 		stack_pop();
+	m_in_stack_reset = false;
+	if (m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+		m_ui.machine().configuration().save_settings();
 }
 
 
@@ -220,6 +233,8 @@ uint32_t menu::global_state::ui_handler(render_container &container)
 			{
 				m_stack->m_active = false;
 				m_stack->menu_deactivated();
+				if (m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+					m_ui.machine().configuration().save_settings();
 			}
 		}
 		return mame_ui_manager::HANDLER_CANCEL;

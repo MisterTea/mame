@@ -408,6 +408,7 @@ private:
 		std::unique_ptr<menu>   m_free;
 
 		bool                    m_hide;
+		bool                    m_in_stack_reset;
 	};
 
 	// this is to satisfy the std::any requirement that objects be copyable
