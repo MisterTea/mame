@@ -267,8 +267,7 @@ bool configuration_manager::load_xml(game_driver const &system, emu_file &file, 
 		for (auto const &type : m_typelist) {
       // JJG: Only load input cfgs.
       if (machine().options().mamehub()) {
-        if (which_type != config_type::CONTROLLER) {
-          osd_printf_debug("SKIPPING CFG TYPE");
+        if (type.first != "input") {
           continue;
         }
       }
