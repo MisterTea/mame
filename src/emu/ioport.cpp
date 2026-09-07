@@ -2582,16 +2582,8 @@ void ioport_manager::frame_update()
     int64_t curTime = curMachineTime.to_msec();
     //sendTime = max(sendTime, curTime - 1000);
 
-		//auto stateChanges = netCommon->getStateChanges(inputData);
-
-		//if (stateChanges.empty()) {
-			// If no changes, align on boundary.  Otherwise, try to send as soon as possible
-			sendTime = (sendTime - (sendTime % 33)) + 33;
-		//}
-		//else {
-			// If changes, align on smaller boundary.
-			//sendTime = (sendTime - (sendTime % 16)) + 16;
-		//}
+		// Align on ~60Hz frame boundary (16ms)
+		sendTime = (sendTime - (sendTime % 16)) + 16;
 
     LOG_EVERY_N(600, INFO) << "SEND TIME: " << sendTime << " CUR TIME: " << curTime;
 
