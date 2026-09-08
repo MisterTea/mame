@@ -9,6 +9,7 @@
 *********************************************************************/
 
 #include "emu.h"
+#include "config.h"
 #include "ui/optsmenu.h"
 
 #include "ui/custui.h"
@@ -124,6 +125,7 @@ bool menu_simple_game_options::handle_item_event(event const &menu_event)
 			menu::stack_push<menu_input_devices>(ui(), container());
 			break;
 		case SAVE_CONFIG:
+			machine().configuration().save_settings();
 			ui().save_main_option();
 			break;
 		}
