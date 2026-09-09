@@ -142,6 +142,7 @@ newoption {
 		{ "android",       "Android"                },
 		{ "asmjs",         "Emscripten/asm.js"      },
 		{ "freebsd",       "FreeBSD"                },
+		{ "ios",           "iOS"                    },
 		{ "netbsd",        "NetBSD"                 },
 		{ "openbsd",       "OpenBSD"                },
 		{ "linux",         "Linux"                  },
@@ -1029,7 +1030,7 @@ end
 
 
 		local version = str_to_version(_OPTIONS["gcc_version"])
-		if string.find(_OPTIONS["gcc"], "clang") or string.find(_OPTIONS["gcc"], "asmjs") or string.find(_OPTIONS["gcc"], "android") then
+		if string.find(_OPTIONS["gcc"], "clang") or string.find(_OPTIONS["gcc"], "asmjs") or string.find(_OPTIONS["gcc"], "android") or string.find(_OPTIONS["gcc"], "ios") then
 			if version < 60000 then
 				print("Clang version 6.0 or later needed")
 				os.exit(-1)

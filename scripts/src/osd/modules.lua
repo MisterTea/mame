@@ -578,7 +578,7 @@ newoption {
 }
 
 if not _OPTIONS["NO_OPENGL"] then
-	if _OPTIONS["targetos"] == "android" then
+	if _OPTIONS["targetos"] == "android" or _OPTIONS["targetos"] == "ios" then
 		_OPTIONS["NO_OPENGL"] = "1"
 	else
 		_OPTIONS["NO_OPENGL"] = "0"
@@ -608,7 +608,7 @@ newoption {
 }
 
 if not _OPTIONS["NO_USE_MIDI"] then
-	if _OPTIONS["targetos"]=="freebsd" or _OPTIONS["targetos"]=="openbsd" or _OPTIONS["targetos"]=="netbsd" or _OPTIONS["targetos"]=="solaris" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"] == "asmjs" or _OPTIONS["targetos"] == "android" then
+	if _OPTIONS["targetos"]=="freebsd" or _OPTIONS["targetos"]=="openbsd" or _OPTIONS["targetos"]=="netbsd" or _OPTIONS["targetos"]=="solaris" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"] == "asmjs" or _OPTIONS["targetos"] == "android" or _OPTIONS["targetos"] == "ios" then
 		_OPTIONS["NO_USE_MIDI"] = "1"
 	else
 		_OPTIONS["NO_USE_MIDI"] = "0"
@@ -690,7 +690,7 @@ if not _OPTIONS["USE_PCAP"] then
 end
 
 if not _OPTIONS["USE_QTDEBUG"] then
-	if _OPTIONS["targetos"]=="windows" or _OPTIONS["targetos"]=="macosx" or _OPTIONS["targetos"]=="solaris" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"]=="asmjs" or _OPTIONS["targetos"]=="android" then
+	if _OPTIONS["targetos"]=="windows" or _OPTIONS["targetos"]=="macosx" or _OPTIONS["targetos"]=="solaris" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"]=="asmjs" or _OPTIONS["targetos"]=="android" or _OPTIONS["targetos"]=="ios" then
 		_OPTIONS["USE_QTDEBUG"] = "0"
 	else
 		_OPTIONS["USE_QTDEBUG"] = "1"

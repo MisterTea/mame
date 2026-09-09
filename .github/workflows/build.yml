@@ -3,9 +3,9 @@ name: Build
 on:
     workflow_dispatch:
     push:
-        branches: [master, mamehub, mamehub_libretro, mamehub_discord]
+        branches: [master, mamehub, mamehub_libretro, mamehub_discord, mamehub_android_discord]
     pull_request:
-        branches: [master, mamehub, mamehub_libretro, mamehub_discord]
+        branches: [master, mamehub, mamehub_libretro, mamehub_discord, mamehub_android_discord]
 
 jobs:
     build_linux:
@@ -133,3 +133,137 @@ jobs:
                   name: mamehub_windows_msvc_beta
                   # A file, directory or wildcard pattern that describes what to upload
                   path: mame/*
+
+    build_android:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: "recursive"
+                  path: "mame"
+
+            - name: Require Discord Android SDK
+              run: |
+                  set -euo pipefail
+                  SO="mame/3rdparty/discord_social_sdk/lib/release/android/arm64-v8a/libdiscord_partner_sdk.so"
+                  AAR="mame/android-project/app/libs/discord_partner_sdk.aar"
+                  if [[ ! -f "$SO" ]]; then
+                    echo "Missing $SO — vendor Discord Social SDK Android arm64-v8a into 3rdparty (see 3rdparty/discord_social_sdk/README.mamehub.md)"
+                    exit 1
+                  fi
+                  if [[ ! -f "$AAR" ]]; then
+                    echo "Missing $AAR — copy discord_partner_sdk.aar into android-project/app/libs/"
+                    exit 1
+                  fi
+
+            - name: Setup JDK
+              uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: "17"
+
+            - name: Setup Android SDK / NDK
+              uses: android-actions/setup-android@v3
+
+            - name: Install NDK + build-tools
+              run: |
+                  set -euo pipefail
+                  sdkmanager --install "ndk;27.0.12077973" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+                  echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> "$GITHUB_ENV"
+                  echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+
+            - name: Install host build deps
+              run: sudo apt-get update -y && sudo apt-get install -y build-essential python3 cmake ninja-build curl rsync
+
+            - name: Build Android deps (OpenSSL / libsodium / SDL2)
+              run: |
+                  set -euo pipefail
+                  chmod +x mame/tests/e2e/mamehub/build_android_deps.sh
+                  mame/tests/e2e/mamehub/build_android_deps.sh
+                  echo "ANDROID_OPENSSL_ROOT=/tmp/mamehub-android-deps/openssl-arm64" >> "$GITHUB_ENV"
+                  echo "ANDROID_SODIUM_ROOT=/tmp/mamehub-android-deps/libsodium-arm64" >> "$GITHUB_ENV"
+                  echo "SDL_INSTALL_ROOT=/tmp/mamehub-android-deps/sdl-arm64" >> "$GITHUB_ENV"
+
+            - name: Cross-compile libmainhub.so (android-arm64)
+              run: |
+                  set -euo pipefail
+                  cd mame
+                  make android-arm64 CONFIG=release NOWERROR=1 REGENIE=1 -j"$(nproc)"
+                  test -f android-project/app/src/main/libs/arm64-v8a/libmainhub.so
+
+            - name: Assemble debug APK
+              run: |
+                  set -euo pipefail
+                  cd mame/android-project
+                  chmod +x gradlew
+                  ./gradlew assembleDebug --no-daemon
+                  test -f app/build/outputs/apk/debug/app-debug.apk
+
+            - name: Stage artifact
+              run: |
+                  set -euo pipefail
+                  mkdir -p out
+                  cp mame/android-project/app/build/outputs/apk/debug/app-debug.apk out/mamehub-android-arm64-debug.apk
+                  cp mame/android-project/app/src/main/libs/arm64-v8a/libmainhub.so out/
+
+            - name: Upload Android APK
+              uses: actions/upload-artifact@v4
+              with:
+                  name: mamehub_android_arm64_beta
+                  path: out/*
+
+    build_ios:
+        runs-on: macos-latest
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: "recursive"
+                  path: "mame"
+
+            - name: Require Discord iOS SDK
+              run: |
+                  set -euo pipefail
+                  XC="mame/3rdparty/discord_social_sdk/lib/release/discord_partner_sdk.xcframework"
+                  if [[ ! -d "$XC/ios-arm64-simulator" || ! -d "$XC/ios-arm64" ]]; then
+                    echo "Missing $XC — vendor Discord Social SDK xcframework into 3rdparty (see 3rdparty/discord_social_sdk/README.mamehub.md)"
+                    exit 1
+                  fi
+
+            - name: Install host deps
+              run: brew install cmake rsync || true
+
+            - name: Build iOS simulator deps (OpenSSL / libsodium / SDL2)
+              run: |
+                  set -euo pipefail
+                  chmod +x mame/tests/e2e/mamehub/build_ios_deps.sh
+                  mame/tests/e2e/mamehub/build_ios_deps.sh
+                  {
+                    echo "IOS_OPENSSL_ROOT=/tmp/mamehub-ios-deps/openssl-sim-arm64"
+                    echo "IOS_SODIUM_ROOT=/tmp/mamehub-ios-deps/libsodium-sim-arm64"
+                    echo "SDL_INSTALL_ROOT=/tmp/mamehub-ios-deps/sdl-sim-arm64"
+                  } >> "$GITHUB_ENV"
+
+            - name: Cross-compile + package iOS Simulator app
+              run: |
+                  set -euo pipefail
+                  cd mame
+                  make ios-simulator CONFIG=release NOWERROR=1 REGENIE=1 -j"$(sysctl -n hw.ncpu)"
+                  chmod +x ios-project/package_app.sh
+                  ./ios-project/package_app.sh
+                  test -d ios-project/build/ios-simulator/MAMEHub.app
+
+            - name: Stage artifact
+              run: |
+                  set -euo pipefail
+                  mkdir -p out
+                  ditto -c -k --sequesterRsrc --keepParent \
+                    mame/ios-project/build/ios-simulator/MAMEHub.app \
+                    out/MAMEHub-ios-simulator.zip
+
+            - name: Upload iOS Simulator app
+              uses: actions/upload-artifact@v4
+              with:
+                  name: mamehub_ios_simulator_beta
+                  path: out/*

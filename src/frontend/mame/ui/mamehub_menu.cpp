@@ -44,6 +44,36 @@ enum
 	ITEM_LEAVE_LOBBY
 };
 
+bool ensure_discord_authenticated(mame_ui_manager &mui)
+{
+	auto &opts = mui.machine().options();
+	if (*opts.discord_mock())
+		mamehub::discord_service::set_mock_user(opts.discord_mock());
+
+	if (mamehub::discord_service::instance().is_authenticated())
+		return true;
+
+	if (!opts.discord_auth() && !mamehub::discord_service::is_mock_enabled())
+	{
+		mui.popup_time(4, "%s", _("Discord auth is disabled (-nodiscord_auth)"));
+		return false;
+	}
+
+	mamehub::discord_identity identity;
+	std::string error;
+	if (!mamehub::discord_service::has_cached_token() && !mamehub::discord_service::is_mock_enabled())
+		mui.popup_time(3, "%s", _("Waiting for Discord authorization..."));
+
+	if (!mamehub::discord_service::instance().authenticate(identity, error))
+	{
+		mui.popup_time(5, _("Discord authorization failed: %s"), error.c_str());
+		return false;
+	}
+
+	mui.popup_time(2, _("Signed in as %s"), identity.display_name.c_str());
+	return true;
+}
+
 // Relative present-day popularity for recognizable software platforms.  Keep
 // these values constant so menu order is deterministic; aliases and regional
 // variants intentionally share a score.  Every machine not listed here has a
@@ -217,10 +247,14 @@ bool menu_mamehub_main::handle(event const *ev)
 		switch (uintptr_t(ev->itemref))
 		{
 		case ITEM_HOST:
+			if (!ensure_discord_authenticated(ui()))
+				return true;
 			menu::stack_push<menu_mamehub_machine>(ui(), container());
 			return true;
 
 		case ITEM_JOIN:
+			if (!ensure_discord_authenticated(ui()))
+				return true;
 			menu::stack_push<menu_mamehub_join>(ui(), container());
 			return true;
 
@@ -249,10 +283,14 @@ bool menu_mamehub_main::custom_mouse_down()
 		switch (uintptr_t(item(h).ref()))
 		{
 		case ITEM_HOST:
+			if (!ensure_discord_authenticated(ui()))
+				return true;
 			menu::stack_push<menu_mamehub_machine>(ui(), container());
 			return true;
 
 		case ITEM_JOIN:
+			if (!ensure_discord_authenticated(ui()))
+				return true;
 			menu::stack_push<menu_mamehub_join>(ui(), container());
 			return true;
 

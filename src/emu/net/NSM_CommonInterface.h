@@ -26,8 +26,13 @@
 
 #include "Headers.hpp"
 #undef LOGFATAL
+#if defined(_WIN32)
 #define LOGFATAL \
   LOG(ERROR) << ust::generate() << "\n", system("pause"), LOG(FATAL)
+#else
+#define LOGFATAL \
+  LOG(ERROR) << ust::generate() << "\n", LOG(FATAL)
+#endif
 
 #define SHA1(x) "S" #x
 

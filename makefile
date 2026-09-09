@@ -1245,6 +1245,33 @@ android-x64: android-ndk generate $(PROJECTDIR_SDL)/$(MAKETYPE)-android-x64/Make
 	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR_SDL)/$(MAKETYPE)-android-x64 config=$(CONFIG)
 
 #-------------------------------------------------
+# ios (device / simulator)
+#-------------------------------------------------
+
+.PHONY: ios-sdk
+ios-sdk:
+ifndef SDL_INSTALL_ROOT
+	$(error SDL_INSTALL_ROOT is not set)
+endif
+	$(eval CLANG_VERSION := $(shell xcrun --sdk iphonesimulator clang -dumpversion 2>/dev/null))
+
+$(PROJECTDIR_SDL)/$(MAKETYPE)-ios-simulator/Makefile: makefile $(SCRIPTS) $(GENIE)
+	$(SILENT) $(GENIE) $(PARAMS) --gcc=ios-simulator --gcc_version=$(CLANG_VERSION) --osd=sdl --targetos=ios --PLATFORM=arm64 --NOASM=1 --with-ios=15.1 $(MAKETYPE)
+
+.PHONY: ios-simulator
+ios-simulator: ios-sdk generate $(PROJECTDIR_SDL)/$(MAKETYPE)-ios-simulator/Makefile
+	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR_SDL)/$(MAKETYPE)-ios-simulator config=$(CONFIG) precompile
+	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR_SDL)/$(MAKETYPE)-ios-simulator config=$(CONFIG)
+
+$(PROJECTDIR_SDL)/$(MAKETYPE)-ios-arm64/Makefile: makefile $(SCRIPTS) $(GENIE)
+	$(SILENT) $(GENIE) $(PARAMS) --gcc=ios-arm64 --gcc_version=$(CLANG_VERSION) --osd=sdl --targetos=ios --PLATFORM=arm64 --NOASM=1 --with-ios=15.1 $(MAKETYPE)
+
+.PHONY: ios-arm64
+ios-arm64: ios-sdk generate $(PROJECTDIR_SDL)/$(MAKETYPE)-ios-arm64/Makefile
+	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR_SDL)/$(MAKETYPE)-ios-arm64 config=$(CONFIG) precompile
+	$(SILENT) $(MAKE) $(MAKEPARAMS) -C $(PROJECTDIR_SDL)/$(MAKETYPE)-ios-arm64 config=$(CONFIG)
+
+#-------------------------------------------------
 # asmjs / Emscripten
 #-------------------------------------------------
 

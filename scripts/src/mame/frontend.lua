@@ -42,6 +42,27 @@ includedirs {
 	GEN_DIR  .. "emu/layout",
 }
 
+if _OPTIONS["targetos"] == "android" and os.getenv("ANDROID_OPENSSL_ROOT") then
+	includedirs {
+		os.getenv("ANDROID_OPENSSL_ROOT") .. "/include",
+	}
+end
+if _OPTIONS["targetos"] == "android" and os.getenv("ANDROID_SODIUM_ROOT") then
+	includedirs {
+		os.getenv("ANDROID_SODIUM_ROOT") .. "/include",
+	}
+end
+if _OPTIONS["targetos"] == "ios" and os.getenv("IOS_OPENSSL_ROOT") then
+	includedirs {
+		os.getenv("IOS_OPENSSL_ROOT") .. "/include",
+	}
+end
+if _OPTIONS["targetos"] == "ios" and os.getenv("IOS_SODIUM_ROOT") then
+	includedirs {
+		os.getenv("IOS_SODIUM_ROOT") .. "/include",
+	}
+end
+
 includedirs {
 	ext_includedir("asio"),
 	ext_includedir("expat"),

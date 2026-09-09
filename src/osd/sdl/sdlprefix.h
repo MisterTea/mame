@@ -73,6 +73,13 @@ struct _IO_FILE {};  //_IO_FILE is an opaque type in the emscripten libc which m
 #define SDLMAME_ANDROID 1
 #endif
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE
+#define SDLMAME_IOS 1
+#endif
+#endif
+
 // fix for Ubuntu 8.10
 #ifdef _FORTIFY_SOURCE
 #undef _FORTIFY_SOURCE

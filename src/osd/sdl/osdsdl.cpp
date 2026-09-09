@@ -23,6 +23,10 @@
 #include <cstring>
 
 
+#if defined(SDLMAME_ANDROID)
+#include <SDL2/SDL_hints.h>
+#endif
+
 namespace {
 
 //============================================================
@@ -260,8 +264,12 @@ void sdl_osd_interface::init(running_machine &machine)
 		}
 	}
 
-#if defined(SDLMAME_ANDROID)
+#if defined(SDLMAME_ANDROID) || defined(SDLMAME_IOS)
 	SDL_SetHint(SDL_HINT_VIDEO_EXTERNAL_CONTEXT, "1");
+	// Keep the activity in landscape. An empty SDL_HINT_ORIENTATIONS plus a
+	// resizable window otherwise promotes to FULL_USER and the emulator can
+	// rotate to portrait, which stretches 4:3 games on a phone.
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
 	/* Initialize SDL */
 

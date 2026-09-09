@@ -107,7 +107,7 @@ if BASE_TARGETOS=="unix" then
 				backtick(sdlconfigcmd() .. " --cflags | sed 's:/SDL2::'"),
 			}
 		end
-	elseif _OPTIONS["targetos"]=="android" then
+	elseif _OPTIONS["targetos"]=="android" or _OPTIONS["targetos"]=="ios" then
 		buildoptions {
 			backtick(sdlconfigcmd() .. " --cflags | sed 's:/SDL2::'"),
 		}
@@ -150,6 +150,12 @@ elseif _OPTIONS["targetos"]=="macosx" then
 		"SDLMAME_MACOSX",
 		"SDLMAME_DARWIN",
 	}
+elseif _OPTIONS["targetos"]=="ios" then
+	defines {
+		"SDLMAME_IOS",
+		"SDLMAME_DARWIN",
+		"SDLMAME_UNIX",
+	}
 elseif _OPTIONS["targetos"]=="freebsd" then
 	buildoptions {
 		-- /usr/local/include is not considered a system include director on FreeBSD.  GL.h resides there and throws warnings
@@ -160,6 +166,11 @@ end
 configuration { "osx*" }
 	includedirs {
 		MAME_DIR .. "3rdparty/bx/include/compat/osx",
+	}
+
+configuration { "ios*" }
+	includedirs {
+		MAME_DIR .. "3rdparty/bx/include/compat/ios",
 	}
 
 configuration { "freebsd" }
