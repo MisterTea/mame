@@ -25,12 +25,15 @@
 #include "strconv.h"
 
 #include <SDL2/SDL.h>
+#if defined(SDLMAME_IOS)
+#include <SDL2/SDL_main.h>
+#endif
 
 // only for oslog callback
 #include <functional>
 
 #ifdef SDLMAME_UNIX
-#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID))
+#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID)) && (!defined(SDLMAME_IOS))
 #ifndef SDLMAME_HAIKU
 #include <fontconfig/fontconfig.h>
 #endif
@@ -79,7 +82,7 @@ int main(int argc, char** argv)
 	// Initialize crash diagnostics
 	diagnostics_module::get_instance()->init_crash_diagnostics();
 
-#if defined(SDLMAME_ANDROID)
+#if defined(SDLMAME_ANDROID) || defined(SDLMAME_IOS)
 	/* Enable standard application logging */
 	SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_VERBOSE);
 #endif
@@ -88,7 +91,7 @@ int main(int argc, char** argv)
 
 #ifdef SDLMAME_UNIX
 	sdl_entered_debugger = 0;
-#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID))
+#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID)) && (!defined(SDLMAME_IOS))
 	FcInit();
 #endif
 #endif
@@ -101,7 +104,7 @@ int main(int argc, char** argv)
 	}
 
 #ifdef SDLMAME_UNIX
-#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID))
+#if (!defined(SDLMAME_MACOSX)) && (!defined(SDLMAME_HAIKU)) && (!defined(SDLMAME_EMSCRIPTEN)) && (!defined(SDLMAME_ANDROID)) && (!defined(SDLMAME_IOS))
 	if (!sdl_entered_debugger)
 	{
 		FcFini();

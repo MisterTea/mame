@@ -1,11 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 24
+    namespace 'org.mamedev.mame'
+    compileSdkVersion 36
+    buildToolsVersion '36.0.0'
 
     defaultConfig {
         applicationId "org.mamedev.mame"
         minSdkVersion 24
+        targetSdkVersion 36
         ndk {
             moduleName 'main'
         }
@@ -26,6 +29,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
+}
+
+dependencies {
+    implementation files('libs/discord_partner_sdk.aar')
+    implementation 'androidx.browser:browser:1.8.0'
+    implementation 'androidx.core:core:1.13.1'
 }
 
 task copyFiles_bgfx(type: Copy)

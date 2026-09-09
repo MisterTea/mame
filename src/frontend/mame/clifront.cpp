@@ -50,6 +50,7 @@
 #include <future>
 
 #include "NSM_Common.h"
+#include "PortMappingHandler.hpp"
 
 //**************************************************************************
 //  CONSTANTS
@@ -281,19 +282,24 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
     if (*m_options.discord_mock()) {
       mamehub::discord_service::set_mock_user(m_options.discord_mock());
     }
+    // Discord sign-in is required by default on all platforms at MAMEHub
+    // startup. Opt out with -nodiscord_auth (Offline-only / local testing).
+    bool const mock_enabled = mamehub::discord_service::is_mock_enabled();
     if (m_options.discord_auth()) {
       if (!mamehub::discord_service::instance().is_authenticated()) {
         mamehub::discord_identity discordIdentity;
         string discordError;
-        if (!mamehub::discord_service::has_cached_token() && !mamehub::discord_service::is_mock_enabled()) {
-          osd_printf_info("Waiting for Discord authorization in browser...\n");
+        if (!mamehub::discord_service::has_cached_token() && !mock_enabled) {
+          osd_printf_info("Waiting for Discord authorization...\n");
         }
         if (!mamehub::discord_service::instance().authenticate(discordIdentity, discordError)) {
           osd_printf_warning("Discord authorization failed: %s\n", discordError.c_str());
-        } else {
-          osd_printf_info("Signed in to Discord as %s\n", discordIdentity.display_name.c_str());
+          throw emu_fatalerror("Discord authorization is required (use -nodiscord_auth to disable)");
         }
+        osd_printf_info("Signed in to Discord as %s\n", discordIdentity.display_name.c_str());
       }
+    } else {
+      osd_printf_info("Discord authorization disabled (-nodiscord_auth)\n");
     }
 
     // If a private lobby was provided on the command line, perform direct connection
@@ -303,11 +309,10 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
       if (m_options.discord_auth() && mamehub::discord_service::instance().is_authenticated()) {
         auto const &discordIdentity = mamehub::discord_service::instance().current_identity();
         userId = to_string(discordIdentity.id);
-        string selectedGame;
-        if (m_options.discord_host()) {
-          selectedGame = m_options.system_name();
-          selectedGame += ";" + m_options.software_name();
-        }
+        // Both host and guest must advertise the same game string so lobby
+        // join validation succeeds (empty guest game is rejected by the host).
+        string selectedGame = m_options.system_name();
+        selectedGame += ";" + m_options.software_name();
         discordDirectory = std::make_unique<mamehub::discord_directory_server>(
             discordIdentity, m_options.discord_lobby(), selectedGame,
             m_options.discord_host(), m_options.discord_players(),
@@ -328,6 +333,8 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
         unsigned short const directoryPort = discordDirectory->port();
         bool const fakeLag = m_options.fake_lag();
         int const connectTimeout = m_options.direct_connect_timeout();
+        if (mamehub::discord_service::is_mock_enabled())
+          wga::DISABLE_PORT_MAPPING = true;
         auto connection = std::async(std::launch::async, [userId, privateKey, peerPort, directoryPort, gameString, fakeLag, connectTimeout] {
           return createNetCommon(userId, privateKey, peerPort, "", directoryPort, 50, gameString, fakeLag, connectTimeout);
         });

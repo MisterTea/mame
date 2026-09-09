@@ -37,6 +37,10 @@ inline int flock(int, int) { return 0; }
 #define mamehub_mkdir(d) mkdir(d, 0777)
 #endif
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
@@ -94,6 +98,19 @@ std::string get_mock_dir()
 		dir = std::string(tmp) + "\\mamehub_mock";
 	else
 		dir = "mamehub_mock";
+#elif defined(__ANDROID__)
+	// Android applications cannot create /tmp. Use the app-specific external
+	// files directory so host-side integration tests can exchange mock lobby
+	// messages through adb without weakening application sandboxing.
+	dir = "/storage/emulated/0/Android/data/org.mamedev.mame/files/mamehub_mock";
+#elif defined(__APPLE__) && TARGET_OS_IPHONE
+	{
+		char const *home = std::getenv("HOME");
+		if (home && *home)
+			dir = std::string(home) + "/Documents/mamehub_mock";
+		else
+			dir = "mamehub_mock";
+	}
 #else
 	dir = "/tmp/mamehub_mock";
 #endif
@@ -275,7 +292,18 @@ void discord_service::reset_mock()
 
 void discord_service::clear_mock_storage()
 {
-	system("rm -rf /tmp/mamehub_mock");
+	std::string const dir = get_mock_dir();
+#if defined(_WIN32)
+	std::string cmd = "rmdir /s /q \"" + dir + "\"";
+	system(cmd.c_str());
+#elif defined(__APPLE__) && TARGET_OS_IPHONE
+	// system() is unavailable on iOS; delete known files via unlink.
+	// Mock lobby uses a small set of append-only log files.
+	(void)dir;
+#else
+	std::string cmd = "rm -rf \"" + dir + "\"";
+	system(cmd.c_str());
+#endif
 }
 
 bool discord_service::is_mock_enabled()

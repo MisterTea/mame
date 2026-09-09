@@ -187,3 +187,152 @@ jobs:
                   files: mamehub_windows_msvc_beta.zip
                   fail_on_unmatched_files: true
                   tag_name: mamehub_beta_2
+
+    build_and_release_android:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: "recursive"
+                  path: "mame"
+
+            - name: Require Discord Android SDK
+              run: |
+                  set -euo pipefail
+                  test -f mame/3rdparty/discord_social_sdk/lib/release/android/arm64-v8a/libdiscord_partner_sdk.so
+                  test -f mame/android-project/app/libs/discord_partner_sdk.aar
+
+            - name: Setup JDK
+              uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: "17"
+
+            - name: Setup Android SDK / NDK
+              uses: android-actions/setup-android@v3
+
+            - name: Install NDK + build-tools
+              run: |
+                  set -euo pipefail
+                  sdkmanager --install "ndk;27.0.12077973" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+                  echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> "$GITHUB_ENV"
+                  echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+
+            - name: Install host build deps
+              run: sudo apt-get update -y && sudo apt-get install -y build-essential python3 cmake ninja-build curl rsync
+
+            - name: Build Android deps
+              run: |
+                  set -euo pipefail
+                  chmod +x mame/tests/e2e/mamehub/build_android_deps.sh
+                  mame/tests/e2e/mamehub/build_android_deps.sh
+                  echo "ANDROID_OPENSSL_ROOT=/tmp/mamehub-android-deps/openssl-arm64" >> "$GITHUB_ENV"
+                  echo "ANDROID_SODIUM_ROOT=/tmp/mamehub-android-deps/libsodium-arm64" >> "$GITHUB_ENV"
+                  echo "SDL_INSTALL_ROOT=/tmp/mamehub-android-deps/sdl-arm64" >> "$GITHUB_ENV"
+
+            - name: Cross-compile + APK
+              run: |
+                  set -euo pipefail
+                  cd mame
+                  make android-arm64 CONFIG=release NOWERROR=1 REGENIE=1 -j"$(nproc)"
+                  cd android-project
+                  chmod +x gradlew
+                  ./gradlew assembleDebug --no-daemon
+
+            - name: Stage zip
+              run: |
+                  set -euo pipefail
+                  mkdir -p mamehub_android_arm64_beta
+                  cp mame/android-project/app/build/outputs/apk/debug/app-debug.apk \
+                    mamehub_android_arm64_beta/mamehub-android-arm64-debug.apk
+                  zip -r mamehub_android_arm64_beta.zip mamehub_android_arm64_beta
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: mamehub_android_arm64_beta
+                  path: mamehub_android_arm64_beta.zip
+
+            - name: Update mamehub beta tag
+              uses: richardsimko/update-tag@v1
+              with:
+                  tag_name: mamehub_beta_2
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  body: |
+                      New mamehub version.
+                  files: mamehub_android_arm64_beta.zip
+                  fail_on_unmatched_files: true
+                  tag_name: mamehub_beta_2
+
+    build_and_release_ios:
+        runs-on: macos-latest
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: "recursive"
+                  path: "mame"
+
+            - name: Require Discord iOS SDK
+              run: |
+                  set -euo pipefail
+                  XC="mame/3rdparty/discord_social_sdk/lib/release/discord_partner_sdk.xcframework"
+                  test -d "$XC/ios-arm64-simulator"
+                  test -d "$XC/ios-arm64"
+
+            - name: Install host deps
+              run: brew install cmake rsync || true
+
+            - name: Build iOS simulator deps
+              run: |
+                  set -euo pipefail
+                  chmod +x mame/tests/e2e/mamehub/build_ios_deps.sh
+                  mame/tests/e2e/mamehub/build_ios_deps.sh
+                  {
+                    echo "IOS_OPENSSL_ROOT=/tmp/mamehub-ios-deps/openssl-sim-arm64"
+                    echo "IOS_SODIUM_ROOT=/tmp/mamehub-ios-deps/libsodium-sim-arm64"
+                    echo "SDL_INSTALL_ROOT=/tmp/mamehub-ios-deps/sdl-sim-arm64"
+                  } >> "$GITHUB_ENV"
+
+            - name: Cross-compile + package
+              run: |
+                  set -euo pipefail
+                  cd mame
+                  make ios-simulator CONFIG=release NOWERROR=1 REGENIE=1 -j"$(sysctl -n hw.ncpu)"
+                  chmod +x ios-project/package_app.sh
+                  ./ios-project/package_app.sh
+
+            - name: Stage zip
+              run: |
+                  set -euo pipefail
+                  ditto -c -k --sequesterRsrc --keepParent \
+                    mame/ios-project/build/ios-simulator/MAMEHub.app \
+                    mamehub_ios_simulator_beta.zip
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: mamehub_ios_simulator_beta
+                  path: mamehub_ios_simulator_beta.zip
+
+            - name: Update mamehub beta tag
+              uses: richardsimko/update-tag@v1
+              with:
+                  tag_name: mamehub_beta_2
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  body: |
+                      New mamehub version.
+                  files: mamehub_ios_simulator_beta.zip
+                  fail_on_unmatched_files: true
+                  tag_name: mamehub_beta_2

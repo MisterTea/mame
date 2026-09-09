@@ -1216,6 +1216,11 @@ project "bx"
 			MAME_DIR .. "3rdparty/bx/include/compat/osx",
 		}
 
+	configuration { "ios*" }
+		includedirs {
+			MAME_DIR .. "3rdparty/bx/include/compat/ios",
+		}
+
 	configuration { "freebsd" }
 		includedirs {
 			MAME_DIR .. "3rdparty/bx/include/compat/freebsd",
@@ -1295,6 +1300,11 @@ project "bimg"
 	configuration { "osx*" }
 		includedirs {
 			MAME_DIR .. "3rdparty/bx/include/compat/osx",
+		}
+
+	configuration { "ios*" }
+		includedirs {
+			MAME_DIR .. "3rdparty/bx/include/compat/ios",
 		}
 
 	configuration { "freebsd" }
@@ -1459,6 +1469,11 @@ end
 			MAME_DIR .. "3rdparty/bx/include/compat/osx",
 		}
 
+	configuration { "ios*" }
+		includedirs {
+			MAME_DIR .. "3rdparty/bx/include/compat/ios",
+		}
+
 	configuration { "freebsd" }
 		includedirs {
 			MAME_DIR .. "3rdparty/bx/include/compat/freebsd",
@@ -1581,6 +1596,17 @@ end
 		files {
 			MAME_DIR .. "3rdparty/bgfx/src/glcontext_eagl.mm",
 			MAME_DIR .. "3rdparty/bgfx/src/glcontext_nsgl.mm",
+			MAME_DIR .. "3rdparty/bgfx/src/renderer_mtl.mm",
+		}
+		buildoptions {
+			"-x objective-c++",
+			"-D BGFX_CONFIG_MULTITHREADED=0",
+		}
+	end
+
+	if _OPTIONS["targetos"]=="ios" then
+		files {
+			MAME_DIR .. "3rdparty/bgfx/src/glcontext_eagl.mm",
 			MAME_DIR .. "3rdparty/bgfx/src/renderer_mtl.mm",
 		}
 		buildoptions {
@@ -2111,6 +2137,22 @@ project "wga"
 		MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
 		MAME_DIR .. "3rdparty/wga/peer/external/json/include",
 	}
+	if _OPTIONS["targetos"] == "android" then
+		if os.getenv("ANDROID_OPENSSL_ROOT") then
+			includedirs { os.getenv("ANDROID_OPENSSL_ROOT") .. "/include" }
+		end
+		if os.getenv("ANDROID_SODIUM_ROOT") then
+			includedirs { os.getenv("ANDROID_SODIUM_ROOT") .. "/include" }
+		end
+	end
+	if _OPTIONS["targetos"] == "ios" then
+		if os.getenv("IOS_OPENSSL_ROOT") then
+			includedirs { os.getenv("IOS_OPENSSL_ROOT") .. "/include" }
+		end
+		if os.getenv("IOS_SODIUM_ROOT") then
+			includedirs { os.getenv("IOS_SODIUM_ROOT") .. "/include" }
+		end
+	end
 
   files {
     MAME_DIR .. "3rdparty/wga/peer/src/base/BiDirectionalRpc.cpp",
