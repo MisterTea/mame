@@ -9,7 +9,7 @@ jobs:
 
         steps:
             - name: Update OS
-              run: sudo apt update -y && sudo apt-get install -y git build-essential python3 libsdl2-dev libsdl2-ttf-dev libfontconfig-dev libpulse-dev qtbase5-dev qtbase5-dev-tools qt5-qmake p7zip-full libsodium-dev
+              run: sudo apt update -y && sudo apt-get install -y git build-essential python3 libsdl2-dev libsdl2-ttf-dev libfontconfig-dev libpulse-dev qt6-base-dev qt6-base-dev-tools p7zip-full libsodium-dev
 
             - uses: actions/checkout@v4
               with:
@@ -51,7 +51,7 @@ jobs:
 
         steps:
             - name: Update OS
-              run: brew install sdl2 sdl2_ttf openssl
+              run: brew install sdl3 sdl3_ttf openssl libsodium
 
             - uses: actions/checkout@v4
               with:
@@ -59,7 +59,7 @@ jobs:
                   path: "mame"
 
             - name: make mame
-              run: pushd mame && make USE_LIBSDL=1 VERBOSE=1 -j2 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.dylib . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
+              run: pushd mame && make VERBOSE=1 -j2 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.dylib . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
