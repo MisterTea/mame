@@ -695,6 +695,10 @@ elseif (_OPTIONS["PLATFORM"] == "x86") or (_OPTIONS["PLATFORM"] == "arm64") then
 		}
 end
 
+	defines {
+		"WGA_MAMEHUB", -- use MAME's asio.h from WGA
+	}
+
 	if _ACTION == "gmake" or _ACTION == "ninja" then
 
 	--we compile C-only to C99 standard with GNU extensions

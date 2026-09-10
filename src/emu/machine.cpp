@@ -187,12 +187,9 @@ void running_machine::start()
   if(options().mamehub())
   {
   }
-  else
-  {
-	if (newbase != 0)
+	else if (newbase != 0)
 	{
 		m_base_time = newbase;
-  }
 
 		std::string rtc_str = options().rtc_time();
 		if (!rtc_str.empty() && rtc_str != "0")
@@ -418,6 +415,11 @@ int running_machine::run(bool quiet)
 		// handle initial load
 		if (m_saveload_schedule != saveload_schedule::NONE)
 			handle_saveload();
+
+		// Direct networking is prepared from the lobby, but the shared clock
+		// must not start until this game has loaded on every peer.
+		if (netCommon)
+			netCommon->startNetplayClock();
 
 		export_http_api();
 

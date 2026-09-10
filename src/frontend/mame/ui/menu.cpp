@@ -14,6 +14,7 @@
 #include "ui/ui.h"
 
 #include "cheat.h"
+#include "config.h"
 #include "mame.h"
 
 #include "corestr.h"
@@ -75,6 +76,7 @@ menu::global_state::global_state(mame_ui_manager &ui)
 	, m_stack()
 	, m_free()
 	, m_hide(false)
+	, m_in_stack_reset(false)
 	, m_target(nullptr)
 	, m_current_pointer(-1)
 	, m_pointer_type(ui_event::pointer::UNKNOWN)
@@ -178,14 +180,32 @@ void menu::global_state::stack_pop()
 			}
 		}
 		m_free->machine().ui_input().reset();
+
+		if (!m_in_stack_reset && m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+			m_ui.machine().configuration().save_settings();
 	}
+}
+
+
+void menu::global_state::stack_pop_to_special_main()
+{
+	m_in_stack_reset = true;
+	while (m_stack && !m_stack->is_special_main_menu())
+		stack_pop();
+	m_in_stack_reset = false;
+	if (m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+		m_ui.machine().configuration().save_settings();
 }
 
 
 void menu::global_state::stack_reset()
 {
+	m_in_stack_reset = true;
 	while (m_stack)
 		stack_pop();
+	m_in_stack_reset = false;
+	if (m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+		m_ui.machine().configuration().save_settings();
 }
 
 
@@ -266,6 +286,8 @@ uint32_t menu::global_state::ui_handler()
 				{
 					m_stack->m_active = false;
 					m_stack->menu_deactivated();
+					if (m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+						m_ui.machine().configuration().save_settings();
 				}
 			}
 
@@ -1909,6 +1931,12 @@ void menu::select_last_item()
 
 void menu::validate_selection(int scandir)
 {
+	if (m_items.empty())
+	{
+		m_selected = -1;
+		return;
+	}
+
 	// clamp to be in range
 	if (m_selected < 0)
 		m_selected = 0;
@@ -1916,8 +1944,16 @@ void menu::validate_selection(int scandir)
 		m_selected = m_items.size() - 1;
 
 	// skip past unselectable items
+	int const initial_selected = m_selected;
 	while (!is_selectable(m_items[m_selected]))
+	{
 		m_selected = (m_selected + m_items.size() + scandir) % m_items.size();
+		if (m_selected == initial_selected)
+		{
+			m_selected = -1;
+			return;
+		}
+	}
 }
 
 

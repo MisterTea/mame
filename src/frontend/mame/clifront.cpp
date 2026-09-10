@@ -88,6 +88,24 @@
 
 namespace {
 
+constexpr char MAMEHUB_LOG_FILENAME[] = "MAMEHub.log";
+constexpr int MAMEHUB_LOG_FILE_COUNT = 10;
+
+void rotate_mamehub_logs()
+{
+	// Keep the current run plus nine previous runs.  Remove the destination
+	// first because std::rename does not replace an existing file on Windows.
+	for (int index = MAMEHUB_LOG_FILE_COUNT - 2; index >= 0; --index)
+	{
+		std::string const source = index
+				? util::string_format("%s.%d", MAMEHUB_LOG_FILENAME, index)
+				: MAMEHUB_LOG_FILENAME;
+		std::string const destination = util::string_format("%s.%d", MAMEHUB_LOG_FILENAME, index + 1);
+		std::remove(destination.c_str());
+		std::rename(source.c_str(), destination.c_str());
+	}
+}
+
 //**************************************************************************
 //  COMMAND-LINE OPTIONS
 //**************************************************************************
@@ -261,11 +279,14 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 	}
 
   // Setup easylogging configurations
+  rotate_mamehub_logs();
   int argc=0;
   char** argv=NULL;
   el::Configurations defaultConf = wga::LogHandler::SetupLogHandler(&argc, &argv);
-  defaultConf.setGlobally(el::ConfigurationType::Filename, "MAMEHub.log");
+  defaultConf.setGlobally(el::ConfigurationType::Filename, MAMEHUB_LOG_FILENAME);
   defaultConf.setGlobally(el::ConfigurationType::ToFile, "true");
+  defaultConf.set(el::Level::Info, el::ConfigurationType::Enabled, "true");
+  defaultConf.set(el::Level::Info, el::ConfigurationType::ToFile, "true");
   el::Loggers::setVerboseLevel(0);
 
   // Reconfigure default logger to apply settings above

@@ -24,7 +24,7 @@
 #endif
 
 #define ASIO_HEADER_ONLY
-#define ASIO_STANDALONE
+#define ASIO_STANDALONE 1
 #define ASIO_SEPARATE_COMPILATION
 
 #include <asio.hpp>
