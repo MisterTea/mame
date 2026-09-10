@@ -83,6 +83,13 @@ else
   echo "OpenSSL already at $OPENSSL_PREFIX"
 fi
 
+# OpenSSL Configure unsets CC/CXX; restore NDK compilers for later deps.
+CC="$TOOLCHAIN/bin/aarch64-linux-android${API}-clang"
+CXX="$TOOLCHAIN/bin/aarch64-linux-android${API}-clang++"
+AR="$TOOLCHAIN/bin/llvm-ar"
+RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
+STRIP="$TOOLCHAIN/bin/llvm-strip"
+
 # ---- libsodium ----
 if [[ ! -f "$SODIUM_PREFIX/lib/libsodium.a" ]]; then
   echo "== libsodium =="
