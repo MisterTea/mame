@@ -18,7 +18,7 @@ public:
   }
 	~mamehub_manager();
 
-  void ui(mame_ui_manager& ui_manager, render_container &container);
+  void ui(mame_ui_manager& ui_manager, render_target &target);
   bool handleChat(running_machine& machine, ui_event& event);
 private:
   static mamehub_manager* m_manager;

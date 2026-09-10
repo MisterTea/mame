@@ -14,18 +14,39 @@
 
 using namespace std;
 
+namespace {
+
+constexpr int64_t NETPLAY_START_LEAD_MICROS = 3 * 1000 * 1000;
+
+} // anonymous namespace
+
 CommonBase *netCommon = NULL;
+static std::atomic<bool> s_abortNetCommon{false};
+
+void abortNetCommon() {
+  s_abortNetCommon.store(true);
+}
+
 CommonBase *createNetCommon(const string &userId,
                             const string &privateKeyString,
                             unsigned short _port, const string &lobbyHostname,
                             unsigned short lobbyPort, int _unmeasuredNoise,
-                            const string &gameName, bool fakeLag) {
-  netCommon = new Common(userId, privateKeyString, _port, lobbyHostname,
-                         lobbyPort, _unmeasuredNoise, gameName, fakeLag);
-  return netCommon;
+                            const string &gameName, bool fakeLag,
+                            int directConnectTimeoutSeconds) {
+  s_abortNetCommon.store(false);
+  try {
+    netCommon = new Common(userId, privateKeyString, _port, lobbyHostname,
+                           lobbyPort, _unmeasuredNoise, gameName, fakeLag,
+                           directConnectTimeoutSeconds);
+    return netCommon;
+  } catch (...) {
+    netCommon = NULL;
+    throw;
+  }
 }
 
 void deleteNetCommon() {
+  abortNetCommon();
   if (netCommon) {
     delete netCommon;
   }
@@ -147,8 +168,11 @@ extern volatile bool memoryBlocksLocked;
 Common::Common(const string &_userId, const string &privateKeyString,
                unsigned short _port, const string &lobbyHostname,
                unsigned short lobbyPort, int _unmeasuredNoise,
-               const string &gameName, bool fakeLag)
-    : userId(_userId),
+               const string &gameName, bool fakeLag,
+               int directConnectTimeoutSeconds)
+    : machineTimeShift(wga::GlobalClock::currentTimeMicros()),
+      netplayClockStarted(false),
+      userId(_userId),
       lastSendTime(0),
       unmeasuredNoise(_unmeasuredNoise),
       cachedInputValues(-1, {}) {
@@ -157,21 +181,23 @@ Common::Common(const string &_userId, const string &privateKeyString,
     wga::ALL_RPC_FLAKY = true;
   }
 
-  auto startConnectTime =
-      chrono::duration_cast<chrono::microseconds>(
-          chrono::high_resolution_clock::now().time_since_epoch())
-          .count();
   netEngine.reset(new wga::NetEngine());
   // privateKey =
   // wga::CryptoHandler::makePrivateKeyFromPassword(privateKeyString +
   //"/" + userId);
-  try {
-    privateKey = wga::CryptoHandler::makePrivateKeyFromB64(privateKeyString);
+  if (privateKeyString.empty()) {
+    auto keypair = wga::CryptoHandler::generateKey();
+    publicKey = keypair.first;
+    privateKey = keypair.second;
+  } else {
+    try {
+      privateKey = wga::CryptoHandler::makePrivateKeyFromB64(privateKeyString);
+    }
+    catch (std::runtime_error &ex) {
+      LOG(FATAL) << "Invalid private key: " << privateKeyString << " (error: " << ex.what() << " )";
+    }
+    publicKey = wga::CryptoHandler::makePublicFromPrivate(privateKey);
   }
-  catch (std::runtime_error &ex) {
-    LOG(FATAL) << "Invalid private key: " << privateKeyString << " (error: " << ex.what() << " )";
-  }
-  publicKey = wga::CryptoHandler::makePublicFromPrivate(privateKey);
   LOG(INFO) << "Using public key: "
             << wga::CryptoHandler::keyToString(publicKey);
 
@@ -193,43 +219,110 @@ Common::Common(const string &_userId, const string &privateKeyString,
     LOG(INFO) << "Joining game: ";
     myPeer->join();
   }
+  netEngine->start();
+  myPeer->start();
+  auto const directConnectDeadline = chrono::steady_clock::now() +
+      chrono::seconds(directConnectTimeoutSeconds);
+  while (!myPeer->initialized()) {
+    if (s_abortNetCommon.load()) {
+      LOG(INFO) << "NetCommon initialization cancelled by user";
+      myPeer->shutdown();
+      server.reset();
+      netEngine->shutdown();
+      throw runtime_error("NetCommon initialization cancelled");
+    }
+    if (chrono::steady_clock::now() >= directConnectDeadline) {
+      throw runtime_error("Could not establish a direct connection to every player within " +
+                          to_string(directConnectTimeoutSeconds) +
+                          " seconds. MAMEHub will not use a relay.");
+    }
+    LOG(INFO) << "Waiting for initialization for peer...";
+    wga::microsleep(100 * 1000);
+  }
+  myPeer->markReady();
   if (myPeer->getPosition() == -1) {
     LOGFATAL << "Somehow didn't get my player position";
   }
   myPlayers = {myPeer->getPosition()};
+}
 
-  netEngine->start();
-  myPeer->start();
-  while (!myPeer->initialized()) {
-    LOG(INFO) << "Waiting for initialization for peer...";
-    wga::microsleep(1000 * 1000);
+void Common::startNetplayClock() {
+  if (netplayClockStarted.load()) {
+    return;
   }
-  if (myPeer->isHosting()) {
-    machineTimeShift =
-        (chrono::duration_cast<chrono::microseconds>(
-             chrono::high_resolution_clock::now().time_since_epoch())
-             .count() -
-         startConnectTime);
-    unordered_map<string, string> machineTimeShiftMap = {
-        {"__BASE_TIME__", to_string(machineTimeShift)}};
-    myPeer->updateState(2, machineTimeShiftMap);
-  } else {
-    myPeer->updateState(2, {{"__BASE_TIME__", to_string(0)}});
-    auto retval = myPeer->getAllInputValues(1).at("__BASE_TIME__");
-    for (auto it : retval) {
-      if (it.second == "0") {
-        continue;
-      }
-      machineTimeShift = stoll(it.second);
+
+  // Common is constructed while the lobby UI is still active.  Do not choose
+  // the emulation epoch there: ROM loading can take a different amount of
+  // time on each peer.  This barrier is entered by running_machine only after
+  // the selected game has loaded and soft-reset locally.
+  myPeer->updateState(2, {{"__NETPLAY_GAME_LOADED__", "1"}});
+  auto const loadedState = myPeer->getAllInputValues(1);
+  auto const loadedIt = loadedState.find("__NETPLAY_GAME_LOADED__");
+  if (loadedIt == loadedState.end()) {
+    throw runtime_error("Netplay game-loaded barrier was not received");
+  }
+  for (auto const &loaded : loadedIt->second) {
+    if (loaded.second != "1") {
+      throw runtime_error("A netplay peer did not finish loading the game");
     }
   }
 
-  if (getCurrentTime() < 0) {
-    LOG(INFO) << "Waiting for time==0";
-    wga::microsleep(std::max(int64_t(0), getCurrentTime() * -1));
-  } else {
-    LOG(INFO) << "AT TIME: " << getCurrentTime();
+  // Now that every game is loaded, the host proposes a slightly future
+  // timestamp in the WGA-synchronised clock; guests publish zero.
+  int64_t const proposedStartTime = myPeer->isHosting()
+      ? wga::GlobalClock::currentTimeMicros() + NETPLAY_START_LEAD_MICROS
+      : 0;
+  myPeer->updateState(3, {{"__NETPLAY_START_TIME__", to_string(proposedStartTime)}});
+
+  auto const proposalState = myPeer->getAllInputValues(2);
+  auto const proposalIt = proposalState.find("__NETPLAY_START_TIME__");
+  if (proposalIt == proposalState.end()) {
+    throw runtime_error("Netplay start-time proposal was not received");
   }
+
+  machineTimeShift = 0;
+  int proposalCount = 0;
+  for (auto const &proposal : proposalIt->second) {
+    int64_t const value = stoll(proposal.second);
+    if (value != 0) {
+      machineTimeShift = value;
+      ++proposalCount;
+    }
+  }
+  if ((proposalCount != 1) || (machineTimeShift <= 0)) {
+    throw runtime_error("Netplay peers did not agree on a single host start time");
+  }
+
+  // Echo the selected epoch and wait until every peer echoes the same value.
+  // This second barrier guarantees that all players know the lobby phase is
+  // over before anyone's emulation clock is allowed to advance from zero.
+  myPeer->updateState(4, {{"__NETPLAY_START_ACK__", to_string(machineTimeShift)}});
+  auto const acknowledgementState = myPeer->getAllInputValues(3);
+  auto const acknowledgementIt = acknowledgementState.find("__NETPLAY_START_ACK__");
+  if (acknowledgementIt == acknowledgementState.end()) {
+    throw runtime_error("Netplay start-time acknowledgement was not received");
+  }
+  for (auto const &acknowledgement : acknowledgementIt->second) {
+    if (stoll(acknowledgement.second) != machineTimeShift) {
+      throw runtime_error("Netplay peers acknowledged different start times");
+    }
+  }
+
+  int64_t remaining = machineTimeShift - wga::GlobalClock::currentTimeMicros();
+  if (remaining < 0) {
+    throw runtime_error("Netplay start-time synchronisation took too long");
+  }
+  LOG(INFO) << "Waiting " << (remaining / 1000)
+            << "ms for the agreed netplay start time";
+  while (remaining > 0) {
+    wga::microsleep(remaining);
+    remaining = machineTimeShift - wga::GlobalClock::currentTimeMicros();
+  }
+  netplayClockStarted.store(true);
+  if (myPeer) {
+    myPeer->resetReachabilityTimers();
+  }
+  LOG(INFO) << "Netplay clock started at time 0";
 }
 
 std::string Common::getMyUserName() { return myPeer->getMyUserName(); }
@@ -525,11 +618,10 @@ unordered_map<string, string> Common::getStateChanges(
 
 void Common::sendInputs(int64_t inputTimeMs,
                         unordered_map<string, string> inputMap) {
-  if (myPeer->getLivingPeerCount() == 0 && myPeer->getTotalPeerCount() > 1) {
-    LOG(INFO) << "Finished!";
-    cout << "FINISHED" << endl;
-    myPeer->shutdown();
-    exit(0);
+  if (isGameOver() || (myPeer->getLivingPeerCount() == 0 && myPeer->getTotalPeerCount() > 1)) {
+    LOG(INFO) << "Finished - game over detected";
+    signalGameOver();
+    return;
   }
   if (inputTimeMs <= 1) {
     VLOG(1) << "SKIPPING FIRST INPUT BLOCK" << endl;
@@ -570,14 +662,21 @@ vector<uint8_t> Common::computeChecksum(running_machine *machine) {
 
 std::map<std::string, std::string> Common::getAllInputValues(
     int64_t ts, const std::string &key) {
+  if (isGameOver()) {
+    return {};
+  }
   std::unordered_map<std::string, std::map<std::string, std::string>>
       allInputData;
   if (cachedInputValues.first == ts) {
     allInputData = cachedInputValues.second;
   } else {
     allInputData = myPeer->getAllInputValues(ts);
+    if (isGameOver()) {
+      return {};
+    }
     int livingPeerCount = myPeer->getLivingPeerCount();
     if (livingPeerCount == 0 && myPeer->getTotalPeerCount() > 1) {
+      signalGameOver();
       return {};
     }
     cachedInputValues = make_pair(ts, allInputData);
@@ -591,3 +690,16 @@ std::map<std::string, std::string> Common::getAllInputValues(
 }
 
 bool Common::isHosting() { return myPeer->isHosting(); }
+
+void Common::signalGameOver() {
+  if (myPeer) {
+    myPeer->signalGameOver();
+  }
+}
+
+bool Common::isGameOver() {
+  if (!myPeer) {
+    return true;
+  }
+  return myPeer->isGameOver();
+}

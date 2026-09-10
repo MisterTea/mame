@@ -42,15 +42,16 @@ extern int initialSyncPercentComplete;
 extern bool waitingForClientCatchup;
 
 mamehub_manager::mamehub_manager() {}
+mamehub_manager::~mamehub_manager() {}
 
 void mamehub_manager::ui(mame_ui_manager& ui_manager,
-                         render_container& container) {
+                         render_target& target) {
   if (statsVisible) {
     if (netCommon) {
-      ui_manager.draw_text_box(container, netCommon->getLatencyString().c_str(),
+      ui_manager.draw_text_box(target, netCommon->getLatencyString().c_str(),
                                ui::text_layout::text_justify::CENTER, 0.9f,
                                0.1f, rgb_t(255, 0, 0, 128));
-      ui_manager.draw_text_box(container,
+      ui_manager.draw_text_box(target,
                                netCommon->getStatisticsString().c_str(),
                                ui::text_layout::text_justify::CENTER, 0.1f,
                                0.1f, rgb_t(255, 0, 0, 128));
@@ -59,7 +60,7 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
 
   time_t curRealTime = time(NULL);
   auto timestamp = ui_manager.machine().machine_time().to_msec();
-  if (timestamp >= 1000) {
+  if (netCommon && timestamp >= 1000) {
     auto values = netCommon->getAllInputValues(timestamp, std::string("CHAT"));
     for (auto value : values) {
       auto userId = value.first;
@@ -129,7 +130,7 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
     */
     //
     ui_manager.draw_text_box(
-        container, it->message.c_str(), ui::text_layout::text_justify::CENTER,
+        target, it->message.c_str(), ui::text_layout::text_justify::CENTER,
         0.5, 0.7 + 0.06 * chatIndex, chatColors[userIdColorMap[it->userId]]);
     //
     chatIndex++;
@@ -143,7 +144,7 @@ void mamehub_manager::ui(mame_ui_manager& ui_manager,
                      std::string("_");
     }
 
-    ui_manager.draw_text_box(container, promptString.c_str(),
+    ui_manager.draw_text_box(target, promptString.c_str(),
                              ui::text_layout::text_justify::CENTER, 0.5f, 0.8f,
                              rgb_t(255, 0, 0, 0));
   }
@@ -169,8 +170,9 @@ bool mamehub_manager::handleChat(running_machine& machine, ui_event& event) {
           // This is a command
           if (chatString.size() > 1 && chatString[1] >= '1' &&
               chatString[1] <= '9') {
-            // TODO: Player swap
-            netCommon->setMyPlayers({chatString[1] - '1'});
+            if (netCommon) {
+              netCommon->setMyPlayers({chatString[1] - '1'});
+            }
             /*
           } else if (netCommon &&
                      std::string(&chatString[0], chatString.size()) ==

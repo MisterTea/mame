@@ -11,6 +11,7 @@
 #define BOOST_VERSION (0)
 
 #include <algorithm>
+#include <atomic>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
@@ -85,7 +86,7 @@ class Common : public CommonBase {
   Common(const string &userId, const string &privateKeyString,
          unsigned short _port, const string &lobbyHostname,
          unsigned short lobbyPort, int _unmeasuredNoise, const string &gameName,
-         bool fakeLag);
+         bool fakeLag, int directConnectTimeoutSeconds);
 
   virtual ~Common();
 
@@ -97,8 +98,12 @@ class Common : public CommonBase {
   virtual int64_t getLastSendTime() { return lastSendTime; }
 
   virtual int64_t getCurrentTime() {
-    return (wga::GlobalClock::currentTimeMicros() - machineTimeShift);
+    return netplayClockStarted.load()
+        ? (wga::GlobalClock::currentTimeMicros() - machineTimeShift)
+        : 0;
   }
+
+  virtual void startNetplayClock();
 
   virtual std::string getGameName() { return myPeer->getGameName(); }
 
@@ -145,9 +150,12 @@ class Common : public CommonBase {
       int64_t ts, const std::string &key);
 
   virtual bool isHosting();
+  virtual void signalGameOver() override;
+  virtual bool isGameOver() override;
 
  protected:
   int64_t machineTimeShift;
+  std::atomic<bool> netplayClockStarted;
   std::string userId;
   std::string doInflate(const unsigned char *inputString, int length);
   int64_t lastSendTime;

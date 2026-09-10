@@ -26,8 +26,13 @@
 
 #include "Headers.hpp"
 #undef LOGFATAL
+#if defined(_WIN32)
 #define LOGFATAL \
   LOG(ERROR) << ust::generate() << "\n", system("pause"), LOG(FATAL)
+#else
+#define LOGFATAL \
+  LOG(ERROR) << ust::generate() << "\n", LOG(FATAL)
+#endif
 
 #define SHA1(x) "S" #x
 
@@ -129,6 +134,10 @@ class CommonBase {
 
   virtual int64_t getCurrentTime() = 0;
 
+  // Establish time zero after the selected game has finished loading on every
+  // peer.  Direct networking may be prepared earlier while the lobby UI runs.
+  virtual void startNetplayClock() = 0;
+
   virtual std::string getGameName() = 0;
 
   virtual std::vector<BlockValueLocation> getLocationsWithValue(
@@ -155,14 +164,18 @@ class CommonBase {
   virtual void createInitialBlocks(running_machine *machine) {}
 
   virtual bool isHosting() = 0;
+  virtual void signalGameOver() = 0;
+  virtual bool isGameOver() = 0;
 };
 
 CommonBase *createNetCommon(const string &userId,
                             const string &privateKeyString,
                             unsigned short _port, const string &lobbyHostname,
                             unsigned short lobbyPort, int _unmeasuredNoise,
-                            const string &gameName, bool fakeLag);
+                            const string &gameName, bool fakeLag,
+                            int directConnectTimeoutSeconds = 10);
 void deleteNetCommon();
+void abortNetCommon();
 string makePrivateKey();
 
 extern CommonBase *netCommon;
