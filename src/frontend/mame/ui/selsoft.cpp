@@ -418,6 +418,7 @@ menu_select_software::menu_select_software(mame_ui_manager &mui, render_containe
 	: menu_select_software(mui, container, system)
 {
 	m_select_callback = std::move(cb);
+	set_right_panel(RP_INFOS);
 }
 
 //-------------------------------------------------

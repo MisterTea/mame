@@ -10,6 +10,7 @@
 
 #include "emu.h"
 #include "ui/selmenu.h"
+#include "ui/launchbox.h"
 
 #include "ui/datmenu.h"
 #include "ui/info.h"
@@ -4069,6 +4070,7 @@ void menu_select_launch::infos_render(u32 flags)
 			if (m_info_view == 0)
 			{
 				m_info_buffer = software->infotext;
+				append_launchbox_metadata(ui(), *software, m_info_buffer);
 			}
 			else
 			{
@@ -4106,6 +4108,7 @@ void menu_select_launch::infos_render(u32 flags)
 			if (m_info_view == 0)
 			{
 				general_info(system, driver, m_info_buffer);
+				append_launchbox_metadata(ui(), driver, m_info_buffer);
 			}
 			else
 			{
