@@ -44,7 +44,7 @@ function maintargetosdoptions(_target,_subtarget)
 		}
 	end
 
-	if BASE_TARGETOS=="unix" and _OPTIONS["targetos"]~="macosx" and _OPTIONS["targetos"]~="android" and _OPTIONS["targetos"]~="asmjs" then
+	if BASE_TARGETOS=="unix" and _OPTIONS["targetos"]~="macosx" and _OPTIONS["targetos"]~="android" and _OPTIONS["targetos"]~="ios" and _OPTIONS["targetos"]~="asmjs" then
 		links {
 			"SDL2_ttf",
 		}
@@ -136,7 +136,7 @@ newoption {
 }
 
 if not _OPTIONS["NO_X11"] then
-	if _OPTIONS["targetos"]=="windows" or _OPTIONS["targetos"]=="macosx" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"]=="asmjs" or _OPTIONS["targetos"]=="android" then
+	if _OPTIONS["targetos"]=="windows" or _OPTIONS["targetos"]=="macosx" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"]=="asmjs" or _OPTIONS["targetos"]=="android" or _OPTIONS["targetos"]=="ios" then
 		_OPTIONS["NO_X11"] = "1"
 	else
 		_OPTIONS["NO_X11"] = "0"
@@ -153,7 +153,7 @@ newoption {
 }
 
 if not _OPTIONS["NO_USE_XINPUT"] then
-	if _OPTIONS["targetos"]=="windows" or _OPTIONS["targetos"]=="macosx" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"]=="asmjs" or _OPTIONS["targetos"]=="android" then
+	if _OPTIONS["targetos"]=="windows" or _OPTIONS["targetos"]=="macosx" or _OPTIONS["targetos"]=="haiku" or _OPTIONS["targetos"]=="asmjs" or _OPTIONS["targetos"]=="android" or _OPTIONS["targetos"]=="ios" then
 		_OPTIONS["NO_USE_XINPUT"] = "1"
 	else
 		_OPTIONS["NO_USE_XINPUT"] = "0"
@@ -269,7 +269,7 @@ if BASE_TARGETOS=="unix" then
 		addlibfromstring(str)
 		addoptionsfromstring(str)
 
-		if _OPTIONS["targetos"]~="haiku" and _OPTIONS["targetos"]~="android" then
+		if _OPTIONS["targetos"]~="haiku" and _OPTIONS["targetos"]~="android" and _OPTIONS["targetos"]~="ios" then
 			links {
 				"m",
 				"pthread",

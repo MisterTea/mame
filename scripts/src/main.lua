@@ -31,13 +31,54 @@ end
 		linkoptions {
 			"-shared",
 			"-Wl,-soname,libmain.so",
-      "$(shell pkg-config --libs-only -Llibsodium)",
-    }
+	    }
 		links {
 			"EGL",
 			"GLESv1_CM",
 			"GLESv2",
 			"SDL2",
+			"discord_partner_sdk",
+		}
+
+	configuration { "ios*" }
+		kind "ConsoleApp"
+		targetprefix ""
+		targetname "MAMEHub"
+		targetextension ""
+		targetsuffix ""
+		links {
+			"SDL2main",
+		}
+		linkoptions {
+			"-framework UIKit",
+			"-framework Foundation",
+			"-framework CoreFoundation",
+			"-framework CoreGraphics",
+			"-framework CoreMotion",
+			"-framework QuartzCore",
+			"-framework OpenGLES",
+			"-framework Metal",
+			"-framework MetalKit",
+			"-framework AVFoundation",
+			"-framework AudioToolbox",
+			"-framework CoreAudio",
+			"-framework CoreHaptics",
+			"-framework GameController",
+			"-framework ImageIO",
+			"-framework MobileCoreServices",
+			"-framework Security",
+			"-framework CFNetwork",
+			"-framework SystemConfiguration",
+			"-framework CoreMedia",
+			"-framework CoreVideo",
+			"-framework AVKit",
+			"-framework SafariServices",
+			"-framework AuthenticationServices",
+			"-framework MediaPlayer",
+			"-framework GLKit",
+			"-framework VideoToolbox",
+			"-framework Accelerate",
+			"-ObjC",
 		}
 
 	configuration {  }
@@ -102,6 +143,13 @@ end
 			end
 			if _OPTIONS["PLATFORM"]=="arm64" then
 				targetdir(MAME_DIR .. "android-project/app/src/main/libs/arm64-v8a")
+				libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release/android/arm64-v8a" }
+				if os.getenv("ANDROID_OPENSSL_ROOT") then
+					libdirs { os.getenv("ANDROID_OPENSSL_ROOT") .. "/lib" }
+				end
+				if os.getenv("ANDROID_SODIUM_ROOT") then
+					libdirs { os.getenv("ANDROID_SODIUM_ROOT") .. "/lib" }
+				end
 				os.copyfile(_OPTIONS["SDL_INSTALL_ROOT"] .. "/lib/libSDL2.so", MAME_DIR .. "android-project/app/src/main/libs/arm64-v8a/libSDL2.so")
 				os.copyfile(androidToolchainRoot() .. "/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so", MAME_DIR .. "android-project/app/src/main/libs/arm64-v8a/libc++_shared.so")
 			end
@@ -116,6 +164,42 @@ end
 				os.copyfile(androidToolchainRoot() .. "/sysroot/usr/lib/x86_64-linux-android/libc++_shared.so", MAME_DIR .. "android-project/app/src/main/libs/x86_64/libc++_shared.so")
 			end
 		end
+	elseif _OPTIONS["targetos"]=="ios" then
+		files {
+			MAME_DIR .. "ios-project/src/VirtualControls.m",
+			MAME_DIR .. "ios-project/src/DiscordURLHandler.m",
+		}
+		buildoptions {
+			"-fobjc-arc",
+		}
+		targetsuffix ""
+		if _OPTIONS["SEPARATE_BIN"]~="1" then
+			targetdir(MAME_DIR .. "ios-project/build/" .. _OPTIONS["gcc"])
+		end
+		includedirs {
+			_OPTIONS["SDL_INSTALL_ROOT"] .. "/include",
+			_OPTIONS["SDL_INSTALL_ROOT"] .. "/include/SDL2",
+		}
+		libdirs {
+			_OPTIONS["SDL_INSTALL_ROOT"] .. "/lib",
+		}
+		if os.getenv("IOS_OPENSSL_ROOT") then
+			libdirs { os.getenv("IOS_OPENSSL_ROOT") .. "/lib" }
+		end
+		if os.getenv("IOS_SODIUM_ROOT") then
+			libdirs { os.getenv("IOS_SODIUM_ROOT") .. "/lib" }
+		end
+		local discordSlice = "ios-arm64"
+		if _OPTIONS["gcc"] == "ios-simulator" then
+			discordSlice = "ios-arm64-simulator"
+		end
+		local discordFw = MAME_DIR .. "3rdparty/discord_social_sdk/lib/release/discord_partner_sdk.xcframework/" .. discordSlice
+		libdirs { discordFw }
+		linkoptions {
+			"-F" .. discordFw,
+			"-framework discord_partner_sdk",
+			"-Wl,-rpath,@executable_path/Frameworks",
+		}
 	else
 		if _OPTIONS["SEPARATE_BIN"]~="1" then
 			targetdir(MAME_DIR)
@@ -134,6 +218,35 @@ end
 		"optional",
 		"emu",
 	}
+	if _OPTIONS["targetos"]=="android" or _OPTIONS["targetos"]=="ios" then
+		links {
+			"ssl",
+			"crypto",
+			"sodium",
+		}
+	end
+	if _OPTIONS["targetos"]=="macosx" then
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
+		links { "discord_partner_sdk" }
+		linkoptions {
+			"-Wl,-rpath,@loader_path",
+			"-Wl,-rpath,@loader_path/3rdparty/discord_social_sdk/lib/release",
+		}
+	elseif _OPTIONS["targetos"]=="linux" then
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
+		links { "discord_partner_sdk" }
+		linkoptions {
+			"-Wl,-rpath,'$$ORIGIN'",
+			"-Wl,-rpath,'$$ORIGIN/3rdparty/discord_social_sdk/lib/release'",
+		}
+	elseif _OPTIONS["targetos"]=="windows" then
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release" }
+		links { "discord_partner_sdk" }
+	end
+	configuration { "arm64", "vs*" }
+		libdirs { MAME_DIR .. "3rdparty/discord_social_sdk/lib/release/arm64" }
+		links { "discord_partner_sdk" }
+	configuration { }
 	links {
 		"osd_" .. _OPTIONS["osd"],
 	}

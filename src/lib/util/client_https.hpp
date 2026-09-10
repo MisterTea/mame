@@ -15,7 +15,7 @@ namespace webpp {
 		explicit Client(const std::string& server_port_path, bool verify_certificate=true,
 				const std::string& cert_file=std::string(), const std::string& private_key_file=std::string(),
 				const std::string& verify_file=std::string()) :
-				ClientBase(server_port_path, 443), m_context(asio::ssl::context::tlsv12) {
+				ClientBase(server_port_path, 443), m_context(asio::ssl::context::tls_client) {
 			if(cert_file.size()>0 && private_key_file.size()>0) {
 				m_context.use_certificate_chain_file(cert_file);
 				m_context.use_private_key_file(private_key_file, asio::ssl::context::pem);
@@ -54,6 +54,7 @@ namespace webpp {
 						{
 							std::lock_guard<std::mutex> lock(socket_mutex);
 							socket = std::make_unique<HTTPS>(io_context, m_context);
+							SSL_set_tlsext_host_name(socket->native_handle(), host.c_str());
 						}
 
 						auto timer = get_timeout_timer(config.timeout_connect);

@@ -26,7 +26,12 @@ class system_list;
 class menu_select_game : public menu_select_launch
 {
 public:
+	using select_callback = std::function<void(game_driver const &driver)>;
+	using select_filter = std::function<bool(game_driver const &driver)>;
+
 	menu_select_game(mame_ui_manager &mui, render_target &target, const char *gamename);
+	menu_select_game(mame_ui_manager &mui, render_target &target, const char *gamename, select_callback cb);
+	menu_select_game(mame_ui_manager &mui, render_target &target, const char *gamename, select_callback cb, select_filter filter);
 	virtual ~menu_select_game();
 
 	// force game select menu
@@ -55,6 +60,8 @@ private:
 	std::vector<std::pair<double, std::reference_wrapper<ui_system_info const> > > m_searchlist;
 	unsigned m_searched_fields;
 	bool m_populated_favorites;
+	select_callback m_select_callback;
+	select_filter m_select_filter;
 
 	static bool s_first_start;
 

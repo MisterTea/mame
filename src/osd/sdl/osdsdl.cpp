@@ -327,6 +327,9 @@ void sdl_osd_interface::input_update(bool relative_reset)
 {
 	process_events_buf();
 	poll_input_modules(relative_reset);
+#if defined(SDLMAME_ANDROID) || defined(SDLMAME_IOS)
+	SDL_SetHint("MAMEHUB_MENU_ACTIVE", machine().ui().is_menu_active() ? "1" : "0");
+#endif
 }
 
 

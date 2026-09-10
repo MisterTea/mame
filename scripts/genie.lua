@@ -147,6 +147,7 @@ newoption {
 		{ "android",       "Android"                },
 		{ "asmjs",         "Emscripten/asm.js"      },
 		{ "freebsd",       "FreeBSD"                },
+		{ "ios",           "iOS"                    },
 		{ "netbsd",        "NetBSD"                 },
 		{ "openbsd",       "OpenBSD"                },
 		{ "linux",         "Linux"                  },

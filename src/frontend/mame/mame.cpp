@@ -12,6 +12,7 @@
 #include "mame.h"
 
 #include "ui/inifile.h"
+#include "ui/mamehub_menu.h"
 #include "ui/selgame.h"
 #include "ui/simpleselgame.h"
 #include "ui/ui.h"
@@ -22,6 +23,9 @@
 #include "fileio.h"
 #include "luaengine.h"
 #include "mameopts.h"
+#include "mamehub.h"
+#include "discord_discovery.h"
+#include "NSM_CommonInterface.h"
 #include "pluginopts.h"
 #include "rendlay.h"
 #include "validity.h"
@@ -300,8 +304,17 @@ int mame_machine_manager::execute()
 			if (machine.exit_pending())
 			{
 				m_options.set_system_name("");
+				m_options.set_value(OPTION_SOFTWARENAME, "", OPTION_PRIORITY_CMDLINE);
+				m_options.set_software("");
 				m_options.set_value(OPTION_BIOS, "", OPTION_PRIORITY_CMDLINE);
 			}
+		}
+
+		if (!is_empty)
+		{
+			deleteNetCommon();
+			mamehub_manager::instance()->reset();
+			mamehub::discord_discovery::instance().reset();
 		}
 
 		if (machine.exit_pending() && (!started_empty || is_empty))
@@ -441,7 +454,9 @@ void emulator_info::display_ui_chooser(running_machine& machine)
 	// force the UI to show the game select screen
 	mame_ui_manager &mui = mame_machine_manager::instance()->ui();
 	render_target &target = machine.render().ui_target();
-	if (machine.options().ui() == emu_options::UI_SIMPLE)
+	if (machine.options().mamehub() && machine.options().discord())
+		ui::menu_mamehub_main::force_menu(mui, target);
+	else if (machine.options().ui() == emu_options::UI_SIMPLE)
 		ui::simple_menu_select_game::force_game_select(mui, target);
 	else
 		ui::menu_select_game::force_game_select(mui, target);

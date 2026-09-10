@@ -22,6 +22,8 @@ newoption {
 		{ "asmjs",         "Emscripten/asm.js"      },
 		{ "freebsd",       "FreeBSD"                },
 		{ "freebsd-clang", "FreeBSD (clang compiler)"},
+		{ "ios-arm64",     "iOS - ARM64 device"     },
+		{ "ios-simulator", "iOS - ARM64 simulator"  },
 		{ "linux-gcc",     "Linux (GCC compiler)"   },
 		{ "linux-clang",   "Linux (Clang compiler)" },
 		{ "mingw32-gcc",   "MinGW32"                },
@@ -51,6 +53,12 @@ newoption {
 	description = "Set Android platform version (default: android-24).",
 }
 
+newoption {
+	trigger = "with-ios",
+	value   = "#",
+	description = "Set iOS deployment target (default: 15.1).",
+}
+
 local android = {}
 
 function androidToolchainRoot()
@@ -64,6 +72,42 @@ function androidToolchainRoot()
 	end
 
 	return android.toolchainRoot;
+end
+
+local function iosDeploymentTarget()
+	if _OPTIONS["with-ios"] then
+		return _OPTIONS["with-ios"]
+	end
+	return "15.1"
+end
+
+local function iosSdkName()
+	if _OPTIONS["gcc"] == "ios-simulator" then
+		return "iphonesimulator"
+	end
+	return "iphoneos"
+end
+
+local function iosSdkPath()
+	local sdk = iosSdkName()
+	local f = io.popen("xcrun --sdk " .. sdk .. " --show-sdk-path 2>/dev/null")
+	if not f then
+		return ""
+	end
+	local path = f:read("*l") or ""
+	f:close()
+	return path
+end
+
+local function iosClangBin(tool)
+	local sdk = iosSdkName()
+	local f = io.popen("xcrun --sdk " .. sdk .. " -f " .. tool .. " 2>/dev/null")
+	if not f then
+		return tool
+	end
+	local path = f:read("*l") or tool
+	f:close()
+	return path
 end
 
 function toolchain(_buildDir, _subDir)
@@ -99,6 +143,14 @@ function toolchain(_buildDir, _subDir)
 			premake.gcc.llvm = true
 
 			location (_buildDir .. "projects/" .. _subDir .. "/".. _ACTION .. "-android-" .. _OPTIONS["PLATFORM"])
+		end
+
+		if string.find(_OPTIONS["gcc"], "ios") then
+			premake.gcc.cc   = iosClangBin("clang")
+			premake.gcc.cxx  = iosClangBin("clang++")
+			premake.gcc.ar   = iosClangBin("ar")
+			premake.gcc.llvm = true
+			location (_buildDir .. "projects/" .. _subDir .. "/".. _ACTION .. "-" .. _OPTIONS["gcc"])
 		end
 
 		if "asmjs" == _OPTIONS["gcc"] then
@@ -302,9 +354,13 @@ function toolchain(_buildDir, _subDir)
 	includedirs {
 		"/usr/local/opt/libsodium/include",
 		"/usr/local/opt/openssl/include",
+		"/opt/homebrew/opt/libsodium/include",
+		"/opt/homebrew/opt/openssl@3/include",
 	}
 	libdirs {
-		"/usr/local/opt/openssl/lib"
+		"/usr/local/opt/openssl/lib",
+		"/opt/homebrew/opt/libsodium/lib",
+		"/opt/homebrew/opt/openssl@3/lib",
 	}
 	links {
 		"sodium",
@@ -598,6 +654,42 @@ function toolchain(_buildDir, _subDir)
 			"--target=x86_64-none-linux-android" .. androidApiLevel,
 		}
 
+	configuration { "ios-arm64 or ios-simulator", "Release" }
+		targetdir (_buildDir .. "ios/bin/" .. _OPTIONS["gcc"] .. "/Release")
+
+	configuration { "ios-arm64 or ios-simulator", "Debug" }
+		targetdir (_buildDir .. "ios/bin/" .. _OPTIONS["gcc"] .. "/Debug")
+
+	configuration { "ios-arm64 or ios-simulator" }
+		objdir (_buildDir .. "ios/obj/" .. _OPTIONS["gcc"])
+		local iosMin = iosDeploymentTarget()
+		local iosSdk = iosSdkPath()
+		local iosTriple
+		if _OPTIONS["gcc"] == "ios-simulator" then
+			iosTriple = "arm64-apple-ios" .. iosMin .. "-simulator"
+		else
+			iosTriple = "arm64-apple-ios" .. iosMin
+		end
+		buildoptions {
+			"-target " .. iosTriple,
+			"-isysroot " .. iosSdk,
+			"-fPIC",
+			"-DHAVE_IMMINTRIN_H=0",
+			"-DSDL_DISABLE_IMMINTRIN_H=1",
+			"-DHAVE_SSE=0",
+		}
+		local versionMinFlag
+		if _OPTIONS["gcc"] == "ios-simulator" then
+			versionMinFlag = "-mios-simulator-version-min=" .. iosMin
+		else
+			versionMinFlag = "-miphoneos-version-min=" .. iosMin
+		end
+		linkoptions {
+			"-target " .. iosTriple,
+			"-isysroot " .. iosSdk,
+			versionMinFlag,
+		}
+
 	configuration { "asmjs" }
 		targetdir (_buildDir .. "asmjs" .. "/bin")
 		objdir (_buildDir .. "asmjs" .. "/obj")
@@ -702,4 +794,3 @@ function strip()
 
 	configuration {} -- reset configuration
 end
-

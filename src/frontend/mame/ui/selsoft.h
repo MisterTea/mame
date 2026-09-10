@@ -17,6 +17,7 @@
 
 #include "lrucache.h"
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -29,7 +30,10 @@ namespace ui {
 class menu_select_software : public menu_select_launch
 {
 public:
+	using select_callback = std::function<void(game_driver const &driver, ui_software_info const &software)>;
+
 	menu_select_software(mame_ui_manager &mui, render_target &target, ui_system_info const &system);
+	menu_select_software(mame_ui_manager &mui, render_target &target, ui_system_info const &system, select_callback cb);
 	virtual ~menu_select_software() override;
 
 protected:
@@ -73,6 +77,7 @@ private:
 	std::shared_ptr<machine_data>       m_data;
 
 	std::vector<std::reference_wrapper<ui_software_info const> > m_displaylist;
+	select_callback m_select_callback;
 };
 
 } // namespace ui

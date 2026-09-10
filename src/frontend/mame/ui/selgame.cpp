@@ -115,6 +115,19 @@ menu_select_game::menu_select_game(mame_ui_manager &mui, render_target &target, 
 	ui_globals::curdats_total = 1;
 }
 
+menu_select_game::menu_select_game(mame_ui_manager &mui, render_target &target, const char *gamename, select_callback cb)
+	: menu_select_game(mui, target, gamename)
+{
+	m_select_callback = std::move(cb);
+	set_right_panel(RP_INFOS);
+}
+
+menu_select_game::menu_select_game(mame_ui_manager &mui, render_target &target, const char *gamename, select_callback cb, select_filter filter)
+	: menu_select_game(mui, target, gamename, std::move(cb))
+{
+	m_select_filter = std::move(filter);
+}
+
 //-------------------------------------------------
 //  dtor
 //-------------------------------------------------
@@ -316,17 +329,19 @@ void menu_select_game::populate()
 			{
 				for (auto it = m_searchlist.begin(); (m_searchlist.end() != it) && (MAX_VISIBLE_SEARCH > m_displaylist.size()); ++it)
 				{
-					if (flt->apply(it->second))
+					if (flt->apply(it->second) && (!m_select_filter || m_select_filter(*it->second.get().driver)))
 						m_displaylist.emplace_back(it->second);
 				}
 			}
 			else
 			{
-				std::transform(
-						m_searchlist.begin(),
-						std::next(m_searchlist.begin(), (std::min)(m_searchlist.size(), MAX_VISIBLE_SEARCH)),
-						std::back_inserter(m_displaylist),
-						[] (auto const &entry) { return entry.second; });
+				for (auto const &entry : m_searchlist)
+				{
+					if (!m_select_filter || m_select_filter(*entry.second.get().driver))
+						m_displaylist.emplace_back(entry.second);
+					if (m_displaylist.size() >= MAX_VISIBLE_SEARCH)
+						break;
+				}
 			}
 		}
 		else
@@ -336,13 +351,14 @@ void menu_select_game::populate()
 			if (!flt)
 			{
 				for (ui_system_info const &sysinfo : sorted)
-					m_displaylist.emplace_back(sysinfo);
+					if (!m_select_filter || m_select_filter(*sysinfo.driver))
+						m_displaylist.emplace_back(sysinfo);
 			}
 			else
 			{
 				for (ui_system_info const &sysinfo : sorted)
 				{
-					if (flt->apply(sysinfo))
+					if (flt->apply(sysinfo) && (!m_select_filter || m_select_filter(*sysinfo.driver)))
 						m_displaylist.emplace_back(sysinfo);
 				}
 			}
@@ -587,11 +603,18 @@ bool menu_select_game::inkey_select(const event *menu_event)
 
 		// audit the system ROMs first to see if we're going to work
 		media_auditor auditor(enumerator);
-		media_auditor::summary const summary = auditor.audit_media(AUDIT_VALIDATE_FAST);
+		media_auditor::summary summary;
 
 		// if everything looks good, schedule the new driver
-		if (audit_passed(summary))
+		if (audit_system_with_candy(machine(), auditor, enumerator, summary))
 		{
+			if (m_select_callback)
+			{
+				auto const &driver = *system->driver;
+				stack_pop();
+				m_select_callback(driver);
+				return true;
+			}
 			if (!select_bios(*system->driver, false))
 				launch_system(*system->driver);
 			return false;
@@ -660,10 +683,17 @@ bool menu_select_game::inkey_select_favorite(const event *menu_event)
 
 		// audit the system ROMs first to see if we're going to work
 		media_auditor auditor(enumerator);
-		media_auditor::summary const summary = auditor.audit_media(AUDIT_VALIDATE_FAST);
+		media_auditor::summary summary;
 
-		if (audit_passed(summary))
+		if (audit_system_with_candy(machine(), auditor, enumerator, summary))
 		{
+			if (m_select_callback)
+			{
+				auto const &driver = *ui_swinfo->driver;
+				stack_pop();
+				m_select_callback(driver);
+				return true;
+			}
 			// if everything looks good, schedule the new driver
 			if (!select_bios(*ui_swinfo->driver, false))
 			{
@@ -685,8 +715,8 @@ bool menu_select_game::inkey_select_favorite(const event *menu_event)
 		driver_enumerator drv(machine().options(), *ui_swinfo->driver);
 		media_auditor auditor(drv);
 		drv.next();
-		media_auditor::summary const sysaudit = auditor.audit_media(AUDIT_VALIDATE_FAST);
-		if (!audit_passed(sysaudit))
+		media_auditor::summary sysaudit;
+		if (!audit_system_with_candy(machine(), auditor, drv, sysaudit))
 		{
 			set_error(reset_options::REMEMBER_REF, make_system_audit_fail_text(auditor, sysaudit));
 			return true;
@@ -697,9 +727,8 @@ bool menu_select_game::inkey_select_favorite(const event *menu_event)
 			software_list_device *swlist = software_list_device::find_by_name(*drv.config(), ui_swinfo->listname);
 			const software_info *swinfo = swlist->find(ui_swinfo->shortname);
 
-			media_auditor::summary const swaudit = auditor.audit_software(*swlist, *swinfo, AUDIT_VALIDATE_FAST);
-
-			if (audit_passed(swaudit))
+			media_auditor::summary swaudit;
+			if (audit_software_with_candy(machine(), auditor, *swlist, *swinfo, swaudit))
 			{
 				reselect_last::reselect(true);
 				if (!select_bios(*ui_swinfo, false) && !select_part(*swinfo, *ui_swinfo))
@@ -722,7 +751,7 @@ bool menu_select_game::inkey_select_favorite(const event *menu_event)
 
 bool menu_select_game::isfavorite() const
 {
-	return machine_filter::FAVORITE == m_persistent_data.filter_data().get_current_filter_type();
+	return !m_select_filter && (machine_filter::FAVORITE == m_persistent_data.filter_data().get_current_filter_type());
 }
 
 

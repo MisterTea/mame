@@ -15,6 +15,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 #include "lua.h"
 
@@ -142,6 +145,15 @@
 static int os_execute (lua_State *L) {
   const char *cmd = luaL_optstring(L, 1, NULL);
   int stat;
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+  /* system(3) is unavailable on iOS. */
+  (void)cmd;
+  errno = ENOTSUP;
+  if (cmd != NULL)
+    return luaL_execresult(L, -1);
+  lua_pushboolean(L, 0);
+  return 1;
+#else
   errno = 0;
   stat = l_system(cmd);
   if (cmd != NULL)
@@ -150,6 +162,7 @@ static int os_execute (lua_State *L) {
     lua_pushboolean(L, stat);  /* true if there is a shell */
     return 1;
   }
+#endif
 }
 
 

@@ -208,6 +208,14 @@
 #define OPTION_LOBBY_HOST                    "lobby_host"
 #define OPTION_LOBBY_PORT                    "lobby_port"
 #define OPTION_FAKE_LAG                  "fake_lag"
+#define OPTION_DIRECT_CONNECT_TIMEOUT    "direct_connect_timeout"
+#define OPTION_DISCORD                  "discord"
+#define OPTION_DISCORD_AUTH             "discord_auth"
+#define OPTION_DISCORD_LOBBY            "discord_lobby"
+#define OPTION_DISCORD_HOST             "discord_host"
+#define OPTION_DISCORD_PLAYERS          "discord_players"
+#define OPTION_DISCORD_DIRECTORY_PORT   "discord_directory_port"
+#define OPTION_DISCORD_MOCK             "discord_mock"
 #define OPTION_CANDY					"candy"
 
 #define OPTION_HTTP                 "http"
@@ -497,6 +505,14 @@ public:
 	const char *lobby_host() const { return value(OPTION_LOBBY_HOST); }
 	int lobby_port() const { return int_value(OPTION_LOBBY_PORT); }
 	bool fake_lag() const { return bool_value(OPTION_FAKE_LAG); }
+	int direct_connect_timeout() const { return int_value(OPTION_DIRECT_CONNECT_TIMEOUT); }
+	bool discord() const { return bool_value(OPTION_DISCORD); }
+	bool discord_auth() const { return bool_value(OPTION_DISCORD_AUTH); }
+	const char *discord_lobby() const { return value(OPTION_DISCORD_LOBBY); }
+	bool discord_host() const { return bool_value(OPTION_DISCORD_HOST); }
+	int discord_players() const { return int_value(OPTION_DISCORD_PLAYERS); }
+	int discord_directory_port() const { return int_value(OPTION_DISCORD_DIRECTORY_PORT); }
+	const char *discord_mock() const { return value(OPTION_DISCORD_MOCK); }
 
 	bool console() const { return bool_value(OPTION_CONSOLE); }
 

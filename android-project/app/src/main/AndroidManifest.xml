@@ -48,6 +48,9 @@
 
     <!-- Allow writing to external storage -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Discord Social SDK / Custom Tabs / netplay -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Allow access to the vibrator -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
@@ -97,6 +100,17 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
             -->
+        </activity>
+
+        <activity android:name="com.discord.socialsdk.AuthenticationActivity"
+                  android:launchMode="singleTask"
+                  android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="discord-1545444437482676284" />
+            </intent-filter>
         </activity>
     </application>
 
