@@ -236,7 +236,8 @@ int main(int argc, char *argv[])
 		// Initialize this after the osd interface so that we are first in the
 		// output order
 		winui_output_error winerror;
-		if (!is_console)
+		// JJG: Don't hide the console in mamehub
+		if (false && !is_console)
 		{
 			// if we are a GUI app, output errors to message boxes
 			osd_output::push(&winerror);
@@ -245,7 +246,7 @@ int main(int argc, char *argv[])
 		}
 		osd.register_options();
 		result = emulator_info::start_frontend(options, osd, args);
-		if (!is_console)
+		if (false && !is_console)
 			osd_output::pop(&winerror);
 	}
 

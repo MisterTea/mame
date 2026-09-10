@@ -27,6 +27,7 @@ includedirs {
 	MAME_DIR .. "3rdparty/wga/peer/external",
 	MAME_DIR .. "3rdparty/wga/peer/external/msgpack-c/include",
 	MAME_DIR .. "3rdparty/wga/peer/external/json/include",
+	MAME_DIR .. "3rdparty/discord_social_sdk/include",
 
 	MAME_DIR .. "src/osd",
 	MAME_DIR .. "src/emu",
@@ -68,7 +69,8 @@ includedirs {
 	ext_includedir("lua"),
 	ext_includedir("zlib"),
 	ext_includedir("flac"),
-	ext_includedir("rapidjson")
+	ext_includedir("rapidjson"),
+	ext_includedir("sqlite3")
 }
 
 configuration { }
@@ -85,6 +87,16 @@ files {
 	MAME_DIR .. "src/frontend/mame/cheat.h",
 	MAME_DIR .. "src/frontend/mame/clifront.cpp",
 	MAME_DIR .. "src/frontend/mame/clifront.h",
+	MAME_DIR .. "src/frontend/mame/discord_lobby.cpp",
+	MAME_DIR .. "src/frontend/mame/discord_lobby.h",
+	MAME_DIR .. "src/frontend/mame/discord_directory_server.cpp",
+	MAME_DIR .. "src/frontend/mame/discord_directory_server.h",
+	MAME_DIR .. "src/frontend/mame/discord_discovery.cpp",
+	MAME_DIR .. "src/frontend/mame/discord_discovery.h",
+	MAME_DIR .. "src/frontend/mame/discord_service.cpp",
+	MAME_DIR .. "src/frontend/mame/discord_service.h",
+	MAME_DIR .. "src/frontend/mame/discord_waiting_room.cpp",
+	MAME_DIR .. "src/frontend/mame/discord_waiting_room.h",
 	MAME_DIR .. "src/frontend/mame/infoxml.cpp",
 	MAME_DIR .. "src/frontend/mame/infoxml.h",
 	MAME_DIR .. "src/frontend/mame/iptseqpoll.cpp",
@@ -170,6 +182,10 @@ files {
 	MAME_DIR .. "src/frontend/mame/ui/inputtoggle.h",
 	MAME_DIR .. "src/frontend/mame/ui/keyboard.cpp",
 	MAME_DIR .. "src/frontend/mame/ui/keyboard.h",
+	MAME_DIR .. "src/frontend/mame/ui/launchbox.cpp",
+	MAME_DIR .. "src/frontend/mame/ui/launchbox.h",
+	MAME_DIR .. "src/frontend/mame/ui/mamehub_menu.cpp",
+	MAME_DIR .. "src/frontend/mame/ui/mamehub_menu.h",
 	MAME_DIR .. "src/frontend/mame/ui/mainmenu.cpp",
 	MAME_DIR .. "src/frontend/mame/ui/mainmenu.h",
 	MAME_DIR .. "src/frontend/mame/ui/menu.cpp",

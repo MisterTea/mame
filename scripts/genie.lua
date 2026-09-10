@@ -147,6 +147,7 @@ newoption {
 		{ "android",       "Android"                },
 		{ "asmjs",         "Emscripten/asm.js"      },
 		{ "freebsd",       "FreeBSD"                },
+		{ "ios",           "iOS"                    },
 		{ "netbsd",        "NetBSD"                 },
 		{ "openbsd",       "OpenBSD"                },
 		{ "linux",         "Linux"                  },
@@ -694,6 +695,10 @@ elseif (_OPTIONS["PLATFORM"] == "x86") or (_OPTIONS["PLATFORM"] == "arm64") then
 			"ASMJIT_STATIC",
 		}
 end
+
+	defines {
+		"WGA_MAMEHUB", -- use MAME's asio.h from WGA
+	}
 
 	if _ACTION == "gmake" or _ACTION == "ninja" then
 

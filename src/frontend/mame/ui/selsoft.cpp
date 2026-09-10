@@ -414,8 +414,8 @@ menu_select_software::menu_select_software(mame_ui_manager &mui, render_target &
 	ui_globals::cur_sw_dats_total = 1;
 }
 
-menu_select_software::menu_select_software(mame_ui_manager &mui, render_container &container, ui_system_info const &system, select_callback cb)
-	: menu_select_software(mui, container, system)
+menu_select_software::menu_select_software(mame_ui_manager &mui, render_target &target, ui_system_info const &system, select_callback cb)
+	: menu_select_software(mui, target, system)
 {
 	m_select_callback = std::move(cb);
 	set_right_panel(RP_INFOS);

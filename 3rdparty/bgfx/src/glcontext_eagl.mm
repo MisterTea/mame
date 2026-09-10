@@ -309,8 +309,9 @@ namespace bgfx { namespace gl
 		return BGFX_CAPS_SWAP_CHAIN;
 	}
 
-	SwapChainGL* GlContext::createSwapChain(void* _nwh)
+	SwapChainGL* GlContext::createSwapChain(void* _nwh, int _width, int _height)
 	{
+		BX_UNUSED(_width, _height);
 		return BX_NEW(g_allocator, SwapChainGL)(/*m_display, m_config,*/ (__bridge EAGLContext*)m_context, (__bridge CAEAGLLayer*)_nwh);
 	}
 

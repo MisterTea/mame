@@ -29,7 +29,7 @@ namespace bgfx { namespace gl
 		void resize(uint32_t _width, uint32_t _height, uint32_t _flags);
 
 		uint64_t getCaps() const;
-		SwapChainGL* createSwapChain(void* _nwh);
+		SwapChainGL* createSwapChain(void* _nwh, int _width = 0, int _height = 0);
 		void destroySwapChain(SwapChainGL*  _swapChain);
 		void swap(SwapChainGL* _swapChain = NULL);
 		void makeCurrent(SwapChainGL* _swapChain = NULL);

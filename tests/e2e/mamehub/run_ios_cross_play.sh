@@ -2,7 +2,7 @@
 # macOS host + iOS Simulator joiner: launch snes:tmnt4 over Discord mock,
 # navigate past the title, mash inputs on both peers, assert no INPUT DESYNC.
 #
-# Requires: booted simulator with org.mamedev.mamehub installed, mamehub binary,
+# Requires: booted simulator with org.mistertea.mamehub installed, mamehub binary,
 # pad tool, snes softlist + ROM.
 #
 # Env:
@@ -17,7 +17,7 @@ BIN="${MAMEHUB_BIN:-$ROOT/mamehub}"
 ROMPATH="${MAMEHUB_ROMPATH:-roms}"
 OUT="${MAMEHUB_E2E_OUT:-/tmp/mamehub-ios-cross-play}"
 HOST_MOCK="${MAMEHUB_MOCK:-/tmp/mamehub_mock}"
-PKG=org.mamedev.mamehub
+PKG="${MAMEHUB_IOS_PKG:-org.mistertea.mamehub}"
 LOBBY="${MAMEHUB_LOBBY:-ios-cross-play}"
 HOST_PORT="${MAMEHUB_HOST_PORT:-5966}"
 JOIN_PORT="${MAMEHUB_JOIN_PORT:-5976}"
@@ -216,6 +216,7 @@ echo "== launch iOS guest first =="
 # --stdout/--stderr often stay empty; --console captures osd_printf.
 # Pass absolute container paths for rompath/hashpath.
 (
+  # -sound none: SDL audio init SEGV on iOS Simulator (null device name).
   xcrun simctl launch --console --terminate-running-process \
     booted "$PKG" \
     -discord_auth -discord_mock iOSGuest \
@@ -223,6 +224,7 @@ echo "== launch iOS guest first =="
     -discord_directory_port "$JOIN_DIR_PORT" -port "$JOIN_PORT" \
     -direct_connect_timeout "$CONNECT_TIMEOUT" \
     -rompath "$GUEST_ROMS" -hashpath "$GUEST_HASH" \
+    -sound none \
     -keepaspect -view "Screen 0 Standard (4:3)" \
     snes snes:tmnt4
 ) >"$JOIN_LOG" 2>&1 &

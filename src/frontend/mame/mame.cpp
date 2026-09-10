@@ -12,6 +12,7 @@
 #include "mame.h"
 
 #include "ui/inifile.h"
+#include "ui/mamehub_menu.h"
 #include "ui/selgame.h"
 #include "ui/simpleselgame.h"
 #include "ui/ui.h"
@@ -453,7 +454,9 @@ void emulator_info::display_ui_chooser(running_machine& machine)
 	// force the UI to show the game select screen
 	mame_ui_manager &mui = mame_machine_manager::instance()->ui();
 	render_target &target = machine.render().ui_target();
-	if (machine.options().ui() == emu_options::UI_SIMPLE)
+	if (machine.options().mamehub())
+		ui::menu_mamehub_main::force_menu(mui, target);
+	else if (machine.options().ui() == emu_options::UI_SIMPLE)
 		ui::simple_menu_select_game::force_game_select(mui, target);
 	else
 		ui::menu_select_game::force_game_select(mui, target);

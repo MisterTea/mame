@@ -24,7 +24,7 @@ public:
   }
 	~mamehub_manager();
 
-  void ui(mame_ui_manager& ui_manager, render_container &container);
+  void ui(mame_ui_manager& ui_manager, render_target &target);
   bool handleChat(running_machine& machine, ui_event& event);
   void set_discord_directory(std::unique_ptr<mamehub::discord_directory_server> dir);
   mamehub::discord_directory_server *discord_directory() const;

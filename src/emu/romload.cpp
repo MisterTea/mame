@@ -23,11 +23,23 @@
 #include "path.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdarg>
 #include <cstdio>
+#include <fstream>
+#include <iostream>
+#include <map>
 #include <set>
 #include <span>
+#include <tuple>
 
+#include "client_http.hpp"
+#pragma push_macro("SHA1")
+#undef SHA1
+#include "client_https.hpp"
+#pragma pop_macro("SHA1")
+using HttpClient = webpp::Client<webpp::HTTP>;
+using HttpsClient = webpp::Client<webpp::HTTPS>;
 
 #define LOG_LOAD 0
 #define LOG(...) do { if (LOG_LOAD) debugload(__VA_ARGS__); } while(0)
@@ -277,7 +289,122 @@ auto open_parent_disk(
 			};
 }
 
+std::tuple<std::string, std::string, std::string, std::string> parse_url(const std::string& url_s)
+{
+	std::string protocol_, host_, path_, query_;
+	const std::string prot_end("://");
+	std::string::const_iterator prot_i = std::search(url_s.begin(), url_s.end(),
+		prot_end.begin(), prot_end.end());
+	protocol_.reserve(distance(url_s.begin(), prot_i));
+	transform(url_s.begin(), prot_i,
+		back_inserter(protocol_),
+		[](unsigned char c){ return std::tolower(c); }); // protocol is icase
+	if (prot_i == url_s.end())
+		return std::make_tuple("","","", "");
+	advance(prot_i, prot_end.length());
+	std::string::const_iterator path_i = find(prot_i, url_s.end(), '/');
+	host_.reserve(distance(prot_i, path_i));
+	std::transform(prot_i, path_i,
+		back_inserter(host_),
+		[](unsigned char c){ return std::tolower(c); }); // host is icase
+	std::string::const_iterator query_i = find(path_i, url_s.end(), '?');
+	path_.assign(path_i, query_i);
+	if (query_i != url_s.end())
+		++query_i;
+	query_.assign(query_i, url_s.end());
+	return std::make_tuple(protocol_, host_, path_, query_);
+}
+
 } // anonymous namespace
+
+
+void candy_mode(const std::string& baseName, const std::string& leafName, const char* mediaPath) {
+	// Candy mode
+	std::string contentString;
+	std::string url;
+	std::string filename;
+	if (leafName.empty()) {
+		url = std::string("http://archive.org/download/MAME220RomsOnlyMerged/") + baseName + std::string(".zip");
+		filename = baseName;
+	} else {
+		url = std::string("http://archive.org/download/MAME_0.202_Software_List_ROMs_merged/") + baseName + std::string(".zip/") + baseName + std::string("%2F") + leafName + std::string(".zip");
+		filename = baseName + std::string(PATH_SEPARATOR) + leafName;
+	}
+	int redirects = 0;
+	while (redirects < 10) {
+		auto urlTokens = parse_url(url);
+		std::string protocol = std::get<0>(urlTokens);
+		std::string host = std::get<1>(urlTokens);
+		std::string path = std::get<2>(urlTokens);
+		std::string query = std::get<3>(urlTokens);
+		if (!query.empty()) {
+			query = std::string("?") + query;
+		}
+
+		std::string status_code;
+		std::string newUrl;
+		std::map<std::string, std::string> headers = {
+			{ "User-Agent", "Mozilla/5.0 (MAMEHub; Macintosh; Mac OS X) AppleWebKit/537.36" }
+		};
+
+		try {
+			if (protocol == "https") {
+				HttpsClient client(host, false);
+				auto r1 = client.request("GET", path + query, "", headers);
+				status_code = r1->status_code;
+				std::cout << "Made request to " << url << " with response " << status_code << std::endl;
+				if (status_code.rfind("30", 0) == 0) {
+					auto its = r1->header.equal_range("Location");
+					for (auto it = its.first; it != its.second; ++it) {
+						newUrl = it->second;
+					}
+				} else if (status_code.rfind("200", 0) == 0) {
+					contentString = { std::istreambuf_iterator<char>(r1->content),
+									  std::istreambuf_iterator<char>() };
+					break;
+				} else {
+					return;
+				}
+			} else {
+				HttpClient client(host);
+				auto r1 = client.request("GET", path + query, "", headers);
+				status_code = r1->status_code;
+				std::cout << "Made request to " << url << " with response " << status_code << std::endl;
+				if (status_code.rfind("30", 0) == 0) {
+					auto its = r1->header.equal_range("Location");
+					for (auto it = its.first; it != its.second; ++it) {
+						newUrl = it->second;
+					}
+				} else if (status_code.rfind("200", 0) == 0) {
+					contentString = { std::istreambuf_iterator<char>(r1->content),
+									  std::istreambuf_iterator<char>() };
+					break;
+				} else {
+					return;
+				}
+			}
+		} catch (std::exception const &e) {
+			std::cout << "Candy mode request error for " << url << ": " << e.what() << std::endl;
+			return;
+		}
+
+		if (newUrl.empty())
+			return;
+		url = newUrl;
+		redirects++;
+	}
+
+	if (contentString.empty())
+		return;
+
+	auto image_file = std::make_unique<emu_file>(mediaPath, OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+	auto filerr = image_file->open(filename + std::string(".zip"));
+	if (!filerr) {
+		std::cout << "Saving file of size " << contentString.size() << " to path " << filename << ".zip" << std::endl;
+		image_file->write(contentString.c_str(), contentString.length());
+	}
+	image_file->close();
+}
 
 
 /***************************************************************************
@@ -778,6 +905,26 @@ std::unique_ptr<emu_file> rom_load_manager::open_rom_file(
 		filerr = result->open(name, crc);
 	else
 		filerr = result->open(name);
+
+	if (filerr && machine().options().candy()) {
+		for (auto path : paths) {
+			std::string locationString(path);
+			auto pathLocation = locationString.find(PATH_SEPARATOR);
+			if (pathLocation == std::string::npos) {
+				candy_mode(locationString, std::string(""), machine().options().media_path());
+			} else {
+				candy_mode(locationString.substr(0, pathLocation), locationString.substr(pathLocation + 1), machine().options().media_path());
+			}
+
+			if (has_crc)
+				filerr = result->open(name, crc);
+			else
+				filerr = result->open(name);
+
+			if (!filerr)
+				break;
+		}
+	}
 
 	// don't return anything if unsuccessful
 	if (filerr)

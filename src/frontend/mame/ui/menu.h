@@ -481,6 +481,7 @@ private:
 		std::unique_ptr<menu>           m_free;
 
 		bool                            m_hide;
+		bool                            m_in_stack_reset;
 
 		render_target                   *m_target;
 		s32                             m_current_pointer;      // current active pointer ID or -1 if none

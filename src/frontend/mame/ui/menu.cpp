@@ -14,6 +14,7 @@
 #include "ui/ui.h"
 
 #include "cheat.h"
+#include "config.h"
 #include "mame.h"
 
 #include "corestr.h"
@@ -75,6 +76,7 @@ menu::global_state::global_state(mame_ui_manager &ui)
 	, m_stack()
 	, m_free()
 	, m_hide(false)
+	, m_in_stack_reset(false)
 	, m_target(nullptr)
 	, m_current_pointer(-1)
 	, m_pointer_type(ui_event::pointer::UNKNOWN)
@@ -178,21 +180,32 @@ void menu::global_state::stack_pop()
 			}
 		}
 		m_free->machine().ui_input().reset();
+
+		if (!m_in_stack_reset && m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+			m_ui.machine().configuration().save_settings();
 	}
 }
 
 
 void menu::global_state::stack_pop_to_special_main()
 {
+	m_in_stack_reset = true;
 	while (m_stack && !m_stack->is_special_main_menu())
 		stack_pop();
+	m_in_stack_reset = false;
+	if (m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+		m_ui.machine().configuration().save_settings();
 }
 
 
 void menu::global_state::stack_reset()
 {
+	m_in_stack_reset = true;
 	while (m_stack)
 		stack_pop();
+	m_in_stack_reset = false;
+	if (m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+		m_ui.machine().configuration().save_settings();
 }
 
 
@@ -273,6 +286,8 @@ uint32_t menu::global_state::ui_handler()
 				{
 					m_stack->m_active = false;
 					m_stack->menu_deactivated();
+					if (m_ui.machine().phase() >= machine_phase::INIT && m_ui.machine().phase() < machine_phase::EXIT)
+						m_ui.machine().configuration().save_settings();
 				}
 			}
 

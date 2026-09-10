@@ -844,10 +844,6 @@ u8 ioport_field::mamehub_player() const {
 	if(t >= IPT_SERVICE1 && t <= IPT_SERVICE4) {
 		p = t - IPT_SERVICE1;
 	}
-	if(t >= IPT_TILT1 && t <= IPT_TILT4) {
-		p = t - IPT_TILT1;
-	}
-
 	return p;
 }
 
@@ -1986,11 +1982,6 @@ time_t ioport_manager::initialize()
         fromPlayer = (fromType - IPT_SERVICE1);
         fromType = IPT_SERVICE1;
       }
-      if(fromType >= IPT_TILT1 && fromType <= IPT_TILT4) {
-        fromPlayer = (fromType - IPT_TILT1);
-        fromType = IPT_TILT1;
-      }
-
       if (fromPlayer==0) {
 				playerFieldMap[&fieldFrom] = { &fieldFrom };
       }
@@ -2023,11 +2014,6 @@ time_t ioport_manager::initialize()
             toPlayer = (toType - IPT_SERVICE1);
             toType = IPT_SERVICE1;
           }
-          if(toType >= IPT_TILT1 && toType <= IPT_TILT4) {
-            toPlayer = (toType - IPT_TILT1);
-            toType = IPT_TILT1;
-          }
-
           if (toPlayer != 0) {
             continue;  // We only want to map players 2+ to player 1
           }

@@ -223,8 +223,8 @@ static mamehub_machine_catalog &machine_catalog(mame_ui_manager &mui)
 //  menu_mamehub_main
 //-------------------------------------------------
 
-menu_mamehub_main::menu_mamehub_main(mame_ui_manager &mui, render_container &container)
-	: menu(mui, container)
+menu_mamehub_main::menu_mamehub_main(mame_ui_manager &mui, render_target &target)
+	: menu(mui, target)
 {
 	set_needs_prev_menu_item(false);
 	set_heading(_("MAMEHub Netplay (Discord)"));
@@ -235,11 +235,11 @@ void menu_mamehub_main::menu_activated()
 	reset(reset_options::SELECT_FIRST);
 }
 
-void menu_mamehub_main::force_menu(mame_ui_manager &mui, render_container &container)
+void menu_mamehub_main::force_menu(mame_ui_manager &mui, render_target &target)
 {
 	menu::stack_reset(mui);
-	menu::stack_push_special_main<menu_mamehub_main>(mui, container);
-	mui.show_menu();
+	menu::stack_push_special_main<menu_mamehub_main>(mui, target);
+	mui.show_menu(target);
 	mui.machine().pause();
 }
 
@@ -269,57 +269,21 @@ bool menu_mamehub_main::handle(event const *ev)
 		case ITEM_HOST:
 			if (!ensure_discord_authenticated(ui()))
 				return true;
-			menu::stack_push<menu_mamehub_machine>(ui(), container());
+			menu::stack_push<menu_mamehub_machine>(ui(), target());
 			return true;
 
 		case ITEM_JOIN:
 			if (!ensure_discord_authenticated(ui()))
 				return true;
-			menu::stack_push<menu_mamehub_join>(ui(), container());
+			menu::stack_push<menu_mamehub_join>(ui(), target());
 			return true;
 
 		case ITEM_OFFLINE:
-			menu::stack_push<menu_mamehub_machine>(ui(), container(), true);
+			menu::stack_push<menu_mamehub_machine>(ui(), target(), true);
 			return true;
 
 		case ITEM_OPTIONS:
-			menu::stack_push<menu_simple_game_options>(ui(), container(), [this] () { reset(reset_options::REMEMBER_REF); });
-			return true;
-
-		case ITEM_EXIT:
-			machine().schedule_exit();
-			return true;
-		}
-	}
-	return false;
-}
-
-bool menu_mamehub_main::custom_mouse_down()
-{
-	int const h = hover();
-	if (h >= 0 && h < item_count() && is_selectable(item(h)))
-	{
-		set_selected_index(h);
-		switch (uintptr_t(item(h).ref()))
-		{
-		case ITEM_HOST:
-			if (!ensure_discord_authenticated(ui()))
-				return true;
-			menu::stack_push<menu_mamehub_machine>(ui(), container());
-			return true;
-
-		case ITEM_JOIN:
-			if (!ensure_discord_authenticated(ui()))
-				return true;
-			menu::stack_push<menu_mamehub_join>(ui(), container());
-			return true;
-
-		case ITEM_OFFLINE:
-			menu::stack_push<menu_select_game>(ui(), container(), nullptr);
-			return true;
-
-		case ITEM_OPTIONS:
-			menu::stack_push<menu_simple_game_options>(ui(), container(), [this] () { reset(reset_options::REMEMBER_REF); });
+			menu::stack_push<menu_simple_game_options>(ui(), target(), [this] () { reset(reset_options::REMEMBER_REF); });
 			return true;
 
 		case ITEM_EXIT:
@@ -334,8 +298,8 @@ bool menu_mamehub_main::custom_mouse_down()
 //  menu_mamehub_machine
 //-------------------------------------------------
 
-menu_mamehub_machine::menu_mamehub_machine(mame_ui_manager &mui, render_container &container, bool offline_launch)
-	: menu(mui, container)
+menu_mamehub_machine::menu_mamehub_machine(mame_ui_manager &mui, render_target &target, bool offline_launch)
+	: menu(mui, target)
 	, m_software_machines(machine_catalog(mui).software_machines())
 	, m_offline_launch(offline_launch)
 {
@@ -387,7 +351,7 @@ bool menu_mamehub_machine::handle(event const *ev)
 		if (m_offline_launch)
 		{
 			menu::stack_push<menu_select_game>(
-					ui(), container(), nullptr,
+					ui(), target(), nullptr,
 					[this] (game_driver const &driver)
 					{
 						launch_offline_game(ui(), driver);
@@ -397,10 +361,10 @@ bool menu_mamehub_machine::handle(event const *ev)
 		else
 		{
 			menu::stack_push<menu_select_game>(
-					ui(), container(), nullptr,
+					ui(), target(), nullptr,
 					[this] (game_driver const &driver)
 					{
-						menu::stack_push<menu_mamehub_lobby>(ui(), container(), &driver);
+						menu::stack_push<menu_mamehub_lobby>(ui(), target(), &driver);
 					},
 					[this] (game_driver const &driver) { return machine_catalog(ui()).is_arcade(driver); });
 		}
@@ -416,7 +380,7 @@ bool menu_mamehub_machine::handle(event const *ev)
 	if (m_offline_launch)
 	{
 		menu::stack_push<menu_select_software>(
-				ui(), container(), systems[index],
+				ui(), target(), systems[index],
 				[this] (game_driver const &selected_driver, ui_software_info const &software)
 				{
 					launch_offline_game(ui(), selected_driver, &software);
@@ -425,10 +389,10 @@ bool menu_mamehub_machine::handle(event const *ev)
 	else
 	{
 		menu::stack_push<menu_select_software>(
-				ui(), container(), systems[index],
+				ui(), target(), systems[index],
 				[this] (game_driver const &selected_driver, ui_software_info const &software)
 				{
-					menu::stack_push<menu_mamehub_lobby>(ui(), container(), &selected_driver, &software);
+					menu::stack_push<menu_mamehub_lobby>(ui(), target(), &selected_driver, &software);
 				});
 	}
 	return true;
@@ -438,8 +402,8 @@ bool menu_mamehub_machine::handle(event const *ev)
 //  menu_mamehub_join
 //-------------------------------------------------
 
-menu_mamehub_join::menu_mamehub_join(mame_ui_manager &mui, render_container &container)
-	: menu(mui, container)
+menu_mamehub_join::menu_mamehub_join(mame_ui_manager &mui, render_target &target)
+	: menu(mui, target)
 	, m_last_poll(std::chrono::steady_clock::now())
 {
 	set_heading(_("Open Lobbies (Discord)"));
@@ -453,7 +417,7 @@ void menu_mamehub_join::menu_activated()
 	reset(reset_options::REMEMBER_REF);
 }
 
-void menu_mamehub_join::custom_render(void *selectedref, float top, float bottom, float x, float y, float x2, float y2)
+void menu_mamehub_join::custom_render(uint32_t flags, void *selectedref, float top, float bottom, float x, float y, float x2, float y2)
 {
 	auto const now = std::chrono::steady_clock::now();
 	if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_poll).count() >= 500)
@@ -504,7 +468,7 @@ bool menu_mamehub_join::handle(event const *ev)
 			if (index < m_lobbies.size())
 			{
 				auto const &lobby = m_lobbies[index];
-				menu::stack_push<menu_mamehub_lobby>(ui(), container(), lobby.secret, lobby.system_name, lobby.software_name, lobby.game_title, lobby.host_name);
+				menu::stack_push<menu_mamehub_lobby>(ui(), target(), lobby.secret, lobby.system_name, lobby.software_name, lobby.game_title, lobby.host_name);
 				return true;
 			}
 		}
@@ -521,8 +485,8 @@ bool menu_mamehub_join::handle(event const *ev)
 //  menu_mamehub_lobby
 //-------------------------------------------------
 
-menu_mamehub_lobby::menu_mamehub_lobby(mame_ui_manager &mui, render_container &container, game_driver const *driver, ui_software_info const *software)
-	: menu(mui, container)
+menu_mamehub_lobby::menu_mamehub_lobby(mame_ui_manager &mui, render_target &target, game_driver const *driver, ui_software_info const *software)
+	: menu(mui, target)
 	, m_is_host(true)
 	, m_driver(driver)
 	, m_system_name(driver ? driver->name : "")
@@ -560,8 +524,8 @@ menu_mamehub_lobby::menu_mamehub_lobby(mame_ui_manager &mui, render_container &c
 	}
 }
 
-menu_mamehub_lobby::menu_mamehub_lobby(mame_ui_manager &mui, render_container &container, std::string secret, std::string system_name, std::string software_name, std::string game_title, std::string host_name)
-	: menu(mui, container)
+menu_mamehub_lobby::menu_mamehub_lobby(mame_ui_manager &mui, render_target &target, std::string secret, std::string system_name, std::string software_name, std::string game_title, std::string host_name)
+	: menu(mui, target)
 	, m_is_host(false)
 	, m_secret(std::move(secret))
 	, m_system_name(std::move(system_name))
@@ -602,7 +566,7 @@ menu_mamehub_lobby::~menu_mamehub_lobby()
 	}
 }
 
-void menu_mamehub_lobby::custom_render(void *selectedref, float top, float bottom, float x, float y, float x2, float y2)
+void menu_mamehub_lobby::custom_render(uint32_t flags, void *selectedref, float top, float bottom, float x, float y, float x2, float y2)
 {
 	if (m_transitioning)
 	{
@@ -745,28 +709,6 @@ bool menu_mamehub_lobby::handle(event const *ev)
 
 		case ITEM_CANCEL_LOBBY:
 		case ITEM_LEAVE_LOBBY:
-			leave_and_pop();
-			return true;
-		}
-	}
-	return false;
-}
-
-bool menu_mamehub_lobby::custom_mouse_down()
-{
-	int const h = hover();
-	if (h >= 0 && h < item_count() && is_selectable(item(h)))
-	{
-		set_selected_index(h);
-		auto ref = uintptr_t(item(h).ref());
-		if (ref == ITEM_START_GAME)
-		{
-			if (m_is_host)
-				start_game_as_host();
-			return true;
-		}
-		else if (ref == ITEM_CANCEL_LOBBY || ref == ITEM_LEAVE_LOBBY)
-		{
 			leave_and_pop();
 			return true;
 		}

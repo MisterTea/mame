@@ -187,12 +187,9 @@ void running_machine::start()
   if(options().mamehub())
   {
   }
-  else
-  {
-	if (newbase != 0)
+	else if (newbase != 0)
 	{
 		m_base_time = newbase;
-  }
 
 		std::string rtc_str = options().rtc_time();
 		if (!rtc_str.empty() && rtc_str != "0")

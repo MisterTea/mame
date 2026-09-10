@@ -115,15 +115,15 @@ menu_select_game::menu_select_game(mame_ui_manager &mui, render_target &target, 
 	ui_globals::curdats_total = 1;
 }
 
-menu_select_game::menu_select_game(mame_ui_manager &mui, render_container &container, const char *gamename, select_callback cb)
-	: menu_select_game(mui, container, gamename)
+menu_select_game::menu_select_game(mame_ui_manager &mui, render_target &target, const char *gamename, select_callback cb)
+	: menu_select_game(mui, target, gamename)
 {
 	m_select_callback = std::move(cb);
 	set_right_panel(RP_INFOS);
 }
 
-menu_select_game::menu_select_game(mame_ui_manager &mui, render_container &container, const char *gamename, select_callback cb, select_filter filter)
-	: menu_select_game(mui, container, gamename, std::move(cb))
+menu_select_game::menu_select_game(mame_ui_manager &mui, render_target &target, const char *gamename, select_callback cb, select_filter filter)
+	: menu_select_game(mui, target, gamename, std::move(cb))
 {
 	m_select_filter = std::move(filter);
 }

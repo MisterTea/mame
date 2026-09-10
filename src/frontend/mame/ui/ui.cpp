@@ -14,6 +14,8 @@
 #include "infoxml.h"
 #include "iptseqpoll.h"
 #include "luaengine.h"
+
+#include "mamehub.h"
 #include "mame.h"
 #include "ui/filemngr.h"
 #include "ui/info.h"
@@ -48,6 +50,8 @@
 // FIXME: allow OSD module headers to be included in a less ugly way
 #include "../osd/modules/lib/osdlib.h"
 #include "../osd/modules/lib/osdobj_common.h"
+
+#include "NSM_CommonInterface.h"
 
 #include <functional>
 #include <type_traits>
@@ -660,8 +664,9 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 	bool video_none = strcmp(downcast<osd_options &>(machine().options()).video(), OSDOPTVAL_NONE) == 0;
 
 	// disable everything if we are using -str for 300 or fewer seconds, or if we're the empty driver,
-	// or if we are debugging, or if there's no mame window to send inputs to
-	if (!first_time || (str > 0 && str < 60*5) || &machine().system() == &GAME_NAME(___empty) || (machine().debug_flags & DEBUG_FLAG_ENABLED) || video_none)
+	// or if we are debugging, or if there's no mame window to send inputs to,
+	// or if netplay is active (MAMEHub skips startup info/warnings)
+	if (netCommon || !first_time || (str > 0 && str < 60*5) || &machine().system() == &GAME_NAME(___empty) || (machine().debug_flags & DEBUG_FLAG_ENABLED) || video_none)
 		show_gameinfo = show_warnings = false;
 
 #if defined(__EMSCRIPTEN__)
@@ -955,6 +960,13 @@ bool mame_ui_manager::update_and_render(render_target &target)
 	// render any cheat stuff at the bottom
 	if (machine().phase() >= machine_phase::RESET)
 		mame_machine_manager::instance()->cheat().render_text(*this, target);
+
+	// MAMEHub overlay (latency/stats/chat)
+	mamehub_manager::instance()->ui(*this, target);
+	if (netCommon && netCommon->isGameOver())
+	{
+		machine().schedule_exit();
+	}
 
 	// draw the FPS counter if it should be visible
 	if (show_fps_counter())
@@ -1486,7 +1498,14 @@ void mame_ui_manager::process_ui_events()
 
 		case ui_event::type::IME_CHAR:
 			if (use_natkbd)
-				machine().natkeyboard().post_char(event.ch);
+			{
+				if (!mamehub_manager::instance()->handleChat(machine(), event))
+					machine().natkeyboard().post_char(event.ch);
+			}
+			else
+			{
+				mamehub_manager::instance()->handleChat(machine(), event);
+			}
 			break;
 		}
 	}
@@ -1902,6 +1921,12 @@ uint32_t mame_ui_manager::handler_ingame()
 
 void mame_ui_manager::request_quit()
 {
+	if (netCommon)
+	{
+		netCommon->signalGameOver();
+		machine().schedule_exit();
+		return;
+	}
 	if (!machine().options().confirm_quit())
 	{
 		machine().schedule_exit();

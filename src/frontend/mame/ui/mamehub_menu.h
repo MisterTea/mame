@@ -25,15 +25,14 @@ namespace ui {
 class menu_mamehub_main : public menu
 {
 public:
-	menu_mamehub_main(mame_ui_manager &mui, render_container &container);
+	menu_mamehub_main(mame_ui_manager &mui, render_target &target);
 	virtual ~menu_mamehub_main() override = default;
 
-	static void force_menu(mame_ui_manager &mui, render_container &container);
+	static void force_menu(mame_ui_manager &mui, render_target &target);
 
 protected:
 	virtual void populate() override;
 	virtual bool handle(event const *ev) override;
-	virtual bool custom_mouse_down() override;
 	virtual void menu_activated() override;
 };
 
@@ -41,7 +40,7 @@ protected:
 class menu_mamehub_machine : public menu
 {
 public:
-	menu_mamehub_machine(mame_ui_manager &mui, render_container &container, bool offline_launch = false);
+	menu_mamehub_machine(mame_ui_manager &mui, render_target &target, bool offline_launch = false);
 	virtual ~menu_mamehub_machine() override = default;
 
 protected:
@@ -59,14 +58,14 @@ private:
 class menu_mamehub_join : public menu
 {
 public:
-	menu_mamehub_join(mame_ui_manager &mui, render_container &container);
+	menu_mamehub_join(mame_ui_manager &mui, render_target &target);
 	virtual ~menu_mamehub_join() override = default;
 
 protected:
 	virtual void populate() override;
 	virtual bool handle(event const *ev) override;
 	virtual void menu_activated() override;
-	virtual void custom_render(void *selectedref, float top, float bottom, float x, float y, float x2, float y2) override;
+	virtual void custom_render(uint32_t flags, void *selectedref, float top, float bottom, float origx1, float origy1, float origx2, float origy2) override;
 
 private:
 	std::vector<mamehub::open_lobby_info> m_lobbies;
@@ -78,16 +77,15 @@ class menu_mamehub_lobby : public menu
 {
 public:
 	// Host constructor
-	menu_mamehub_lobby(mame_ui_manager &mui, render_container &container, game_driver const *driver, ui_software_info const *software = nullptr);
+	menu_mamehub_lobby(mame_ui_manager &mui, render_target &target, game_driver const *driver, ui_software_info const *software = nullptr);
 	// Guest constructor
-	menu_mamehub_lobby(mame_ui_manager &mui, render_container &container, std::string secret, std::string system_name, std::string software_name, std::string game_title, std::string host_name);
+	menu_mamehub_lobby(mame_ui_manager &mui, render_target &target, std::string secret, std::string system_name, std::string software_name, std::string game_title, std::string host_name);
 	virtual ~menu_mamehub_lobby() override;
 
 protected:
 	virtual void populate() override;
 	virtual bool handle(event const *ev) override;
-	virtual void custom_render(void *selectedref, float top, float bottom, float x, float y, float x2, float y2) override;
-	virtual bool custom_mouse_down() override;
+	virtual void custom_render(uint32_t flags, void *selectedref, float top, float bottom, float origx1, float origy1, float origx2, float origy2) override;
 	virtual bool custom_ui_back() override;
 
 private:

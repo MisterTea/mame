@@ -7,7 +7,7 @@
 
 #include "font_module.h"
 
-#if defined(SDLMAME_UNIX) && !defined(SDLMAME_MACOSX) && !defined(SDLMAME_HAIKU) && !defined(SDLMAME_ANDROID) && !defined(SDLMAME_SDL3)
+#if defined(SDLMAME_UNIX) && !defined(SDLMAME_MACOSX) && !defined(SDLMAME_HAIKU) && !defined(SDLMAME_ANDROID) && !defined(SDLMAME_IOS) && !defined(SDLMAME_SDL3)
 
 #include "corestr.h"
 #include "emucore.h"
