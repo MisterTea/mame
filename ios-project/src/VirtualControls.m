@@ -22,6 +22,7 @@ enum {
 	kKeyX = SDL_SCANCODE_LSHIFT,
 	kKeyStart = SDL_SCANCODE_1,
 	kKeySelect = SDL_SCANCODE_5,
+	kKeyUiSelect = SDL_SCANCODE_RETURN,
 };
 
 static void inject_scancode(SDL_Scancode scancode, SDL_bool pressed)
@@ -49,6 +50,7 @@ static SDL_Scancode scancode_for_name(NSString *name)
 	if ([name isEqualToString:@"x"]) return kKeyX;
 	if ([name isEqualToString:@"start"] || [name isEqualToString:@"1"]) return kKeyStart;
 	if ([name isEqualToString:@"select"] || [name isEqualToString:@"coin"] || [name isEqualToString:@"5"]) return kKeySelect;
+	if ([name isEqualToString:@"confirm"] || [name isEqualToString:@"enter"]) return kKeyUiSelect;
 	return (SDL_Scancode)0;
 }
 
@@ -258,7 +260,7 @@ static void hold_scancode(SDL_Scancode scancode, NSInteger holdMs)
 		_buttons[9].enabled = NO;
 		_buttons[8].hidden = NO;
 		_buttons[8].enabled = YES;
-		_buttons[8].scancode = kKeySelect;
+		_buttons[8].scancode = kKeyUiSelect;
 		[_buttons[8] setTitle:@"SELECT" forState:UIControlStateNormal];
 		_buttons[8].frame = CGRectMake(mid - 70, bottom - size * 0.9, 140, 36);
 	}
