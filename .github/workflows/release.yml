@@ -260,19 +260,17 @@ jobs:
                   chmod +x gradlew
                   ./gradlew assembleDebug --no-daemon
 
-            - name: Stage zip
+            - name: Stage APK
               run: |
                   set -euo pipefail
-                  mkdir -p mamehub_android_arm64_beta
                   cp mame/android-project/app/build/outputs/apk/debug/app-debug.apk \
-                    mamehub_android_arm64_beta/mamehub-android-arm64-debug.apk
-                  zip -r mamehub_android_arm64_beta.zip mamehub_android_arm64_beta
+                    mamehub-android-arm64-debug.apk
 
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
                   name: mamehub_android_arm64_beta
-                  path: mamehub_android_arm64_beta.zip
+                  path: mamehub-android-arm64-debug.apk
 
             - name: Update mamehub discord tag
               uses: richardsimko/update-tag@v1
@@ -286,9 +284,10 @@ jobs:
               with:
                   body: |
                       New mamehub version.
-                  files: mamehub_android_arm64_beta.zip
+                  files: mamehub-android-arm64-debug.apk
                   fail_on_unmatched_files: true
                   tag_name: mamehub_discord_v1.0.0
+                  prerelease: true
 
     build_and_release_ios:
         if: false  # hold off uploading iOS to the release for now

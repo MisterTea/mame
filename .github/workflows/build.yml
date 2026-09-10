@@ -200,18 +200,17 @@ jobs:
                   ./gradlew assembleDebug --no-daemon
                   test -f app/build/outputs/apk/debug/app-debug.apk
 
-            - name: Stage artifact
+            - name: Stage APK
               run: |
                   set -euo pipefail
-                  mkdir -p out
-                  cp mame/android-project/app/build/outputs/apk/debug/app-debug.apk out/mamehub-android-arm64-debug.apk
-                  cp mame/android-project/app/src/main/libs/arm64-v8a/libmainhub.so out/
+                  cp mame/android-project/app/build/outputs/apk/debug/app-debug.apk \
+                    mamehub-android-arm64-debug.apk
 
             - name: Upload Android APK
               uses: actions/upload-artifact@v4
               with:
                   name: mamehub_android_arm64_beta
-                  path: out/*
+                  path: mamehub-android-arm64-debug.apk
 
     build_ios:
         runs-on: macos-latest
