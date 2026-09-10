@@ -237,6 +237,7 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_LOBBY_PORT,               "443",         core_options::option_type::INTEGER,    "Lobby port" },
 	{ OPTION_FAKE_LAG,               "0",         core_options::option_type::BOOLEAN,    "Add fake lag and clock skew" },
 	{ OPTION_DIRECT_CONNECT_TIMEOUT "(1-60)", "10", core_options::option_type::INTEGER, "seconds to establish every direct peer connection (no relay fallback)" },
+	{ OPTION_DISCORD,                 "1", core_options::option_type::BOOLEAN, "use Discord host/join inside MAMEHub (disable with -nodiscord for classic lobby_host/lobby_port)" },
 	{ OPTION_DISCORD_AUTH,            "1", core_options::option_type::BOOLEAN, "require Discord sign-in at MAMEHub startup (disable with -nodiscord_auth)" },
 	{ OPTION_DISCORD_LOBBY,           "", core_options::option_type::STRING, "private Discord lobby secret to host or join" },
 	{ OPTION_DISCORD_HOST,            "0", core_options::option_type::BOOLEAN, "host the Discord lobby" },

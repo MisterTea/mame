@@ -301,45 +301,89 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 
   // Set up client/server as appropriate
   if (m_options.mamehub()) {
-    if (*m_options.discord_mock()) {
-      mamehub::discord_service::set_mock_user(m_options.discord_mock());
-    }
-    // Discord sign-in is required by default on all platforms at MAMEHub
-    // startup. Opt out with -nodiscord_auth (Offline-only / local testing).
-    bool const mock_enabled = mamehub::discord_service::is_mock_enabled();
-    if (m_options.discord_auth()) {
-      if (!mamehub::discord_service::instance().is_authenticated()) {
-        mamehub::discord_identity discordIdentity;
-        string discordError;
-        if (!mamehub::discord_service::has_cached_token() && !mock_enabled) {
-          osd_printf_info("Waiting for Discord authorization...\n");
+    if (m_options.discord()) {
+      if (*m_options.discord_mock()) {
+        mamehub::discord_service::set_mock_user(m_options.discord_mock());
+      }
+      // Discord sign-in is required by default on all platforms at MAMEHub
+      // startup. Opt out with -nodiscord_auth (Offline-only / local testing).
+      bool const mock_enabled = mamehub::discord_service::is_mock_enabled();
+      if (m_options.discord_auth()) {
+        if (!mamehub::discord_service::instance().is_authenticated()) {
+          mamehub::discord_identity discordIdentity;
+          string discordError;
+          if (!mamehub::discord_service::has_cached_token() && !mock_enabled) {
+            osd_printf_info("Waiting for Discord authorization...\n");
+          }
+          if (!mamehub::discord_service::instance().authenticate(discordIdentity, discordError)) {
+            osd_printf_warning("Discord authorization failed: %s\n", discordError.c_str());
+            throw emu_fatalerror("Discord authorization is required (use -nodiscord_auth to disable)");
+          }
+          osd_printf_info("Signed in to Discord as %s\n", discordIdentity.display_name.c_str());
         }
-        if (!mamehub::discord_service::instance().authenticate(discordIdentity, discordError)) {
-          osd_printf_warning("Discord authorization failed: %s\n", discordError.c_str());
-          throw emu_fatalerror("Discord authorization is required (use -nodiscord_auth to disable)");
+      } else {
+        osd_printf_info("Discord authorization disabled (-nodiscord_auth)\n");
+      }
+
+      // If a private lobby was provided on the command line, perform direct connection
+      if (*m_options.discord_lobby()) {
+        string userId = m_options.user_id();
+        std::unique_ptr<mamehub::discord_directory_server> discordDirectory;
+        if (m_options.discord_auth() && mamehub::discord_service::instance().is_authenticated()) {
+          auto const &discordIdentity = mamehub::discord_service::instance().current_identity();
+          userId = to_string(discordIdentity.id);
+          // Both host and guest must advertise the same game string so lobby
+          // join validation succeeds (empty guest game is rejected by the host).
+          string selectedGame = m_options.system_name();
+          selectedGame += ";" + m_options.software_name();
+          discordDirectory = std::make_unique<mamehub::discord_directory_server>(
+              discordIdentity, m_options.discord_lobby(), selectedGame,
+              m_options.discord_host(), m_options.discord_players(),
+              (unsigned short)m_options.discord_directory_port());
         }
-        osd_printf_info("Signed in to Discord as %s\n", discordIdentity.display_name.c_str());
+        if (userId.length() == 0) {
+          userId = string(16,'0');
+          for (int a=0;a<16;a++) {
+            userId[a] += (rand()%10);
+          }
+        }
+        deleteNetCommon();
+        string gameString = m_options.system_name();
+        gameString += ";" + m_options.software_name();
+        if (discordDirectory) {
+          string const privateKey = m_options.password();
+          unsigned short const peerPort = (unsigned short)m_options.port();
+          unsigned short const directoryPort = discordDirectory->port();
+          bool const fakeLag = m_options.fake_lag();
+          int const connectTimeout = m_options.direct_connect_timeout();
+          if (mamehub::discord_service::is_mock_enabled())
+            wga::DISABLE_PORT_MAPPING = true;
+          auto connection = std::async(std::launch::async, [userId, privateKey, peerPort, directoryPort, gameString, fakeLag, connectTimeout] {
+            return createNetCommon(userId, privateKey, peerPort, "", directoryPort, 50, gameString, fakeLag, connectTimeout);
+          });
+          mamehub::show_discord_waiting_room(*discordDirectory, m_options.discord_host(), [&connection] {
+            return connection.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+          });
+          connection.get();
+        }
+        if (netCommon) {
+          string gameName = netCommon->getGameName();
+          auto tokens = wga::split(gameName, ';');
+          if (tokens.size() > 2) {
+            LOGFATAL << "Invalid token size: " << gameName;
+          }
+          m_options.set_system_name(tokens[0]);
+          if (tokens.size() > 1) {
+            string software = tokens[1];
+            m_options.set_software(std::move(software));
+          }
+        }
       }
     } else {
-      osd_printf_info("Discord authorization disabled (-nodiscord_auth)\n");
-    }
-
-    // If a private lobby was provided on the command line, perform direct connection
-    if (*m_options.discord_lobby()) {
+      // Classic MAMEHub lobby: connect to lobby_host/lobby_port at startup.
+      osd_printf_info("Discord mode disabled (-nodiscord); using classic lobby %s:%d\n",
+          m_options.lobby_host(), m_options.lobby_port());
       string userId = m_options.user_id();
-      std::unique_ptr<mamehub::discord_directory_server> discordDirectory;
-      if (m_options.discord_auth() && mamehub::discord_service::instance().is_authenticated()) {
-        auto const &discordIdentity = mamehub::discord_service::instance().current_identity();
-        userId = to_string(discordIdentity.id);
-        // Both host and guest must advertise the same game string so lobby
-        // join validation succeeds (empty guest game is rejected by the host).
-        string selectedGame = m_options.system_name();
-        selectedGame += ";" + m_options.software_name();
-        discordDirectory = std::make_unique<mamehub::discord_directory_server>(
-            discordIdentity, m_options.discord_lobby(), selectedGame,
-            m_options.discord_host(), m_options.discord_players(),
-            (unsigned short)m_options.discord_directory_port());
-      }
       if (userId.length() == 0) {
         userId = string(16,'0');
         for (int a=0;a<16;a++) {
@@ -349,22 +393,15 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
       deleteNetCommon();
       string gameString = m_options.system_name();
       gameString += ";" + m_options.software_name();
-      if (discordDirectory) {
-        string const privateKey = m_options.password();
-        unsigned short const peerPort = (unsigned short)m_options.port();
-        unsigned short const directoryPort = discordDirectory->port();
-        bool const fakeLag = m_options.fake_lag();
-        int const connectTimeout = m_options.direct_connect_timeout();
-        if (mamehub::discord_service::is_mock_enabled())
-          wga::DISABLE_PORT_MAPPING = true;
-        auto connection = std::async(std::launch::async, [userId, privateKey, peerPort, directoryPort, gameString, fakeLag, connectTimeout] {
-          return createNetCommon(userId, privateKey, peerPort, "", directoryPort, 50, gameString, fakeLag, connectTimeout);
-        });
-        mamehub::show_discord_waiting_room(*discordDirectory, m_options.discord_host(), [&connection] {
-          return connection.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
-        });
-        connection.get();
-      }
+      createNetCommon(userId,
+        m_options.password(),
+        (unsigned short)m_options.port(),
+        m_options.lobby_host(),
+        (unsigned short)m_options.lobby_port(),
+        50,
+        gameString,
+        m_options.fake_lag(),
+        m_options.direct_connect_timeout());
       if (netCommon) {
         string gameName = netCommon->getGameName();
         auto tokens = wga::split(gameName, ';');
