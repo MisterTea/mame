@@ -46,7 +46,7 @@ if [[ "$IOS_GCC" == "ios-simulator" ]]; then
     xcrun simctl install booted "$APP_DIR"
     echo "Installed on simulator $BOOTED"
     echo "Launch example:"
-    echo "  xcrun simctl launch --console-pty booted org.mamedev.mamehub -discord_auth -discord_mock iOSGuest"
+    echo "  xcrun simctl launch --console-pty booted org.mistertea.mamehub -discord_auth -discord_mock iOSGuest"
   else
     echo "No booted simulator; install later with:"
     echo "  xcrun simctl install booted $APP_DIR"

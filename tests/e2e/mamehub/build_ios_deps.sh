@@ -81,8 +81,10 @@ if [[ ! -f "$OPENSSL_PREFIX/lib/libssl.a" ]]; then
   pushd "$ROOT/openssl-build-$ARCH_SUFFIX" >/dev/null
   # Let OpenSSL's ios*-xcrun targets drive the SDK; only pass arch + min version.
   unset CC CXX CFLAGS CXXFLAGS LDFLAGS
+  # no-asm: ios64-xcrun assembly uses ELF .type/.size directives that Apple
+  # clang rejects; pure-C OpenSSL is fine for MAMEHub netplay crypto volume.
   ./Configure "$OPENSSL_TARGET" \
-    no-shared no-tests no-ui-console no-dso \
+    no-shared no-tests no-ui-console no-dso no-asm \
     --prefix="$OPENSSL_PREFIX" --openssldir="$OPENSSL_PREFIX/ssl" \
     "-arch arm64" "$VERSION_MIN_FLAG"
   make -j"$JOBS"
