@@ -41,7 +41,7 @@ protected:
 class menu_mamehub_machine : public menu
 {
 public:
-	menu_mamehub_machine(mame_ui_manager &mui, render_container &container);
+	menu_mamehub_machine(mame_ui_manager &mui, render_container &container, bool offline_launch = false);
 	virtual ~menu_mamehub_machine() override = default;
 
 protected:
@@ -51,6 +51,7 @@ protected:
 
 private:
 	std::vector<game_driver const *> m_software_machines;
+	bool m_offline_launch;
 	std::string m_search;
 };
 
