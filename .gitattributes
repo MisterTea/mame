@@ -46,6 +46,8 @@
 *.bdf   eol=crlf    svneol=CRLF#application/x-font-bdf
 
 *.zip   -text       svneol=unset#application/zip
+launchbox/*.sqlite3          -text
+launchbox/software/*.sqlite3 -text
 
 makefile svneol=native#text/plain
 Makefile svneol=native#text/plain

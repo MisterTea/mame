@@ -119,6 +119,7 @@ menu_select_game::menu_select_game(mame_ui_manager &mui, render_container &conta
 	: menu_select_game(mui, container, gamename)
 {
 	m_select_callback = std::move(cb);
+	set_right_panel(RP_INFOS);
 }
 
 menu_select_game::menu_select_game(mame_ui_manager &mui, render_container &container, const char *gamename, select_callback cb, select_filter filter)

@@ -69,7 +69,8 @@ includedirs {
 	ext_includedir("lua"),
 	ext_includedir("zlib"),
 	ext_includedir("flac"),
-	ext_includedir("rapidjson")
+	ext_includedir("rapidjson"),
+	ext_includedir("sqlite3")
 }
 
 configuration { }
@@ -178,6 +179,8 @@ files {
 	MAME_DIR .. "src/frontend/mame/ui/inputtoggle.h",
 	MAME_DIR .. "src/frontend/mame/ui/keyboard.cpp",
 	MAME_DIR .. "src/frontend/mame/ui/keyboard.h",
+	MAME_DIR .. "src/frontend/mame/ui/launchbox.cpp",
+	MAME_DIR .. "src/frontend/mame/ui/launchbox.h",
 	MAME_DIR .. "src/frontend/mame/ui/mamehub_menu.cpp",
 	MAME_DIR .. "src/frontend/mame/ui/mamehub_menu.h",
 	MAME_DIR .. "src/frontend/mame/ui/mainmenu.cpp",
