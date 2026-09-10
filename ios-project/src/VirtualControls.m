@@ -80,6 +80,8 @@ static void hold_scancode(SDL_Scancode scancode, NSInteger holdMs)
 	NSFileHandle *_injectHandle;
 	unsigned long long _injectOffset;
 	dispatch_source_t _injectTimer;
+	dispatch_source_t _menuModeTimer;
+	BOOL _menuMode;
 }
 
 + (void)installIfNeeded
@@ -130,6 +132,8 @@ static void hold_scancode(SDL_Scancode scancode, NSInteger holdMs)
 	[self addButton:@"X" scancode:kKeyX];
 	[self addButton:@"START" scancode:kKeyStart];
 	[self addButton:@"SELECT" scancode:kKeySelect];
+	_menuMode = SDL_GetHintBoolean("MAMEHUB_MENU_ACTIVE", SDL_FALSE) ? YES : NO;
+	[self startMenuModeWatcher];
 	return self;
 }
 
@@ -233,13 +237,45 @@ static void hold_scancode(SDL_Scancode scancode, NSInteger holdMs)
 
 	// Face buttons
 	_buttons[4].frame = CGRectMake(right - size * 3, bottom - size * 2, size, size);      // Y
-	_buttons[5].frame = CGRectMake(right - size * 2, bottom - size, size, size);         // B
-	_buttons[6].frame = CGRectMake(right - size, bottom - size * 2, size, size);         // A
+	_buttons[5].frame = CGRectMake(right - size * 2, bottom - size, size, size);           // B
+	_buttons[6].frame = CGRectMake(right - size, bottom - size * 2, size, size);           // A
 	_buttons[7].frame = CGRectMake(right - size * 2, bottom - size * 3, size, size);      // X
 
 	CGFloat mid = w * 0.5;
 	_buttons[8].frame = CGRectMake(mid - 70, bottom - size * 0.9, 65, 36);               // START
 	_buttons[9].frame = CGRectMake(mid + 5, bottom - size * 0.9, 70, 36);                // SELECT
+
+	if (_menuMode)
+	{
+		inject_scancode(kKeyStart, SDL_FALSE);
+		inject_scancode(kKeySelect, SDL_FALSE);
+		for (NSUInteger i = 4; i <= 7; ++i)
+		{
+			_buttons[i].hidden = YES;
+			_buttons[i].enabled = NO;
+		}
+		_buttons[9].hidden = YES;
+		_buttons[9].enabled = NO;
+		_buttons[8].hidden = NO;
+		_buttons[8].enabled = YES;
+		_buttons[8].scancode = kKeySelect;
+		[_buttons[8] setTitle:@"SELECT" forState:UIControlStateNormal];
+		_buttons[8].frame = CGRectMake(mid - 70, bottom - size * 0.9, 140, 36);
+	}
+	else
+	{
+		inject_scancode(kKeyStart, SDL_FALSE);
+		inject_scancode(kKeySelect, SDL_FALSE);
+		for (NSUInteger i = 4; i <= 7; ++i)
+		{
+			_buttons[i].hidden = NO;
+			_buttons[i].enabled = YES;
+		}
+		_buttons[9].hidden = NO;
+		_buttons[9].enabled = YES;
+		_buttons[8].scancode = kKeyStart;
+		[_buttons[8] setTitle:@"START" forState:UIControlStateNormal];
+	}
 }
 
 - (void)press:(MAMEHubPadButton *)sender
@@ -256,6 +292,38 @@ static void hold_scancode(SDL_Scancode scancode, NSInteger holdMs)
 {
 	UIView *hit = [super hitTest:point withEvent:event];
 	return (hit == self) ? nil : hit;
+}
+
+- (void)startMenuModeWatcher
+{
+	_menuModeTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+	dispatch_source_set_timer(_menuModeTimer, dispatch_time(DISPATCH_TIME_NOW, 0),
+		(uint64_t)(120 * NSEC_PER_MSEC), (uint64_t)(20 * NSEC_PER_MSEC));
+	__weak MAMEHubVirtualControls *weakSelf = self;
+	dispatch_source_set_event_handler(_menuModeTimer, ^{
+		[weakSelf refreshMenuMode];
+	});
+	dispatch_resume(_menuModeTimer);
+}
+
+- (void)refreshMenuMode
+{
+	BOOL menuMode = SDL_GetHintBoolean("MAMEHUB_MENU_ACTIVE", SDL_FALSE) ? YES : NO;
+	if (menuMode != _menuMode)
+	{
+		for (NSUInteger i = 4; i <= 9; ++i)
+			inject_scancode(_buttons[i].scancode, SDL_FALSE);
+		_menuMode = menuMode;
+		[self setNeedsLayout];
+	}
+}
+
+- (void)dealloc
+{
+	if (_injectTimer)
+		dispatch_source_cancel(_injectTimer);
+	if (_menuModeTimer)
+		dispatch_source_cancel(_menuModeTimer);
 }
 
 @end
