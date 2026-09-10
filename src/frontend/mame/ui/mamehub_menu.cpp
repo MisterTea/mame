@@ -74,6 +74,31 @@ bool ensure_discord_authenticated(mame_ui_manager &mui)
 	return true;
 }
 
+bool is_confirm_input(menu::event const *ev)
+{
+	return ev && ((IPT_UI_SELECT == ev->iptkey) || (IPT_START == ev->iptkey));
+}
+
+void launch_offline_game(mame_ui_manager &mui, game_driver const &driver, ui_software_info const *software = nullptr)
+{
+	auto &options = mui.machine().options();
+	if (software && !software->startempty)
+	{
+		std::string software_name = string_format("%s:%s", software->listname, software->shortname);
+		options.set_value(OPTION_SOFTWARENAME, software_name, OPTION_PRIORITY_CMDLINE);
+		options.set_software(std::move(software_name));
+	}
+	else
+	{
+		options.set_value(OPTION_SOFTWARENAME, "", OPTION_PRIORITY_CMDLINE);
+		options.set_software("");
+	}
+
+	mame_machine_manager::instance()->schedule_new_driver(driver);
+	mui.machine().resume();
+	mui.machine().schedule_hard_reset();
+}
+
 // Relative present-day popularity for recognizable software platforms.  Keep
 // these values constant so menu order is deterministic; aliases and regional
 // variants intentionally share a score.  Every machine not listed here has a
@@ -242,7 +267,7 @@ void menu_mamehub_main::populate()
 
 bool menu_mamehub_main::handle(event const *ev)
 {
-	if (ev && (IPT_UI_SELECT == ev->iptkey))
+	if (is_confirm_input(ev))
 	{
 		switch (uintptr_t(ev->itemref))
 		{
@@ -259,7 +284,7 @@ bool menu_mamehub_main::handle(event const *ev)
 			return true;
 
 		case ITEM_OFFLINE:
-			menu::stack_push<menu_select_game>(ui(), container(), nullptr);
+			menu::stack_push<menu_mamehub_machine>(ui(), container(), true);
 			return true;
 
 		case ITEM_OPTIONS:
@@ -314,9 +339,10 @@ bool menu_mamehub_main::custom_mouse_down()
 //  menu_mamehub_machine
 //-------------------------------------------------
 
-menu_mamehub_machine::menu_mamehub_machine(mame_ui_manager &mui, render_container &container)
+menu_mamehub_machine::menu_mamehub_machine(mame_ui_manager &mui, render_container &container, bool offline_launch)
 	: menu(mui, container)
 	, m_software_machines(machine_catalog(mui).software_machines())
+	, m_offline_launch(offline_launch)
 {
 }
 
@@ -358,18 +384,31 @@ bool menu_mamehub_machine::handle(event const *ev)
 		return true;
 	}
 
-	if (!ev || (IPT_UI_SELECT != ev->iptkey) || !ev->itemref)
+	if (!is_confirm_input(ev) || !ev->itemref)
 		return false;
 
 	if (uintptr_t(ev->itemref) == ITEM_ARCADE)
 	{
-		menu::stack_push<menu_select_game>(
-				ui(), container(), nullptr,
-				[this] (game_driver const &driver)
-				{
-					menu::stack_push<menu_mamehub_lobby>(ui(), container(), &driver);
-				},
-				[this] (game_driver const &driver) { return machine_catalog(ui()).is_arcade(driver); });
+		if (m_offline_launch)
+		{
+			menu::stack_push<menu_select_game>(
+					ui(), container(), nullptr,
+					[this] (game_driver const &driver)
+					{
+						launch_offline_game(ui(), driver);
+					},
+					[this] (game_driver const &driver) { return machine_catalog(ui()).is_arcade(driver); });
+		}
+		else
+		{
+			menu::stack_push<menu_select_game>(
+					ui(), container(), nullptr,
+					[this] (game_driver const &driver)
+					{
+						menu::stack_push<menu_mamehub_lobby>(ui(), container(), &driver);
+					},
+					[this] (game_driver const &driver) { return machine_catalog(ui()).is_arcade(driver); });
+		}
 		return true;
 	}
 
@@ -379,12 +418,24 @@ bool menu_mamehub_machine::handle(event const *ev)
 	if ((index < 0) || (std::size_t(index) >= systems.size()))
 		return false;
 
-	menu::stack_push<menu_select_software>(
-			ui(), container(), systems[index],
-			[this] (game_driver const &selected_driver, ui_software_info const &software)
-			{
-				menu::stack_push<menu_mamehub_lobby>(ui(), container(), &selected_driver, &software);
-			});
+	if (m_offline_launch)
+	{
+		menu::stack_push<menu_select_software>(
+				ui(), container(), systems[index],
+				[this] (game_driver const &selected_driver, ui_software_info const &software)
+				{
+					launch_offline_game(ui(), selected_driver, &software);
+				});
+	}
+	else
+	{
+		menu::stack_push<menu_select_software>(
+				ui(), container(), systems[index],
+				[this] (game_driver const &selected_driver, ui_software_info const &software)
+				{
+					menu::stack_push<menu_mamehub_lobby>(ui(), container(), &selected_driver, &software);
+				});
+	}
 	return true;
 }
 
@@ -444,7 +495,7 @@ void menu_mamehub_join::populate()
 
 bool menu_mamehub_join::handle(event const *ev)
 {
-	if (ev && (IPT_UI_SELECT == ev->iptkey))
+	if (is_confirm_input(ev))
 	{
 		if (uintptr_t(ev->itemref) == ITEM_REFRESH)
 		{
@@ -688,7 +739,7 @@ bool menu_mamehub_lobby::handle(event const *ev)
 		return false;
 	}
 
-	if (ev && (IPT_UI_SELECT == ev->iptkey))
+	if (is_confirm_input(ev))
 	{
 		switch (uintptr_t(ev->itemref))
 		{
