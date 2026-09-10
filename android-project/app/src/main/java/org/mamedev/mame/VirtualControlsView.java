@@ -8,10 +8,12 @@ import android.graphics.RectF;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.os.Build;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.KeyEvent;
+import android.view.WindowInsets;
 
 import org.libsdl.app.SDLActivity;
 
@@ -31,6 +33,8 @@ import org.libsdl.app.SDLActivity;
  */
 final class VirtualControlsView extends View {
 	private static final int HOLD_MS = 100;
+	private static final int MENU_POLL_MS = 120;
+	private static final String MENU_ACTIVE_HINT = "MAMEHUB_MENU_ACTIVE";
 
 	private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
 	private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -44,6 +48,21 @@ final class VirtualControlsView extends View {
 
 	private int activeDpad = -1;
 	private int activeFace = -1;
+	private boolean menuMode = false;
+	private final Runnable menuPoll = new Runnable() {
+		@Override
+		public void run() {
+			boolean nextMenuMode = SDLActivity.nativeGetHintBoolean(MENU_ACTIVE_HINT, false);
+			if (nextMenuMode != menuMode) {
+				menuMode = nextMenuMode;
+				releaseKey(activeFace);
+				activeFace = -1;
+				requestLayout();
+				invalidate();
+			}
+			handler.postDelayed(this, MENU_POLL_MS);
+		}
+	};
 
 	VirtualControlsView(Context context) {
 		super(context);
@@ -74,19 +93,28 @@ final class VirtualControlsView extends View {
 		float faceSize = dpadSize;
 		float btnW = dp(96);
 		float btnH = dp(48);
+		float leftInset = sideInset(true);
+		float rightInset = sideInset(false);
+		float bottom = h - pad - bottomInset();
 
-		dpadArea.set(pad, h - pad - dpadSize, pad + dpadSize, h - pad);
-		faceArea.set(w - pad - faceSize, h - pad - faceSize, w - pad, h - pad);
-		startBtn.set(w * 0.5f - btnW - dp(12), h - pad - btnH, w * 0.5f - dp(12), h - pad);
-		selectBtn.set(w * 0.5f + dp(12), h - pad - btnH, w * 0.5f + btnW + dp(12), h - pad);
+		dpadArea.set(pad + leftInset, bottom - dpadSize, pad + leftInset + dpadSize, bottom);
+		faceArea.set(w - pad - rightInset - faceSize, bottom - faceSize, w - pad - rightInset, bottom);
+		startBtn.set(w * 0.5f - btnW - dp(12), bottom - btnH, w * 0.5f - dp(12), bottom);
+		selectBtn.set(w * 0.5f + dp(12), bottom - btnH, w * 0.5f + btnW + dp(12), bottom);
+		if (menuMode) {
+			float menuBtnW = dp(136);
+			startBtn.set(w * 0.5f - (menuBtnW * 0.5f), bottom - btnH, w * 0.5f + (menuBtnW * 0.5f), bottom);
+		}
 	}
 
 	@Override
 	protected void onDraw(Canvas canvas) {
 		drawRound(canvas, dpadArea);
-		drawRound(canvas, faceArea);
 		drawRound(canvas, startBtn);
-		drawRound(canvas, selectBtn);
+		if (!menuMode) {
+			drawRound(canvas, faceArea);
+			drawRound(canvas, selectBtn);
+		}
 
 		float dpadCx = dpadArea.centerX();
 		float dpadCy = dpadArea.centerY();
@@ -99,13 +127,16 @@ final class VirtualControlsView extends View {
 		canvas.drawText("←", dpadCx - o, dpadCy + label.getTextSize() * 0.35f, label);
 		canvas.drawText("→", dpadCx + o, dpadCy + label.getTextSize() * 0.35f, label);
 
-		canvas.drawText("X", faceCx, faceCy - o + label.getTextSize() * 0.35f, label);
-		canvas.drawText("B", faceCx, faceCy + o + label.getTextSize() * 0.35f, label);
-		canvas.drawText("Y", faceCx - o, faceCy + label.getTextSize() * 0.35f, label);
-		canvas.drawText("A", faceCx + o, faceCy + label.getTextSize() * 0.35f, label);
-
-		canvas.drawText("START", startBtn.centerX(), startBtn.centerY() + label.getTextSize() * 0.35f, label);
-		canvas.drawText("SELECT", selectBtn.centerX(), selectBtn.centerY() + label.getTextSize() * 0.35f, label);
+		if (!menuMode) {
+			canvas.drawText("X", faceCx, faceCy - o + label.getTextSize() * 0.35f, label);
+			canvas.drawText("B", faceCx, faceCy + o + label.getTextSize() * 0.35f, label);
+			canvas.drawText("Y", faceCx - o, faceCy + label.getTextSize() * 0.35f, label);
+			canvas.drawText("A", faceCx + o, faceCy + label.getTextSize() * 0.35f, label);
+			canvas.drawText("START", startBtn.centerX(), startBtn.centerY() + label.getTextSize() * 0.35f, label);
+			canvas.drawText("SELECT", selectBtn.centerX(), selectBtn.centerY() + label.getTextSize() * 0.35f, label);
+		} else {
+			canvas.drawText("SELECT", startBtn.centerX(), startBtn.centerY() + label.getTextSize() * 0.35f, label);
+		}
 	}
 
 	private void drawRound(Canvas canvas, RectF r) {
@@ -122,14 +153,14 @@ final class VirtualControlsView extends View {
 
 		if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
 			if (startBtn.contains(x, y)) {
-				pulseKey(KeyEvent.KEYCODE_1);
+				pulseKey(menuMode ? KeyEvent.KEYCODE_5 : KeyEvent.KEYCODE_1);
 				return true;
 			}
-			if (selectBtn.contains(x, y)) {
+			if (!menuMode && selectBtn.contains(x, y)) {
 				pulseKey(KeyEvent.KEYCODE_5);
 				return true;
 			}
-			if (dpadArea.contains(x, y) || faceArea.contains(x, y)) {
+			if (dpadArea.contains(x, y) || (!menuMode && faceArea.contains(x, y))) {
 				// fall through to shared press logic below
 			} else {
 				// Let SDL receive taps outside the pad (menus / "press any key").
@@ -148,12 +179,59 @@ final class VirtualControlsView extends View {
 				}
 				return true;
 			}
-			if (faceArea.contains(x, y)) {
+			if (!menuMode && faceArea.contains(x, y)) {
 				int key = quadrantKey(faceArea, x, y, false);
 				if (key != activeFace) {
 					releaseKey(activeFace);
 					pressKey(key);
 					activeFace = key;
+				}
+
+				@Override
+				protected void onAttachedToWindow() {
+					super.onAttachedToWindow();
+					menuMode = SDLActivity.nativeGetHintBoolean(MENU_ACTIVE_HINT, false);
+					requestLayout();
+					invalidate();
+					handler.post(menuPoll);
+				}
+
+				@Override
+				protected void onDetachedFromWindow() {
+					handler.removeCallbacks(menuPoll);
+					super.onDetachedFromWindow();
+				}
+
+				private float bottomInset() {
+					if (Build.VERSION.SDK_INT >= 30) {
+						WindowInsets insets = getRootWindowInsets();
+						if (insets != null) {
+							return insets.getInsets(WindowInsets.Type.systemBars()).bottom;
+						}
+					} else if (Build.VERSION.SDK_INT >= 23) {
+						WindowInsets insets = getRootWindowInsets();
+						if (insets != null) {
+							return insets.getStableInsetBottom();
+						}
+					}
+					return 0f;
+				}
+
+				private float sideInset(boolean left) {
+					if (Build.VERSION.SDK_INT >= 30) {
+						WindowInsets insets = getRootWindowInsets();
+						if (insets != null) {
+							return left
+									? insets.getInsets(WindowInsets.Type.systemBars()).left
+									: insets.getInsets(WindowInsets.Type.systemBars()).right;
+						}
+					} else if (Build.VERSION.SDK_INT >= 23) {
+						WindowInsets insets = getRootWindowInsets();
+						if (insets != null) {
+							return left ? insets.getStableInsetLeft() : insets.getStableInsetRight();
+						}
+					}
+					return 0f;
 				}
 				return true;
 			}
