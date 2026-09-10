@@ -57,7 +57,7 @@ final class VirtualControlsView extends View {
 				menuMode = nextMenuMode;
 				releaseKey(activeFace);
 				activeFace = -1;
-				requestLayout();
+				layoutControls(getWidth(), getHeight());
 				invalidate();
 			}
 			handler.postDelayed(this, MENU_POLL_MS);
@@ -88,6 +88,10 @@ final class VirtualControlsView extends View {
 	@Override
 	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
 		super.onSizeChanged(w, h, oldw, oldh);
+		layoutControls(w, h);
+	}
+
+	private void layoutControls(int w, int h) {
 		float pad = dp(16);
 		float dpadSize = Math.min(h, w) * 0.42f;
 		float faceSize = dpadSize;
@@ -153,7 +157,7 @@ final class VirtualControlsView extends View {
 
 		if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
 			if (startBtn.contains(x, y)) {
-				pulseKey(menuMode ? KeyEvent.KEYCODE_5 : KeyEvent.KEYCODE_1);
+				pulseKey(menuMode ? KeyEvent.KEYCODE_ENTER : KeyEvent.KEYCODE_1);
 				return true;
 			}
 			if (!menuMode && selectBtn.contains(x, y)) {
@@ -186,53 +190,6 @@ final class VirtualControlsView extends View {
 					pressKey(key);
 					activeFace = key;
 				}
-
-				@Override
-				protected void onAttachedToWindow() {
-					super.onAttachedToWindow();
-					menuMode = SDLActivity.nativeGetHintBoolean(MENU_ACTIVE_HINT, false);
-					requestLayout();
-					invalidate();
-					handler.post(menuPoll);
-				}
-
-				@Override
-				protected void onDetachedFromWindow() {
-					handler.removeCallbacks(menuPoll);
-					super.onDetachedFromWindow();
-				}
-
-				private float bottomInset() {
-					if (Build.VERSION.SDK_INT >= 30) {
-						WindowInsets insets = getRootWindowInsets();
-						if (insets != null) {
-							return insets.getInsets(WindowInsets.Type.systemBars()).bottom;
-						}
-					} else if (Build.VERSION.SDK_INT >= 23) {
-						WindowInsets insets = getRootWindowInsets();
-						if (insets != null) {
-							return insets.getStableInsetBottom();
-						}
-					}
-					return 0f;
-				}
-
-				private float sideInset(boolean left) {
-					if (Build.VERSION.SDK_INT >= 30) {
-						WindowInsets insets = getRootWindowInsets();
-						if (insets != null) {
-							return left
-									? insets.getInsets(WindowInsets.Type.systemBars()).left
-									: insets.getInsets(WindowInsets.Type.systemBars()).right;
-						}
-					} else if (Build.VERSION.SDK_INT >= 23) {
-						WindowInsets insets = getRootWindowInsets();
-						if (insets != null) {
-							return left ? insets.getStableInsetLeft() : insets.getStableInsetRight();
-						}
-					}
-					return 0f;
-				}
 				return true;
 			}
 			if (action == MotionEvent.ACTION_MOVE && (activeDpad >= 0 || activeFace >= 0)) {
@@ -256,6 +213,53 @@ final class VirtualControlsView extends View {
 			return false;
 		}
 		return false;
+	}
+
+	@Override
+	protected void onAttachedToWindow() {
+		super.onAttachedToWindow();
+		menuMode = SDLActivity.nativeGetHintBoolean(MENU_ACTIVE_HINT, false);
+		layoutControls(getWidth(), getHeight());
+		invalidate();
+		handler.post(menuPoll);
+	}
+
+	@Override
+	protected void onDetachedFromWindow() {
+		handler.removeCallbacks(menuPoll);
+		super.onDetachedFromWindow();
+	}
+
+	private float bottomInset() {
+		if (Build.VERSION.SDK_INT >= 30) {
+			WindowInsets insets = getRootWindowInsets();
+			if (insets != null) {
+				return insets.getInsets(WindowInsets.Type.systemBars()).bottom;
+			}
+		} else if (Build.VERSION.SDK_INT >= 23) {
+			WindowInsets insets = getRootWindowInsets();
+			if (insets != null) {
+				return insets.getStableInsetBottom();
+			}
+		}
+		return 0f;
+	}
+
+	private float sideInset(boolean left) {
+		if (Build.VERSION.SDK_INT >= 30) {
+			WindowInsets insets = getRootWindowInsets();
+			if (insets != null) {
+				return left
+						? insets.getInsets(WindowInsets.Type.systemBars()).left
+						: insets.getInsets(WindowInsets.Type.systemBars()).right;
+			}
+		} else if (Build.VERSION.SDK_INT >= 23) {
+			WindowInsets insets = getRootWindowInsets();
+			if (insets != null) {
+				return left ? insets.getStableInsetLeft() : insets.getStableInsetRight();
+			}
+		}
+		return 0f;
 	}
 
 	/** Map touch in a square to a quadrant key. */

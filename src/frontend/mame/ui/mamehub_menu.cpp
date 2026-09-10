@@ -74,11 +74,6 @@ bool ensure_discord_authenticated(mame_ui_manager &mui)
 	return true;
 }
 
-static bool is_confirm_input(menu::event const *ev)
-{
-	return ev && ((IPT_UI_SELECT == ev->iptkey) || (IPT_START == ev->iptkey));
-}
-
 static void launch_offline_game(mame_ui_manager &mui, game_driver const &driver, ui_software_info const *software = nullptr)
 {
 	auto &options = mui.machine().options();
@@ -267,7 +262,7 @@ void menu_mamehub_main::populate()
 
 bool menu_mamehub_main::handle(event const *ev)
 {
-	if (is_confirm_input(ev))
+	if (ev && (IPT_UI_SELECT == ev->iptkey))
 	{
 		switch (uintptr_t(ev->itemref))
 		{
@@ -384,7 +379,7 @@ bool menu_mamehub_machine::handle(event const *ev)
 		return true;
 	}
 
-	if (!is_confirm_input(ev) || !ev->itemref)
+	if (!ev || (IPT_UI_SELECT != ev->iptkey) || !ev->itemref)
 		return false;
 
 	if (uintptr_t(ev->itemref) == ITEM_ARCADE)
@@ -495,7 +490,7 @@ void menu_mamehub_join::populate()
 
 bool menu_mamehub_join::handle(event const *ev)
 {
-	if (is_confirm_input(ev))
+	if (ev && (IPT_UI_SELECT == ev->iptkey))
 	{
 		if (uintptr_t(ev->itemref) == ITEM_REFRESH)
 		{
@@ -739,7 +734,7 @@ bool menu_mamehub_lobby::handle(event const *ev)
 		return false;
 	}
 
-	if (is_confirm_input(ev))
+	if (ev && (IPT_UI_SELECT == ev->iptkey))
 	{
 		switch (uintptr_t(ev->itemref))
 		{
