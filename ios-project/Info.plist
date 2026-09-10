@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>MAMEHub</string>
+	<string>MamehubDiscord</string>
 	<key>CFBundleExecutable</key>
 	<string>MAMEHub</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.mamedev.mamehub</string>
+	<string>org.mistertea.mamehub</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>MAMEHub</string>
+	<string>MamehubDiscord</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -57,7 +57,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>org.mamedev.mamehub.discord</string>
+			<string>org.mistertea.mamehub.discord</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>discord-1545444437482676284</string>

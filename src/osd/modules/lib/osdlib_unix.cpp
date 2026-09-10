@@ -25,6 +25,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#if defined(__APPLE__)
+#include <libkern/OSCacheControl.h>
+#endif
+
 
 //============================================================
 //  osd_getenv
@@ -201,7 +205,13 @@ private:
 
 bool invalidate_instruction_cache(void const *start, std::size_t size) noexcept
 {
-#if !defined(SDLMAME_EMSCRIPTEN)
+#if defined(SDLMAME_EMSCRIPTEN)
+	(void)start;
+	(void)size;
+#elif defined(__APPLE__)
+	// iOS device clang_rt lacks ___clear_cache; use Darwin's API instead.
+	sys_icache_invalidate(const_cast<void *>(start), size);
+#else
 	char const *const begin(reinterpret_cast<char const *>(start));
 	char const *const end(begin + size);
 	__builtin___clear_cache(const_cast<char *>(begin), const_cast<char *>(end));
