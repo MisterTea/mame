@@ -307,6 +307,8 @@ static void hold_scancode(SDL_Scancode scancode, NSInteger holdMs)
 	BOOL menuMode = SDL_GetHintBoolean("MAMEHUB_MENU_ACTIVE", SDL_FALSE) ? YES : NO;
 	if (menuMode != _menuMode)
 	{
+		for (NSUInteger i = 4; i <= 9; ++i)
+			inject_scancode(_buttons[i].scancode, SDL_FALSE);
 		_menuMode = menuMode;
 		[self setNeedsLayout];
 	}
