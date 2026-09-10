@@ -247,6 +247,8 @@ static void hold_scancode(SDL_Scancode scancode, NSInteger holdMs)
 
 	if (_menuMode)
 	{
+		inject_scancode(kKeyStart, SDL_FALSE);
+		inject_scancode(kKeySelect, SDL_FALSE);
 		for (NSUInteger i = 4; i <= 7; ++i)
 		{
 			_buttons[i].hidden = YES;
@@ -262,6 +264,8 @@ static void hold_scancode(SDL_Scancode scancode, NSInteger holdMs)
 	}
 	else
 	{
+		inject_scancode(kKeyStart, SDL_FALSE);
+		inject_scancode(kKeySelect, SDL_FALSE);
 		for (NSUInteger i = 4; i <= 7; ++i)
 		{
 			_buttons[i].hidden = NO;

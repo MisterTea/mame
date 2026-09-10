@@ -109,7 +109,6 @@ final class VirtualControlsView extends View {
 
 	@Override
 	protected void onDraw(Canvas canvas) {
-		updateMenuMode();
 		drawRound(canvas, dpadArea);
 		drawRound(canvas, startBtn);
 		if (!menuMode) {
@@ -148,7 +147,6 @@ final class VirtualControlsView extends View {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-		updateMenuMode();
 		final int action = event.getActionMasked();
 		final float x = event.getX();
 		final float y = event.getY();
@@ -192,6 +190,9 @@ final class VirtualControlsView extends View {
 				@Override
 				protected void onAttachedToWindow() {
 					super.onAttachedToWindow();
+					menuMode = SDLActivity.nativeGetHintBoolean(MENU_ACTIVE_HINT, false);
+					requestLayout();
+					invalidate();
 					handler.post(menuPoll);
 				}
 
@@ -199,17 +200,6 @@ final class VirtualControlsView extends View {
 				protected void onDetachedFromWindow() {
 					handler.removeCallbacks(menuPoll);
 					super.onDetachedFromWindow();
-				}
-
-				private void updateMenuMode() {
-					boolean nextMenuMode = SDLActivity.nativeGetHintBoolean(MENU_ACTIVE_HINT, false);
-					if (nextMenuMode != menuMode) {
-						menuMode = nextMenuMode;
-						releaseKey(activeFace);
-						activeFace = -1;
-						requestLayout();
-						invalidate();
-					}
 				}
 
 				private float bottomInset() {
