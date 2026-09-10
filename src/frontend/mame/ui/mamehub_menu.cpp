@@ -74,12 +74,12 @@ bool ensure_discord_authenticated(mame_ui_manager &mui)
 	return true;
 }
 
-bool is_confirm_input(menu::event const *ev)
+static bool is_confirm_input(menu::event const *ev)
 {
 	return ev && ((IPT_UI_SELECT == ev->iptkey) || (IPT_START == ev->iptkey));
 }
 
-void launch_offline_game(mame_ui_manager &mui, game_driver const &driver, ui_software_info const *software = nullptr)
+static void launch_offline_game(mame_ui_manager &mui, game_driver const &driver, ui_software_info const *software = nullptr)
 {
 	auto &options = mui.machine().options();
 	if (software && !software->startempty)
