@@ -1413,7 +1413,10 @@ LRESULT CALLBACK win_window_info::video_window_proc(HWND wnd, UINT message, WPAR
 			if ((wparam == WA_ACTIVE) || (wparam == WA_CLICKACTIVE))
 				window->target()->push_window_focus_event();
 			else if (wparam == WA_INACTIVE)
+			{
 				window->target()->push_window_defocus_event();
+				downcast<windows_osd_interface&>(window->machine().osd()).handle_input_event(INPUT_EVENT_DEFOCUS, nullptr);
+			}
 		}
 		return DefWindowProc(wnd, message, wparam, lparam);
 
