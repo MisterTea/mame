@@ -44,23 +44,40 @@ mkdir -p "$SRC_ROOT" "$ROOT"
 echo "== Android deps: abi=$ABI api=$API ndk=$ANDROID_NDK_HOME host=$HOST_TAG =="
 
 fetch_tar() {
-  local url=$1 dest=$2
+  local dest=$1
+  shift
+  local urls=("$@")
   if [[ -d "$dest" ]]; then
     return 0
   fi
   local tar="${dest}.tar.gz"
   if [[ ! -f "$tar" ]]; then
-    echo "Downloading $url"
-    curl -L --fail -o "$tar" "$url"
+    local url ok=0
+    for url in "${urls[@]}"; do
+      echo "Downloading $url"
+      if curl -L --fail --retry 5 --retry-delay 2 --retry-all-errors --connect-timeout 30 -o "$tar" "$url"; then
+        ok=1
+        break
+      fi
+      rm -f "$tar"
+      echo "Download failed for $url; trying next mirror if any"
+    done
+    [[ "$ok" -eq 1 ]] || { echo "All download mirrors failed for $dest"; exit 1; }
   fi
   mkdir -p "$(dirname "$dest")"
   tar -xzf "$tar" -C "$(dirname "$dest")"
 }
 
 # ---- sources ----
-fetch_tar "https://www.openssl.org/source/openssl-3.0.17.tar.gz" "$SRC_ROOT/openssl-3.0.17"
-fetch_tar "https://download.libsodium.org/libsodium/releases/libsodium-1.0.20.tar.gz" "$SRC_ROOT/libsodium-1.0.20"
-fetch_tar "https://www.libsdl.org/release/SDL2-2.32.10.tar.gz" "$SRC_ROOT/SDL2-2.32.10"
+fetch_tar "$SRC_ROOT/openssl-3.0.17" \
+  "https://www.openssl.org/source/openssl-3.0.17.tar.gz" \
+  "https://github.com/openssl/openssl/releases/download/openssl-3.0.17/openssl-3.0.17.tar.gz"
+fetch_tar "$SRC_ROOT/libsodium-1.0.20" \
+  "https://github.com/jedisct1/libsodium/releases/download/1.0.20-RELEASE/libsodium-1.0.20.tar.gz" \
+  "https://download.libsodium.org/libsodium/releases/libsodium-1.0.20.tar.gz"
+fetch_tar "$SRC_ROOT/SDL2-2.32.10" \
+  "https://www.libsdl.org/release/SDL2-2.32.10.tar.gz" \
+  "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz"
 
 # ---- OpenSSL ----
 if [[ ! -f "$OPENSSL_PREFIX/lib/libssl.a" ]]; then
