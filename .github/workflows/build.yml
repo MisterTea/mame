@@ -204,13 +204,14 @@ jobs:
               run: |
                   set -euo pipefail
                   cp mame/android-project/app/build/outputs/apk/debug/app-debug.apk \
-                    mamehub-android-arm64-debug.apk
+                    mamehub_android_arm64_beta.apk
 
             - name: Upload Android APK
               uses: actions/upload-artifact@v4
               with:
-                  name: mamehub_android_arm64_beta
-                  path: mamehub-android-arm64-debug.apk
+                  name: mamehub_android_arm64_beta.apk
+                  path: mamehub_android_arm64_beta.apk
+                  if-no-files-found: error
 
     build_ios:
         runs-on: macos-latest
