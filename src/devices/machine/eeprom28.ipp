@@ -64,7 +64,7 @@ template <EEPROM28_PARAMS>
 inline bool eeprom28_device<EEPROM28_ARGS>::is_accessing_id_page(uint32_t offset) const requires HasIdPage
 {
 	if (HAS_ID_PAGE) {
-		return m_access_id_page && (offset & PAGE_MASK) == ID_PAGE_OFFSET;
+		return m_access_id_page && (offset & EE28_PAGE_MASK) == ID_PAGE_OFFSET;
 	} else {
 		return false;
 	}
@@ -85,7 +85,7 @@ inline uint32_t eeprom28_device<EEPROM28_ARGS>::storage_offset(uint32_t offset) 
 template <EEPROM28_PARAMS>
 inline uint32_t eeprom28_device<EEPROM28_ARGS>::storage_page(uint32_t offset) const
 {
-	return storage_offset(offset) & PAGE_MASK;
+	return storage_offset(offset) & EE28_PAGE_MASK;
 }
 
 // construction/destruction
@@ -290,7 +290,7 @@ void eeprom28_device<EEPROM28_ARGS>::write(uint32_t offset, uint8_t data)
 		// We note which page we're starting to buffer, copy its current contents into the buffer
 		// so the buffer can be written into on a byte by byte basis, before being written back
 		// to storage during the programming cycle.
-		m_buffering_page = offset & PAGE_MASK;
+		m_buffering_page = offset & EE28_PAGE_MASK;
 		std::memcpy(&m_page_buffer[0], &m_storage[storage_page(m_buffering_page)], PAGE_SIZE_BYTES);
 		EE28LOGMASKED(EE28_LOG_DETAIL, "%s: buffering page %04x\n", machine().describe_context(), m_buffering_page);
 	}
@@ -310,7 +310,7 @@ void eeprom28_device<EEPROM28_ARGS>::write(uint32_t offset, uint8_t data)
 		// Another valid interpretation is to reject the write.
 		// Here, I choose the latter: any writes to an address within a different page
 		// are ignored, only those within the same page are accepted.
-		if ((offset & PAGE_MASK) == m_buffering_page) {
+		if ((offset & EE28_PAGE_MASK) == m_buffering_page) {
 			m_page_buffer[offset & PAGE_OFFSET_MASK] = data;
 			EE28LOGMASKED(EE28_LOG_DETAIL, "%s: buffer[%02x] = %02x\n", machine().describe_context(), offset & PAGE_OFFSET_MASK, data);
 		}
@@ -351,7 +351,7 @@ uint8_t eeprom28_device<EEPROM28_ARGS>::read(uint32_t offset)
 
 	// If we're currently buffering a page, then reads from the page in question
 	// should be sourced from the page buffer.
-	bool read_from_buffer = m_buffering_page >= 0 && (offset & PAGE_MASK) == m_buffering_page;
+	bool read_from_buffer = m_buffering_page >= 0 && (offset & EE28_PAGE_MASK) == m_buffering_page;
 	uint8_t data = read_from_buffer ? m_page_buffer[offset & PAGE_OFFSET_MASK] : m_storage[storage_offset(offset)];
 
 	if (m_program_buffer_to_eeprom || (m_state == STATE_PROGRAMMING)) {

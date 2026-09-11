@@ -115,11 +115,12 @@ public:
 	static constexpr uint32_t PAGE_SIZE_BYTES = PageSizeBytes;
 
 	static constexpr uint32_t PAGE_OFFSET_MASK = PageSizeBytes - 1;
-	static constexpr uint32_t PAGE_MASK = ~(PAGE_OFFSET_MASK);
+	// Avoid Android NDK PAGE_MASK macro (bits/page_size.h / sys/user.h).
+	static constexpr uint32_t EE28_PAGE_MASK = ~(PAGE_OFFSET_MASK);
 
 	static constexpr uint32_t ID_PAGE_SIZE_BYTES = HasIdPage ? PageSizeBytes : 0;
 	static constexpr uint32_t ID_PAGE_OFFSET = DATA_SIZE_BYTES - ID_PAGE_SIZE_BYTES;
-	static constexpr uint32_t ID_PAGE = PAGE_MASK + 1;
+	static constexpr uint32_t ID_PAGE = EE28_PAGE_MASK + 1;
 
 	static constexpr uint32_t TOTAL_SIZE_BYTES = DATA_SIZE_BYTES + ID_PAGE_SIZE_BYTES;
 

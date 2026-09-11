@@ -290,7 +290,6 @@ jobs:
                   prerelease: true
 
     build_and_release_ios:
-        if: false  # hold off uploading iOS to the release for now
         runs-on: macos-latest
 
         steps:
@@ -356,3 +355,4 @@ jobs:
                   files: mamehub_ios_simulator_beta.zip
                   fail_on_unmatched_files: true
                   tag_name: mamehub_discord_v1.0.0
+                  prerelease: true
