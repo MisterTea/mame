@@ -264,13 +264,16 @@ jobs:
               run: |
                   set -euo pipefail
                   cp mame/android-project/app/build/outputs/apk/debug/app-debug.apk \
-                    mamehub-android-arm64-debug.apk
+                    mamehub_android_arm64_beta.apk
 
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
-                  name: mamehub_android_arm64_beta
-                  path: mamehub-android-arm64-debug.apk
+                  # Note: Actions always wraps artifact downloads in a .zip container;
+                  # the GitHub Release asset below is the raw .apk.
+                  name: mamehub_android_arm64_beta.apk
+                  path: mamehub_android_arm64_beta.apk
+                  if-no-files-found: error
 
             - name: Update mamehub discord tag
               uses: richardsimko/update-tag@v1
@@ -284,7 +287,7 @@ jobs:
               with:
                   body: |
                       New mamehub version.
-                  files: mamehub-android-arm64-debug.apk
+                  files: mamehub_android_arm64_beta.apk
                   fail_on_unmatched_files: true
                   tag_name: mamehub_discord_v1.0.0
                   prerelease: true
