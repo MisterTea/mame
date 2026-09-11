@@ -47,6 +47,7 @@ function maintargetosdoptions(_target,_subtarget)
 		"shcore",
 		"shlwapi",
 		"uuid",
+		"ksuser",
 	}
 end
 

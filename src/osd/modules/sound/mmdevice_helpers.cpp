@@ -19,6 +19,12 @@
 
 #include <mmreg.h>
 
+// MinGW declares these PROPERTYKEYs as extern without providing definitions
+// unless INITGUID is set before the header (MSVC gets them via uuid.lib).
+#if defined(__GNUC__)
+#define INITGUID
+#endif
+#include <initguid.h>
 #include <functiondiscoverykeys_devpkey.h>
 
 
