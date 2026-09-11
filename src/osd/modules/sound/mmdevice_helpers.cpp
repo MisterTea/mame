@@ -19,13 +19,17 @@
 
 #include <mmreg.h>
 
-// MinGW declares these PROPERTYKEYs as extern without providing definitions
-// unless INITGUID is set before the header (MSVC gets them via uuid.lib).
-#if defined(__GNUC__)
-#define INITGUID
-#endif
-#include <initguid.h>
 #include <functiondiscoverykeys_devpkey.h>
+
+// MinGW headers declare these PROPERTYKEYs as extern; DEFINE_PROPERTYKEY is
+// often already locked to the declaration form by earlier includes, so INITGUID
+// alone does not instantiate them. Provide explicit definitions for the link.
+#if defined(__GNUC__)
+EXTERN_C const PROPERTYKEY PKEY_AudioEndpoint_PhysicalSpeakers =
+	{ { 0x1da5d803, 0xd492, 0x4edd, { 0x8c, 0x23, 0xe0, 0xc0, 0xff, 0xee, 0x7f, 0x0e } }, 3 };
+EXTERN_C const PROPERTYKEY PKEY_AudioEngine_DeviceFormat =
+	{ { 0xf19f064d, 0x082c, 0x4e27, { 0xbc, 0x73, 0x68, 0x82, 0xa1, 0xbb, 0x8e, 0x4c } }, 0 };
+#endif
 
 
 namespace osd {
