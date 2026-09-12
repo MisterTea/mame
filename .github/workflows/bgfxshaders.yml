@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: msys2/setup-msys2@v2
       with:
-        install: git make mingw-w64-x86_64-gcc mingw-w64-x86_64-python mingw-w64-x86_64-libc++
+        install: git make mingw-w64-x86_64-gcc mingw-w64-x86_64-python mingw-w64-x86_64-libc++ mingw-w64-x86_64-ccache
     - uses: actions/checkout@main
       with:
         fetch-depth: 0
