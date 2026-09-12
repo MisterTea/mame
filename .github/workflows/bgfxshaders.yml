@@ -31,7 +31,7 @@ jobs:
       with:
         key: bgfxshaders-windows
         max-size: 1G
-        create-symlink: true
+        create-symlink: false
     - name: Prevent make from rebuilding GLSL parser source
       run: |
         touch 3rdparty/bgfx/3rdparty/glsl-optimizer/src/glsl/glcpp/glcpp-lex.c
@@ -42,6 +42,8 @@ jobs:
     - name: Build
       env:
         MINGW64: "/mingw64"
+        OVERRIDE_CC: ccache gcc
+        OVERRIDE_CXX: ccache g++
       run: make shaders -j4
     - uses: actions/upload-artifact@main
       with:
