@@ -341,7 +341,12 @@ void video_manager::frame_update(bool from_debugger)
 	// update inputs and draw the user interface
 	t0 = nowUs();
 	machine().osd().input_update(true);
+#if defined(__EMSCRIPTEN__)
+	// In-emulator UI draw currently hangs under Asyncify/WebGL. Skip for now so
+	// gameplay frames can present; shell UI covers selection.
+#else
 	anything_changed = emulator_info::draw_user_interface(machine()) || anything_changed;
+#endif
 
 	// let plugins draw over the UI
 	anything_changed = emulator_info::frame_hook() || anything_changed;
@@ -790,6 +795,13 @@ bool video_manager::finish_screen_updates()
 
 void video_manager::update_throttle(attotime emutime)
 {
+#if defined(__EMSCRIPTEN__)
+	// Browser builds are paced by requestAnimationFrame. Blocking osd_sleep here
+	// freezes the tab (no pthreads / Asyncify yield in stock osd_sleep).
+	if (!netCommon)
+		return;
+#endif
+
 	// MAMEHub: sync emulation to netplay / WGA global clock instead of stock OSD ticks
 	bool printed = false;
 	bool slept = false;
@@ -800,12 +812,7 @@ void video_manager::update_throttle(attotime emutime)
 		int64_t curTime;
 		if (netCommon)
 		{
-#if defined(__EMSCRIPTEN__)
-			// Emscripten stub reports milliseconds.
-			curTime = netCommon->getCurrentTime() * 1000;
-#else
 			curTime = netCommon->getCurrentTime();
-#endif
 		}
 		else
 		{

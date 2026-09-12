@@ -394,6 +394,10 @@ int running_machine::run(bool quiet)
 		m_configuration->load_settings();
 
 		// load the NVRAM
+#if defined(__EMSCRIPTEN__)
+		std::fprintf(stderr, "emscripten: run after load_settings\n");
+		std::fflush(stderr);
+#endif
 		nvram_load();
 
 		// set the time on RTCs (this may overwrite parts of NVRAM)
@@ -407,7 +411,16 @@ int running_machine::run(bool quiet)
 
 		// initialize ui lists
 		// display the startup screens
+#if defined(__EMSCRIPTEN__)
+		std::fprintf(stderr, "emscripten: run before ui_initialize\n");
+		std::fflush(stderr);
+#endif
 		manager().ui_initialize(*this);
+#if defined(__EMSCRIPTEN__)
+		std::fprintf(stderr, "emscripten: run after ui_initialize exit=%d hard_reset=%d\n",
+			m_exit_pending ? 1 : 0, m_hard_reset_pending ? 1 : 0);
+		std::fflush(stderr);
+#endif
 
 		// perform a soft reset -- this takes us to the running phase
 		soft_reset();
@@ -424,9 +437,13 @@ int running_machine::run(bool quiet)
 		export_http_api();
 
 #if defined(__EMSCRIPTEN__)
-		// break out to our async javascript loop and halt
+		// Pace via requestAnimationFrame; Asyncify-park until hard-reset/exit.
+		// (simulateInfiniteLoop throw-"unwind" abandons the C stack on modern
+		// Emscripten, so the RAF loop never runs and execute() never resumes.)
+		std::fprintf(stderr, "emscripten: run calling set_running_machine\n");
+		std::fflush(stderr);
 		emscripten_set_running_machine(this);
-#endif
+#else
 
     printf("SOFT RESET FINISHED\n");
 
@@ -491,7 +508,7 @@ int running_machine::run(bool quiet)
           )
         {
           lastSyncSecond = m_machine_time.seconds();
-          printf("SYNC AT TIME: %d\n",int(::time(NULL)));
+          printf("SYNC AT TIME: %d\n", int(::time(NULL)));
           if (!m_scheduler.can_save())
           {
             printf("ANONYMOUS TIMER! COULD NOT DO FULL SYNC\n");
@@ -508,6 +525,7 @@ int running_machine::run(bool quiet)
 				handle_saveload();
 			}
 		}
+#endif
 		m_manager.http()->clear();
 
 		// and out via the exit phase
@@ -1524,11 +1542,23 @@ void system_time::full_time::set(struct tm &t)
 
 running_machine * running_machine::emscripten_running_machine;
 
+namespace {
+
+EM_JS(void, mamehub_signal_machine_end, (), {
+	// retained for API compatibility; sleep-loop exit does not need a Promise
+});
+
+} // anonymous namespace
+
 void running_machine::emscripten_main_loop()
 {
 	running_machine *machine = emscripten_running_machine;
+	if (!machine)
+		return;
 
 	auto profile = g_profiler.start(PROFILER_EXTRA);
+
+	static double s_last_burst_ms = 0.0;
 
 	// execute CPUs if not paused
 	if (!machine->m_paused)
@@ -1536,31 +1566,41 @@ void running_machine::emscripten_main_loop()
 		device_scheduler * scheduler;
 		scheduler = &(machine->scheduler());
 
-		// Emscripten will call this function at 60Hz, so step the simulation
-		// forward for the amount of time that has passed since the last frame
-		const attotime frametime(0,HZ_TO_ATTOSECONDS(60));
-		const attotime stoptime(scheduler->time() + frametime);
-
-		while (!machine->m_paused && !machine->scheduled_event_pending() && scheduler->time() < stoptime)
+		// Run until wall budget is spent. Empty quanta are cheap; a low slice
+		// cap previously exited after ~3ms and slept, capping present rate.
+		const double budget_ms = 20.0;
+		const double start_ms = emscripten_get_now();
+		attotime const start_time = scheduler->time();
+		unsigned slices = 0;
+		while (!machine->m_paused && !machine->scheduled_event_pending())
 		{
 			scheduler->timeslice();
-			// handle save/load
+			++slices;
 			if (machine->m_saveload_schedule != saveload_schedule::NONE)
 			{
 				machine->handle_saveload();
 				break;
 			}
+			if ((emscripten_get_now() - start_ms) >= budget_ms)
+				break;
+			// Bail only if time is wedged (no progress) after many quanta.
+			if ((slices & 0x3ff) == 0 && scheduler->time() == start_time)
+				break;
+			if (slices >= 100000)
+				break;
 		}
+		s_last_burst_ms = emscripten_get_now() - start_ms;
+		(void)slices;
 	}
 	// otherwise, just pump video updates through
 	else
-		machine->m_video->frame_update();
-
-	// cancel the emscripten loop if the system has been told to exit
-	if (machine->exit_pending())
 	{
-		emscripten_cancel_main_loop();
+		machine->m_video->frame_update();
+		s_last_burst_ms = 0.0;
 	}
+
+	// Stash for the outer Asyncify sleeper (busy bursts sleep less).
+	EM_ASM({ Module._mameLastBurstMs = $0; }, s_last_burst_ms);
 }
 
 void running_machine::emscripten_set_running_machine(running_machine *machine)
@@ -1569,7 +1609,21 @@ void running_machine::emscripten_set_running_machine(running_machine *machine)
 	EM_ASM (
 		JSMESS.running = true;
 	);
-	emscripten_set_main_loop(&(emscripten_main_loop), 0, 1);
+
+	// Drive frames from inside run() via Asyncify sleep. A separate RAF MainLoop
+	// cannot call back into WASM while run() is Asyncify-parked, and modern
+	// Emscripten's throw-"unwind" set_main_loop does not resume execute() for
+	// hard resets.
+	while (!machine->exit_pending() && !machine->hard_reset_pending())
+	{
+		emscripten_main_loop();
+		// Adaptive yield: short sleep after a full emu burst, longer when idle.
+		// Avoid 1ms — Asyncify unwind overhead dominates at that cadence.
+		double const burst = EM_ASM_DOUBLE({ return Module._mameLastBurstMs || 0; });
+		// Full burst → short yield; slice-starved/idle → also short so we retry.
+		int const sleep_ms = (burst >= 10.0) ? 4 : 6;
+		emscripten_sleep(sleep_ms);
+	}
 }
 
 running_machine * running_machine::emscripten_get_running_machine()
