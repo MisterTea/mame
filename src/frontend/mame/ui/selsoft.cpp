@@ -274,6 +274,14 @@ public:
 				});
 
 		// start populating search info in background
+#if defined(__EMSCRIPTEN__)
+		m_searchlist.reserve(m_swinfo.size());
+		for (ui_software_info const &sw : m_swinfo)
+		{
+			if (!sw.startempty)
+				m_searchlist.emplace_back(sw);
+		}
+#else
 		m_search_thread = std::make_unique<std::thread>(
 				[this] ()
 				{
@@ -284,6 +292,7 @@ public:
 							m_searchlist.emplace_back(sw);
 					}
 				});
+#endif
 
 		// build derivative filter data
 		m_filter_data.finalise();

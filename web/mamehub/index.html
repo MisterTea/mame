@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MAMEHub Browser</title>
+  <style>
+    :root {
+      --bg: #12141a;
+      --fg: #e8e6e3;
+      --muted: #9a9590;
+      --accent: #3d9a6a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #1c2430, var(--bg));
+      color: var(--fg);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    header, footer { padding: 1rem 1.5rem; }
+    h1 { margin: 0; font-size: 1.4rem; letter-spacing: 0.04em; }
+    p { color: var(--muted); margin: 0.35rem 0 0; }
+    main {
+      display: grid;
+      gap: 1rem;
+      padding: 0 1.5rem 1.5rem;
+      align-content: start;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    input, button, select {
+      font: inherit;
+      padding: 0.55rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid #2a303a;
+      background: #1a1f28;
+      color: var(--fg);
+    }
+    button {
+      background: var(--accent);
+      border-color: transparent;
+      color: #04140c;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary { background: #2a303a; color: var(--fg); }
+    #canvas-wrap {
+      background: #000;
+      min-height: 480px;
+      border: 1px solid #2a303a;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    #canvas {
+      width: 100%;
+      max-width: 960px;
+      height: auto;
+      image-rendering: pixelated;
+      display: none;
+    }
+    #canvas-placeholder { color: var(--muted); padding: 1rem; text-align: center; }
+    #log {
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      background: #0c0e12;
+      border: 1px solid #2a303a;
+      padding: 0.75rem;
+      max-height: 12rem;
+      overflow: auto;
+    }
+    #candy-progress {
+      width: 100%;
+      max-width: 960px;
+      margin: 0.5rem auto 0;
+    }
+    #candy-progress-label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 0.35rem;
+    }
+    #candy-progress-track {
+      height: 8px;
+      background: #1a1f28;
+      border: 1px solid #2a303a;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    #candy-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.15s ease-out;
+    }
+    #software-picker {
+      border: 1px solid #2a303a;
+      background: #151a22;
+      padding: 1rem 1.1rem;
+      border-radius: 8px;
+      max-width: 960px;
+    }
+    #software-picker h2 {
+      margin: 0 0 0.35rem;
+      font-size: 1.05rem;
+    }
+    #software-picker p {
+      margin: 0 0 0.85rem;
+    }
+    #software-picker select {
+      min-width: 18rem;
+    }
+    #virtual-gamepad {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #virtual-gamepad .pad-cluster {
+      position: absolute;
+      display: grid;
+      gap: 0.35rem;
+      pointer-events: auto;
+    }
+    #virtual-gamepad .pad-dpad {
+      left: 0.6rem;
+      bottom: 0.6rem;
+      grid-template-columns: repeat(3, 3.1rem);
+      grid-template-rows: repeat(3, 3.1rem);
+      grid-template-areas:
+        ". up ."
+        "left . right"
+        ". down .";
+    }
+    #virtual-gamepad .pad-face {
+      right: 0.6rem;
+      bottom: 0.6rem;
+      grid-template-columns: repeat(3, 3.1rem);
+      grid-template-rows: repeat(3, 3.1rem);
+      grid-template-areas:
+        ". x ."
+        "y . a"
+        ". b .";
+    }
+    #virtual-gamepad .pad-shoulders {
+      left: 50%;
+      top: 0.55rem;
+      transform: translateX(-50%);
+      grid-auto-flow: column;
+      gap: 1.2rem;
+    }
+    #virtual-gamepad .pad-meta {
+      left: 50%;
+      bottom: 0.55rem;
+      transform: translateX(-50%);
+      grid-auto-flow: column;
+      gap: 0.75rem;
+    }
+    #virtual-gamepad button.pad-btn {
+      width: 3.1rem;
+      height: 3.1rem;
+      margin: 0;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(232, 230, 227, 0.28);
+      background: rgba(18, 22, 30, 0.55);
+      color: rgba(232, 230, 227, 0.92);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      box-shadow: none;
+      touch-action: none;
+    }
+    #virtual-gamepad button.pad-btn.wide {
+      width: 4.2rem;
+      height: 2.4rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+    }
+    #virtual-gamepad button.pad-btn.active {
+      background: rgba(61, 154, 106, 0.72);
+      border-color: rgba(61, 154, 106, 0.95);
+      color: #04140c;
+    }
+    #virtual-gamepad .pad-dpad .up { grid-area: up; }
+    #virtual-gamepad .pad-dpad .down { grid-area: down; }
+    #virtual-gamepad .pad-dpad .left { grid-area: left; }
+    #virtual-gamepad .pad-dpad .right { grid-area: right; }
+    #virtual-gamepad .pad-face .a { grid-area: a; }
+    #virtual-gamepad .pad-face .b { grid-area: b; }
+    #virtual-gamepad .pad-face .x { grid-area: x; }
+    #virtual-gamepad .pad-face .y { grid-area: y; }
+    @media (max-width: 720px) {
+      #canvas-wrap { min-height: 360px; }
+      #virtual-gamepad .pad-dpad,
+      #virtual-gamepad .pad-face {
+        grid-template-columns: repeat(3, 2.75rem);
+        grid-template-rows: repeat(3, 2.75rem);
+      }
+      #virtual-gamepad button.pad-btn {
+        width: 2.75rem;
+        height: 2.75rem;
+      }
+      #virtual-gamepad button.pad-btn.wide {
+        width: 3.6rem;
+        height: 2.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MAMEHub Browser</h1>
+    <p>Self-host shell — Nostr lobby signaling + WebRTC. Offline SNES first.</p>
+  </header>
+  <main>
+    <div class="row">
+      <button id="startOfflineBtn" type="button">Start offline</button>
+      <button id="gamepadToggleBtn" type="button" class="secondary" aria-pressed="false" title="Toggle on-screen gamepad">Gamepad</button>
+      <span id="pubkey" style="color:var(--muted);font-size:0.85rem"></span>
+    </div>
+    <div class="row">
+      <input id="userId" placeholder="user_id (optional)" size="24" />
+      <input id="game" placeholder="game" value="snes" size="12" />
+      <button id="hostBtn" type="button" class="secondary">Host lobby</button>
+      <input id="roomId" placeholder="room id" size="20" />
+      <button id="joinBtn" type="button" class="secondary">Join</button>
+    </div>
+    <div id="software-picker" hidden>
+      <h2>Offline — Select SNES software</h2>
+      <p>Machine is always SNES (Discord unused). Candy downloads <code>snes.zip</code> and the cart from archive.org.</p>
+      <div class="row">
+        <select id="softwareSelect" aria-label="SNES software"></select>
+        <input id="softwareCustom" placeholder="or softlist shortname" size="16" />
+        <button id="softwarePlayBtn" type="button">Play</button>
+        <button id="softwareCancelBtn" type="button" class="secondary">Cancel</button>
+      </div>
+    </div>
+    <div id="canvas-wrap">
+      <div id="canvas-placeholder">Start offline → pick SNES software → candy fetches ROMs → play.</div>
+      <canvas id="canvas" width="512" height="448" tabindex="1"></canvas>
+      <div id="virtual-gamepad" hidden aria-hidden="true" aria-label="On-screen SNES gamepad">
+        <div class="pad-cluster pad-shoulders">
+          <button type="button" class="pad-btn wide" data-pad="l" aria-label="L">L</button>
+          <button type="button" class="pad-btn wide" data-pad="r" aria-label="R">R</button>
+        </div>
+        <div class="pad-cluster pad-dpad" aria-label="D-pad">
+          <button type="button" class="pad-btn up" data-pad="up" aria-label="Up">▲</button>
+          <button type="button" class="pad-btn left" data-pad="left" aria-label="Left">◀</button>
+          <button type="button" class="pad-btn right" data-pad="right" aria-label="Right">▶</button>
+          <button type="button" class="pad-btn down" data-pad="down" aria-label="Down">▼</button>
+        </div>
+        <div class="pad-cluster pad-face" aria-label="Face buttons">
+          <button type="button" class="pad-btn x" data-pad="x" aria-label="X">X</button>
+          <button type="button" class="pad-btn y" data-pad="y" aria-label="Y">Y</button>
+          <button type="button" class="pad-btn a" data-pad="a" aria-label="A">A</button>
+          <button type="button" class="pad-btn b" data-pad="b" aria-label="B">B</button>
+        </div>
+        <div class="pad-cluster pad-meta">
+          <button type="button" class="pad-btn wide" data-pad="select" aria-label="Select">Select</button>
+          <button type="button" class="pad-btn wide" data-pad="start" aria-label="Start">Start</button>
+        </div>
+      </div>
+    </div>
+    <div id="candy-progress" hidden>
+      <div id="candy-progress-label">Candy…</div>
+      <div id="candy-progress-track"><div id="candy-progress-bar"></div></div>
+    </div>
+    <div id="log"></div>
+  </main>
+  <footer>
+    <p>Relays: <code>config.js</code>. Artifacts: <code>dist/mamesneshub.js</code> + <code>.wasm</code>. Softlist defs: <code>hash/snes.xml</code>. Use <code>python3 serve.py</code> so candy can proxy system + cart zips from archive.org.</p>
+  </footer>
+  <script src="config.js?v=html3"></script>
+  <script src="vendor/nostr.bundle.js"></script>
+  <script src="nostr_lobby.js?v=mp6"></script>
+  <script src="webrtc_peer.js?v=mp6"></script>
+  <script src="virtual_gamepad.js?v=html3"></script>
+  <script src="app.js?v=mp6"></script>
+</body>
+</html>

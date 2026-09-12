@@ -58,11 +58,110 @@ typedef uint64_t HashT;
 #endif // !defined(OSD_WINDOWS && !defined(OSD_MAC)
 
 
-// standard C headers
-#include <cmath>
-#include <cstdio>
-#include <memory>
-#include <utility>
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+
+EM_JS(void, mamehub_webgl_blit, (int w, int h, int pitch, uintptr_t src), {
+	if (w <= 0 || h <= 0 || pitch < w)
+		return;
+	const heap8 = (typeof HEAPU8 !== "undefined" && HEAPU8)
+		? HEAPU8
+		: (Module.HEAPU8 || null);
+	if (!heap8)
+		abort("MAMEHub: HEAPU8 missing; cannot present");
+	const bytes = pitch * h * 4;
+	if ((src + bytes) > heap8.length)
+		abort("MAMEHub: framebuffer OOB");
+
+	const wrap = document.getElementById("canvas-wrap") || document.body;
+	let ov = document.getElementById("mame-webgl");
+	if (!ov) {
+		ov = document.createElement("canvas");
+		ov.id = "mame-webgl";
+		ov.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;pointer-events:none;z-index:2;background:#000;";
+		wrap.style.position = wrap.style.position || "relative";
+		wrap.appendChild(ov);
+		const glc = document.getElementById("canvas");
+		if (glc)
+			glc.style.opacity = "0";
+	}
+
+	let gl = ov._gl;
+	if (!gl) {
+		if (ov._failedGL)
+			return;
+		gl = ov.getContext("webgl2", {
+			alpha: false,
+			antialias: false,
+			depth: false,
+			stencil: false,
+			preserveDrawingBuffer: false
+		});
+		if (!gl) {
+			ov._failedGL = 1;
+			const msg = "MAMEHub requires WebGL2 (no canvas2d fallback)";
+			const logEl = document.getElementById("log");
+			if (logEl)
+				logEl.textContent += msg + "\\n";
+			abort(msg);
+		}
+		ov._gl = gl;
+
+		const vsSrc = "#version 300 es\\nin vec2 a_pos;out vec2 v_uv;void main(){v_uv=vec2(a_pos.x*0.5+0.5,1.0-(a_pos.y*0.5+0.5));gl_Position=vec4(a_pos,0.0,1.0);}";
+		const fsSrc = "#version 300 es\\nprecision mediump float;in vec2 v_uv;uniform sampler2D u_tex;out vec4 o;void main(){vec4 c=texture(u_tex,v_uv);o=vec4(c.b,c.g,c.r,1.0);}";
+		function compile(type, src) {
+			const s = gl.createShader(type);
+			gl.shaderSource(s, src);
+			gl.compileShader(s);
+			if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+				abort("MAMEHub WebGL shader compile failed: " + gl.getShaderInfoLog(s));
+			return s;
+		}
+		const prog = gl.createProgram();
+		gl.attachShader(prog, compile(gl.VERTEX_SHADER, vsSrc));
+		gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fsSrc));
+		gl.linkProgram(prog);
+		if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+			abort("MAMEHub WebGL program link failed: " + gl.getProgramInfoLog(prog));
+		gl.useProgram(prog);
+		ov._prog = prog;
+		const buf = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
+		const loc = gl.getAttribLocation(prog, "a_pos");
+		gl.enableVertexAttribArray(loc);
+		gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+		gl.uniform1i(gl.getUniformLocation(prog, "u_tex"), 0);
+		const tex = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, tex);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		ov._tex = tex;
+		ov._texW = 0;
+		ov._texH = 0;
+	}
+
+	if (ov.width !== w || ov.height !== h) {
+		ov.width = w;
+		ov.height = h;
+		gl.viewport(0, 0, w, h);
+	}
+	gl.bindTexture(gl.TEXTURE_2D, ov._tex);
+	gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+	gl.pixelStorei(gl.UNPACK_ROW_LENGTH, pitch);
+	if (ov._texW !== w || ov._texH !== h) {
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+		ov._texW = w;
+		ov._texH = h;
+	}
+	gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, heap8.subarray(src, src + bytes));
+	gl.useProgram(ov._prog);
+	gl.drawArrays(gl.TRIANGLES, 0, 6);
+});
+#endif
+
 
 
 #if defined(SDLMAME_MACOSX) || defined(OSD_MAC)
@@ -597,9 +696,12 @@ void renderer_ogl::initialize_gl()
 	char *vendor = (char *)glGetString(GL_VENDOR);
 
 	//printf("%p\n", extstr);
-#ifdef OSD_WINDOWS
+#if defined(OSD_WINDOWS) || defined(__EMSCRIPTEN__)
+	// WebGL2 often returns NULL for GL_EXTENSIONS (use glGetStringi instead).
 	if (!extstr)
 		extstr = (char *)"";
+	if (!vendor)
+		vendor = (char *)"";
 #endif
 	// print out the driver info for debugging
 	if (!s_shown_video_info)
@@ -744,6 +846,14 @@ void renderer_ogl::initialize_gl()
 
 	s_shown_video_info = true;
 
+#if defined(__EMSCRIPTEN__)
+	// Browser WebGL: VBO/PBO/FBO/GLSL paths are unreliable under LEGACY_GL.
+	m_usevbo = 0;
+	m_usepbo = 0;
+	m_usefbo = 0;
+	m_useglsl = 0;
+#endif
+
 }
 //============================================================
 //  sdl_info::create
@@ -766,7 +876,12 @@ int renderer_ogl::create()
 		osd_printf_error("Creating OpenGL context failed: %s\n", msg ? msg : "unknown error");
 		return 1;
 	}
+#if defined(__EMSCRIPTEN__)
+	// Browser frame pacing is Asyncify sleep; GL swap-vsync blocks the tab.
+	m_gl_context->set_swap_interval(0);
+#else
 	m_gl_context->set_swap_interval(video_config.waitvsync ? 1 : 0);
+#endif
 
 	m_blittimer = 0;
 	m_surf_w = 0;
@@ -1179,6 +1294,10 @@ int renderer_ogl::draw(const int update)
 
 	if (m_init_context)
 	{
+#if defined(__EMSCRIPTEN__)
+		// Fixed-function setup (shade model / depth hints) is unreliable under
+		// WebGL+LEGACY_GL and has hung the Asyncify loop. Skip it.
+#else
 		// do some one-time OpenGL setup
 		// FIXME: SRGB conversion is working on SDL2, may be of use
 		// when we eventually target gamma and monitor profiles.
@@ -1189,6 +1308,7 @@ int renderer_ogl::draw(const int update)
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
 		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+#endif
 	}
 
 	// only clear if the geometry changes (and for 2 frames afterward to clear double and triple buffers)
@@ -1205,12 +1325,23 @@ int renderer_ogl::draw(const int update)
 		// FIXME:: this can be done in create!
 		if ( !m_initialized )
 		{
+#if defined(__EMSCRIPTEN__)
+#endif
 			loadGLExtensions();
+#if defined(__EMSCRIPTEN__)
+#endif
 		}
 
 		m_surf_w = m_width;
 		m_surf_h = m_height;
 
+#if defined(__EMSCRIPTEN__)
+		// Fixed-function setup (glDisable/glOrtho/client-state) hangs under
+		// Asyncify+LEGACY_GL on the first present. Skip; WebGL defaults are fine
+		// for a basic 2D blit, and LEGACY_GL still remaps later draw calls.
+		m_last_blendmode = BLENDMODE_ALPHA;
+		m_initialized = 1;
+#else
 		// we're doing nothing 3d, so the Z-buffer is currently not interesting
 		glDisable(GL_DEPTH_TEST);
 
@@ -1286,6 +1417,7 @@ int renderer_ogl::draw(const int update)
 
 			m_initialized = 1;
 		}
+#endif
 	}
 
 	// compute centering parameters
@@ -1314,6 +1446,40 @@ int renderer_ogl::draw(const int update)
 	m_last_vofs = vofs;
 
 	window().m_primlist->acquire_lock();
+#if defined(__EMSCRIPTEN__)
+	// Legacy fixed-function GL prims hang under Asyncify. Upload the largest
+	// RGB32/ARGB32 screen quad via WebGL2 texture blit instead.
+	{
+		render_primitive const *best = nullptr;
+		u32 best_area = 0;
+		for (render_primitive const &prim : *window().m_primlist)
+		{
+			if (prim.type != render_primitive::QUAD || prim.texture.base == nullptr)
+				continue;
+			u32 const fmt = PRIMFLAG_GET_TEXFORMAT(prim.flags);
+			if (fmt != TEXFORMAT_RGB32 && fmt != TEXFORMAT_ARGB32)
+				continue;
+			u32 const area = prim.texture.width * prim.texture.height;
+			if (area > best_area)
+			{
+				best_area = area;
+				best = &prim;
+			}
+		}
+		if (best != nullptr)
+		{
+			auto const *const src = reinterpret_cast<u32 const *>(best->texture.base);
+			int const w = int(best->texture.width);
+			int const h = int(best->texture.height);
+			int const pitch = int(best->texture.rowpixels);
+			mamehub_webgl_blit(w, h, pitch, reinterpret_cast<uintptr_t>(src));
+		}
+	}
+	window().m_primlist->release_lock();
+	m_init_context = 0;
+	// Skip SDL_GL_SwapWindow — WebGL overlay is the visible surface.
+	return 0;
+#else
 
 	// now draw
 	for (render_primitive &prim : *window().m_primlist)
@@ -1531,6 +1697,7 @@ int renderer_ogl::draw(const int update)
 	m_gl_context->swap_buffer();
 
 	return 0;
+#endif
 }
 
 //============================================================

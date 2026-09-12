@@ -195,16 +195,31 @@ int renderer_sdl1::create()
 	// create renderer
 	osd_printf_verbose("Enter renderer_sdl1::create()\n");
 	SDL_Window *sdl_window = dynamic_cast<sdl_window_info &>(window()).platform_window();
+#if defined(__EMSCRIPTEN__)
+	// Emscripten often has no named "software" backend; let SDL pick a
+	// workable one, then disable vsync so Present cannot block forever.
+	m_sdl_renderer = SDL_CreateRenderer(sdl_window, nullptr);
+	if (!m_sdl_renderer)
+		m_sdl_renderer = SDL_CreateRenderer(sdl_window, "opengles2");
+	if (!m_sdl_renderer)
+		m_sdl_renderer = SDL_CreateRenderer(sdl_window, "opengl");
+#else
 	m_sdl_renderer = SDL_CreateRenderer(sdl_window, "software");
+#endif
 	if (!m_sdl_renderer)
 	{
 		fatalerror("Error creating renderer: %s\n", SDL_GetError());
 	}
 
+#if defined(__EMSCRIPTEN__)
+	SDL_SetRenderVSync(m_sdl_renderer, 0);
+	osd_printf_verbose("SDL soft renderer: %s\n", SDL_GetRendererName(m_sdl_renderer));
+#else
 	if (video_config.waitvsync)
 	{
 		SDL_SetRenderVSync(m_sdl_renderer, SDL_RENDERER_VSYNC_ADAPTIVE);
 	}
+#endif
 
 	m_yuv_lookup = nullptr;
 	m_blittimer = 0;
@@ -257,6 +272,10 @@ void renderer_sdl1::destroy_all_textures()
 
 int renderer_sdl1::draw(int update)
 {
+#if defined(__EMSCRIPTEN__)
+	std::fprintf(stderr, "sdlsoft: draw enter update=%d\n", update);
+	std::fflush(stderr);
+#endif
 	uint8_t *surfptr;
 	int32_t pitch;
 	Uint32 rmask, gmask, bmask;
@@ -267,6 +286,10 @@ int renderer_sdl1::draw(int update)
 	osd_dim wdim = window().get_size_pixels();
 	if (has_flags(FI_CHANGED) || (wdim != m_last_dim))
 	{
+#if defined(__EMSCRIPTEN__)
+		std::fprintf(stderr, "sdlsoft: recreate texture %dx%d\n", m_blit_dim.width(), m_blit_dim.height());
+		std::fflush(stderr);
+#endif
 		destroy_all_textures();
 		clear_flags(FI_CHANGED);
 		m_blittimer = 3;
@@ -294,7 +317,15 @@ int renderer_sdl1::draw(int update)
 		m_blittimer--;
 	}
 
+#if defined(__EMSCRIPTEN__)
+	std::fprintf(stderr, "sdlsoft: before LockTexture\n");
+	std::fflush(stderr);
+#endif
 	SDL_LockTexture(m_texture_id, nullptr, (void **) &surfptr, &pitch);
+#if defined(__EMSCRIPTEN__)
+	std::fprintf(stderr, "sdlsoft: after LockTexture pitch=%d\n", (int)pitch);
+	std::fflush(stderr);
+#endif
 
 	// get ready to center the image
 	vofs = hofs = 0;
@@ -326,7 +357,15 @@ int renderer_sdl1::draw(int update)
 	m_last_hofs = hofs;
 	m_last_vofs = vofs;
 
+#if defined(__EMSCRIPTEN__)
+	std::fprintf(stderr, "sdlsoft: before acquire_lock\n");
+	std::fflush(stderr);
+#endif
 	window().m_primlist->acquire_lock();
+#if defined(__EMSCRIPTEN__)
+	std::fprintf(stderr, "sdlsoft: after acquire_lock; draw_primitives\n");
+	std::fflush(stderr);
+#endif
 
 	auto mamewidth = SDL_GetNumberProperty(props, SDL_PROP_TEXTURE_WIDTH_NUMBER, 0);
 	auto mameheight = SDL_GetNumberProperty(props, SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0);
@@ -392,6 +431,10 @@ int renderer_sdl1::draw(int update)
 	}
 
 	window().m_primlist->release_lock();
+#if defined(__EMSCRIPTEN__)
+	std::fprintf(stderr, "sdlsoft: after draw_primitives/unlock list\n");
+	std::fflush(stderr);
+#endif
 
 	// unlock and flip
 	SDL_UnlockTexture(m_texture_id);
@@ -402,8 +445,16 @@ int renderer_sdl1::draw(int update)
 		r.y=vofs;
 		r.w=blitwidth;
 		r.h=blitheight;
+#if defined(__EMSCRIPTEN__)
+		std::fprintf(stderr, "sdlsoft: before RenderTexture/Present\n");
+		std::fflush(stderr);
+#endif
 		SDL_RenderTexture(m_sdl_renderer, m_texture_id, nullptr, (const SDL_FRect *)&r);
 		SDL_RenderPresent(m_sdl_renderer);
+#if defined(__EMSCRIPTEN__)
+		std::fprintf(stderr, "sdlsoft: after Present\n");
+		std::fflush(stderr);
+#endif
 	}
 	return 0;
 }

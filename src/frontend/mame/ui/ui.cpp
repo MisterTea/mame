@@ -657,6 +657,13 @@ static void output_joined_collection(const TColl &collection, TEmitMemberFunc em
 
 void mame_ui_manager::display_startup_screens(bool first_time)
 {
+#if defined(__EMSCRIPTEN__)
+	// Startup info/warnings/file-manager are synchronous and block the browser
+	// (osd_sleep has no Asyncify yield). Softlist carts are mounted via argv.
+	(void)first_time;
+	set_handler(ui_callback_type::GENERAL, handler_callback_func(&mame_ui_manager::handler_ingame, this));
+	return;
+#else
 	const int maxstate = 3;
 	int const str = machine().options().seconds_to_run();
 	bool show_gameinfo = !machine().options().skip_gameinfo();
@@ -845,12 +852,23 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 					throw emu_fatalerror(std::move(warning).str());
 				}
 
+#if defined(__EMSCRIPTEN__)
+				// Browser builds cannot run the blocking file-manager UI (GL/menu
+				// draw stalls before the Asyncify frame loop). Fail clearly instead.
+				warning << "Images must be mounted for the following devices: ";
+				output_joined_collection(mandatory_images,
+						[&warning] (const std::reference_wrapper<const std::string> &img) { warning << img.get(); },
+						[&warning] () { warning << ", "; });
+				osd_printf_error("%s\n", warning.str().c_str());
+				machine().schedule_exit();
+#else
 				warning << _("This system requires media images to be mounted for the following device(s): ");
 				output_joined_collection(mandatory_images,
 						[&warning] (const std::reference_wrapper<const std::string> &img) { warning << '"' << img.get() << '"'; },
 						[&warning] () { warning << ", "; });
 
 				ui::menu_file_manager::force_file_manager(*this, machine().render().ui_target(), std::move(warning).str());
+#endif
 			}
 			break;
 		}
@@ -906,6 +924,7 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 				osd_sleep(osd_ticks_per_second() / 1000);
 		}
 	}
+#endif
 }
 
 

@@ -31,7 +31,9 @@
 
 #include "NSM_CommonInterface.h"
 
-#if !defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#else
 #include "TimeHandler.hpp"
 #endif
 
@@ -236,10 +238,21 @@ static void mamehub_osd_sleep(osd_ticks_t duration)
 {
 	if (!duration)
 		return;
+#if defined(__EMSCRIPTEN__)
+	// Stock osd_sleep is a no-op under Emscripten. Netplay throttle must wait
+	// on the shared clock via Asyncify.
+	int ms = int((duration * 1000) / osd_ticks_per_second());
+	if (ms < 1)
+		ms = 1;
+	if (ms > 50)
+		ms = 50;
+	emscripten_sleep(ms);
+#else
 	auto const t0 = std::chrono::steady_clock::now();
 	osd_sleep(duration);
 	wga::addFrameWaitUs(std::chrono::duration_cast<std::chrono::microseconds>(
 			std::chrono::steady_clock::now() - t0).count());
+#endif
 }
 
 void video_manager::frame_update(bool from_debugger)
@@ -341,7 +354,12 @@ void video_manager::frame_update(bool from_debugger)
 	// update inputs and draw the user interface
 	t0 = nowUs();
 	machine().osd().input_update(true);
+#if defined(__EMSCRIPTEN__)
+	// In-emulator UI draw currently hangs under Asyncify/WebGL. Skip for now so
+	// gameplay frames can present; shell UI covers selection.
+#else
 	anything_changed = emulator_info::draw_user_interface(machine()) || anything_changed;
+#endif
 
 	// let plugins draw over the UI
 	anything_changed = emulator_info::frame_hook() || anything_changed;
@@ -790,6 +808,13 @@ bool video_manager::finish_screen_updates()
 
 void video_manager::update_throttle(attotime emutime)
 {
+#if defined(__EMSCRIPTEN__)
+	// Offline browser is paced by the Asyncify/RAF loop. Netplay still needs
+	// shared-clock sleep (via mamehub_osd_sleep → emscripten_sleep).
+	if (!netCommon)
+		return;
+#endif
+
 	// MAMEHub: sync emulation to netplay / WGA global clock instead of stock OSD ticks.
 	// Target a one-frame lead over shared now so a Present hitch burns slack
 	// instead of immediately putting us behind. Skip OSD when behind by >=1ms.
@@ -806,17 +831,11 @@ void video_manager::update_throttle(attotime emutime)
 		int64_t curTime;
 		if (netCommon)
 		{
-#if defined(__EMSCRIPTEN__)
-			// Emscripten stub reports milliseconds.
-			curTime = netCommon->getCurrentTime() * 1000;
-#else
 			curTime = netCommon->getCurrentTime();
-#endif
 		}
 		else
 		{
-			curTime = int64_t(std::chrono::duration_cast<std::chrono::microseconds>(
-				std::chrono::steady_clock::now().time_since_epoch()).count());
+			curTime = wga::GlobalClock::currentTimeMicros();
 		}
 
 		attotime expectedEmulationTime(
@@ -836,7 +855,14 @@ void video_manager::update_throttle(attotime emutime)
 					<< ((emutime - expectedEmulationTime).attoseconds() / ATTOSECONDS_PER_MILLISECOND)
 					<< "ms (target lead 1 frame)" << std::endl;
 			}
-			mamehub_osd_sleep(osd_ticks_per_second() / 1000);
+			// Coalesce ahead-time into one sleep (1ms loops pay Asyncify tax).
+			attotime const ahead = emutime - targetLead;
+			int msAhead = int(ahead.attoseconds() / ATTOSECONDS_PER_MILLISECOND) + ahead.seconds() * 1000;
+			if (msAhead < 1)
+				msAhead = 1;
+			if (msAhead > 16)
+				msAhead = 16;
+			mamehub_osd_sleep((osd_ticks_per_second() * msAhead) / 1000);
 			continue;
 		}
 

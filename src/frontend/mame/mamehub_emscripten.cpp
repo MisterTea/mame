@@ -19,17 +19,6 @@ bool mamehub_manager::handleChat(running_machine &, ui_event &)
 	return false;
 }
 
-void mamehub_manager::set_discord_directory(std::unique_ptr<mamehub::discord_directory_server> dir)
-{
-	m_discord_directory = std::move(dir);
-}
-
-mamehub::discord_directory_server *mamehub_manager::discord_directory() const
-{
-	return m_discord_directory.get();
-}
-
 void mamehub_manager::reset()
 {
-	m_discord_directory.reset();
 }

@@ -1115,29 +1115,24 @@ configuration { "asmjs" }
 		"-s USE_SDL=3",
 		"-s USE_SDL_TTF=3",
 		"-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=\"['\\$$ERRNO_CODES']\"",
-		"-s EXPORTED_FUNCTIONS=\"['_main', '_malloc', '__ZN15running_machine30emscripten_get_running_machineEv', '__ZN15running_machine17emscripten_get_uiEv', '__ZN15running_machine20emscripten_get_soundEv', '__ZN15mame_ui_manager12set_show_fpsEb', '__ZNK15mame_ui_manager8show_fpsEv', '__ZN13sound_manager4muteEbh', '__ZN15running_machine15emscripten_saveEPKc', '__ZN15running_machine15emscripten_loadEPKc', '__ZN15running_machine21emscripten_hard_resetEv', '__ZN15running_machine21emscripten_soft_resetEv', '__ZN15running_machine15emscripten_exitEv']\"",
-		"-s EXPORTED_RUNTIME_METHODS=\"['cwrap','FS','PATH','UTF8ToString','stringToUTF8']\"",
+		"-s EXPORTED_FUNCTIONS=\"['_main', '_malloc', '_free', '_mamehub_net_on_message', '_mamehub_browser_select_snes_software', '__ZN15running_machine30emscripten_get_running_machineEv', '__ZN15running_machine17emscripten_get_uiEv', '__ZN15running_machine20emscripten_get_soundEv', '__ZN15mame_ui_manager12set_show_fpsEb', '__ZNK15mame_ui_manager8show_fpsEv', '__ZN13sound_manager4muteEbh', '__ZN15running_machine15emscripten_saveEPKc', '__ZN15running_machine15emscripten_loadEPKc', '__ZN15running_machine21emscripten_hard_resetEv', '__ZN15running_machine21emscripten_soft_resetEv', '__ZN15running_machine15emscripten_exitEv']\"",
+		"-s EXPORTED_RUNTIME_METHODS=\"['cwrap','FS','PATH','UTF8ToString','stringToUTF8','allocateUTF8','getValue','HEAPU8','HEAPU32','HEAP8','wasmMemory']\"",
 		"-s ERROR_ON_UNDEFINED_SYMBOLS=0",
 		"-s STACK_SIZE=5MB",
 		"-s MAX_WEBGL_VERSION=2",
 		"-s ASYNCIFY=1",
-		"-s ASYNCIFY_STACK_SIZE=1048576",
+		"-s ASYNCIFY_STACK_SIZE=8388608",
 		"-s LEGACY_GL_EMULATION=1",
 		"--js-library " .. _MAKE.esc(MAME_DIR) .. "scripts/resources/emscripten/gl_legacy_stubs.js",
 		"-s EXCEPTION_CATCHING_ALLOWED=\"['_ZN15running_machine17start_all_devicesEv','_ZN8chd_file11open_commonEb','_ZN8chd_file13read_metadataEjjRNSt3__212basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEE','_ZN8chd_file13read_metadataEjjRNSt3__26vectorIhNS0_9allocatorIhEEEE','_ZNK19netlist_mame_device19base_validity_checkER16validity_checker']\"",
 		"--pre-js " .. _MAKE.esc(MAME_DIR) .. "src/osd/modules/sound/js_sound.js",
 		"--post-js " .. _MAKE.esc(MAME_DIR) .. "scripts/resources/emscripten/emscripten_post.js",
-		"--embed-file " .. _MAKE.esc(MAME_DIR) .. "bgfx/chains@bgfx/chains",
-		"--embed-file " .. _MAKE.esc(MAME_DIR) .. "bgfx/effects@bgfx/effects",
-		"--embed-file " .. _MAKE.esc(MAME_DIR) .. "bgfx/shaders/essl@bgfx/shaders/essl",
-		"--embed-file " .. _MAKE.esc(MAME_DIR) .. "artwork/bgfx@artwork/bgfx",
-		"--embed-file " .. _MAKE.esc(MAME_DIR) .. "artwork/lut-default.png@artwork/lut-default.png",
-		"--embed-file " .. _MAKE.esc(MAME_DIR) .. "artwork/slot-mask.png@artwork/slot-mask.png",
+		-- Browser path uses OpenGL/WebGL, not BGFX — skip embedding BGFX assets (faster links).
 	}
 	if _OPTIONS["OPTIMIZE"]~=nil then
+		-- Asyncify needs enough Binaryen opts to keep local counts browser-legal.
+		-- -O0/-O1 → "local count too large" and the module will not instantiate.
 		if _OPTIONS["OPTIMIZE"]=="3" then
-			-- emcc's link-time -O3 is very slow, max out at -O2 for now
-			-- we should still be getting the benefit of -O3 on the individual object files
 			linkoptions {
 				"-O2",
 			}
