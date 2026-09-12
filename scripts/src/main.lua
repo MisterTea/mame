@@ -276,8 +276,12 @@ end
 		"ymfm",
 		ext_lib("jpeg"),
 		"7z",
+	}
+if _OPTIONS["targetos"] ~= "asmjs" then
+	links {
     "wga",
 	}
+end
 if CPU_INCLUDE_DRC_NATIVE then
 	links {
 		"asmjit",

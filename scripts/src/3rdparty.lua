@@ -2108,6 +2108,7 @@ project "asmjit"
 		MAME_DIR .. "3rdparty/asmjit/asmjit/x86/x86rapass_p.h",
 	}
 end
+if _OPTIONS["targetos"] ~= "asmjs" then
 project "wga"
 	uuid "9ee43987-9a53-4fbd-9469-769d2b485379"
 	kind "StaticLib"
@@ -2187,3 +2188,4 @@ project "wga"
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/miniupnpc.c",
     MAME_DIR .. "3rdparty/wga/peer/external/miniupnpc-2.1.20190408/igd_desc_parse.c",
     }
+end

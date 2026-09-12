@@ -13,8 +13,10 @@
 #include "mame.h"
 #include "mameopts.h"
 #include "mamehub.h"
+#if !defined(__EMSCRIPTEN__)
 #include "NSM_Common.h"
 #include "PortMappingHandler.hpp"
+#endif
 
 #include "drivenum.h"
 #include "emuopts.h"
@@ -27,8 +29,6 @@
 #include <unordered_set>
 
 namespace ui {
-
-namespace {
 
 enum
 {
@@ -44,6 +44,9 @@ enum
 	ITEM_LEAVE_LOBBY
 };
 
+namespace {
+
+#if !defined(__EMSCRIPTEN__)
 bool ensure_discord_authenticated(mame_ui_manager &mui)
 {
 	auto &opts = mui.machine().options();
@@ -73,6 +76,9 @@ bool ensure_discord_authenticated(mame_ui_manager &mui)
 	mui.popup_time(2, _("Signed in as %s"), identity.display_name.c_str());
 	return true;
 }
+#endif
+
+} // anonymous namespace (enums / discord helper)
 
 static void launch_offline_game(mame_ui_manager &mui, game_driver const &driver, ui_software_info const *software = nullptr)
 {
@@ -93,6 +99,74 @@ static void launch_offline_game(mame_ui_manager &mui, game_driver const &driver,
 	mui.machine().resume();
 	mui.machine().schedule_hard_reset();
 }
+
+#if defined(__EMSCRIPTEN__)
+//-------------------------------------------------
+//  menu_mamehub_main (browser: SNES softlist only)
+//-------------------------------------------------
+
+menu_mamehub_main::menu_mamehub_main(mame_ui_manager &mui, render_target &target)
+	: menu(mui, target)
+{
+	set_heading(_("MAMEHub"));
+}
+
+void menu_mamehub_main::menu_activated()
+{
+}
+
+void menu_mamehub_main::force_menu(mame_ui_manager &mui, render_target &target)
+{
+	// Skip Host/Join/Offline and machine select — open SNES software list.
+	menu::stack_reset(mui);
+	auto &systems = system_list::instance();
+	systems.cache_data(mui.options());
+	int const index = driver_list::find("snes");
+	if ((index < 0) || (std::size_t(index) >= systems.systems().size()))
+	{
+		menu::stack_push_special_main<menu_mamehub_main>(mui, target);
+		mui.show_menu(target);
+		mui.machine().pause();
+		mui.popup_time(5, "%s", _("SNES driver not present in this build"));
+		return;
+	}
+
+	ui_system_info const &system = systems.systems()[index];
+	menu::stack_push_special_main<menu_select_software>(
+			mui, target, system,
+			[] (game_driver const &selected_driver, ui_software_info const &software)
+			{
+				launch_offline_game(mame_machine_manager::instance()->ui(), selected_driver, &software);
+			});
+	mui.show_menu(target);
+	mui.machine().pause();
+}
+
+void menu_mamehub_main::populate()
+{
+	item_append(_("Select Game (Offline)"), 0, (void *)(uintptr_t)ITEM_OFFLINE);
+	item_append(_("Exit"), 0, (void *)(uintptr_t)ITEM_EXIT);
+}
+
+bool menu_mamehub_main::handle(event const *ev)
+{
+	if (!ev || (IPT_UI_SELECT != ev->iptkey) || !ev->itemref)
+		return false;
+	switch (uintptr_t(ev->itemref))
+	{
+	case ITEM_OFFLINE:
+		force_menu(ui(), target());
+		return true;
+	case ITEM_EXIT:
+		machine().schedule_exit();
+		return true;
+	default:
+		return false;
+	}
+}
+
+#else
+namespace {
 
 // Relative present-day popularity for recognizable software platforms.  Keep
 // these values constant so menu order is deterministic; aliases and regional
@@ -855,5 +929,7 @@ void menu_mamehub_lobby::finish_connection()
 	ui().machine().resume();
 	ui().machine().schedule_hard_reset();
 }
+
+#endif // !__EMSCRIPTEN__
 
 } // namespace ui

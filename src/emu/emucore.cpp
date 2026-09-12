@@ -12,14 +12,21 @@
 #include "emu.h"
 
 //
+#if defined(__EMSCRIPTEN__)
+#include "emucore.h"
+#include "osdcore.h"
+#else
 #include "UniversalStacktrace/ust/ust.hpp"
 #include "emucore.h"
 #include "osdcore.h"
+#endif
 
 emu_fatalerror::emu_fatalerror(util::format_argument_pack<char> const &args)
 	: emu_fatalerror(0, args)
 {
+#if !defined(__EMSCRIPTEN__)
   std::cout << ust::generate() << std::endl;
+#endif
 	osd_break_into_debugger(m_text.c_str());
 }
 
@@ -27,7 +34,9 @@ emu_fatalerror::emu_fatalerror(int _exitcode, util::format_argument_pack<char> c
 	: m_text(util::string_format(args))
 	, m_code(_exitcode)
 {
+#if !defined(__EMSCRIPTEN__)
   std::cout << ust::generate() << std::endl;
+#endif
 }
 
 void report_bad_cast(const std::type_info &src_type,
