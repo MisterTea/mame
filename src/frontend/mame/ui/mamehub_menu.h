@@ -11,6 +11,7 @@
 #include <future>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 class game_driver;
@@ -37,7 +38,34 @@ protected:
 	virtual void populate() override;
 	virtual bool handle(event const *ev) override;
 	virtual void menu_activated() override;
+
+#if defined(__EMSCRIPTEN__)
+private:
+	bool m_opened_softlist = false;
+#endif
 };
+
+#if defined(__EMSCRIPTEN__)
+// Lightweight SNES software picker for browser builds.
+// Avoids menu_select_software — building/drawing the full softlist freezes WASM.
+class menu_mamehub_browser_software : public menu
+{
+public:
+	menu_mamehub_browser_software(mame_ui_manager &mui, render_target &target, game_driver const &driver);
+	virtual ~menu_mamehub_browser_software() override = default;
+
+protected:
+	virtual void populate() override;
+	virtual bool handle(event const *ev) override;
+	virtual bool custom_ui_back() override { return !m_search.empty(); }
+
+private:
+	void launch_selected(std::string const &shortname);
+
+	std::string m_search;
+	std::vector<std::pair<std::string, std::string>> m_entries; // shortname, title
+};
+#endif
 
 #if !defined(__EMSCRIPTEN__)
 // First level of host selection: Arcade or a machine with software lists.

@@ -410,6 +410,7 @@ void candy_mode(const std::string& baseName, const std::string& leafName, const 
 	}
 
 	std::cout << "Candy mode (browser): fetching " << url << " -> " << out_path << std::endl;
+	std::cout.flush();
 	if (!mamehub_candy_fetch(url.c_str(), out_path.c_str())) {
 		// Some archive.org edges prefer a literal slash inside the zip path.
 		if (!leafName.empty()) {
@@ -418,6 +419,30 @@ void candy_mode(const std::string& baseName, const std::string& leafName, const 
 			std::cout << "Candy mode (browser): retry " << alt << std::endl;
 			if (mamehub_candy_fetch(alt.c_str(), out_path.c_str()))
 				return;
+		}
+		// S-SMP IPL lives in snes.zip on archive.org (no standalone s_smp.zip).
+		if (leafName.empty() && baseName == "s_smp") {
+			std::string snes_path = out_dir + "/snes.zip";
+			std::string alt = "https://archive.org/download/MAME220RomsOnlyMerged/snes.zip";
+			std::cout << "Candy mode (browser): s_smp alias via snes.zip" << std::endl;
+			if (mamehub_candy_fetch(alt.c_str(), snes_path.c_str())) {
+				// Present the same zip under the device set name.
+				EM_ASM({
+					const src = UTF8ToString($0);
+					const dst = UTF8ToString($1);
+					try {
+						if (FS.analyzePath(src).exists) {
+							const data = FS.readFile(src);
+							const dir = dst.includes("/") ? dst.slice(0, dst.lastIndexOf("/")) : "";
+							if (dir) FS.mkdirTree(dir);
+							FS.writeFile(dst, data);
+						}
+					} catch (e) {
+						console.error("s_smp alias copy failed", e);
+					}
+				}, snes_path.c_str(), out_path.c_str());
+				return;
+			}
 		}
 		std::cout << "Candy mode (browser): download failed for " << filename << ".zip" << std::endl;
 	}

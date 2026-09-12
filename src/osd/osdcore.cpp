@@ -170,7 +170,13 @@ osd_ticks_t osd_ticks_per_second() noexcept
 
 void osd_sleep(osd_ticks_t duration) noexcept
 {
-#ifdef _WIN32
+#if defined(__EMSCRIPTEN__)
+	// Browser frame pacing uses emscripten_sleep in running_machine's Asyncify
+	// loop. Blocking here (sleep_for / nested emscripten_sleep) freezes or
+	// corrupts Asyncify when called from inside a timeslice.
+	(void)duration;
+	return;
+#elif defined(_WIN32)
 // sleep_for appears to oversleep on Windows with gcc 8
 	Sleep(duration / (osd_ticks_per_second() / 1000));
 #else

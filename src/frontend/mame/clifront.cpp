@@ -312,9 +312,16 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
   // Set up client/server as appropriate
   if (m_options.mamehub()) {
 #if defined(__EMSCRIPTEN__)
-    // Browser builds use the MAMEHub UI for offline SNES softlist selection.
-    // No Discord SDK and no classic lobby connect at startup.
-    (void)mamehub::resolve_user_id(m_options.user_id());
+    // Browser: WebRTC DataChannel netplay is prepared by the HTML shell
+    // (Module.mamehubNet) before WASM boots. createNetCommon attaches to it.
+    {
+      string userId = mamehub::resolve_user_id(m_options.user_id());
+      string privateKey = *m_options.password() ? m_options.password() : "";
+      string gameString = m_options.system_name();
+      if (!m_options.software_name().empty())
+        gameString += ";" + m_options.software_name();
+      createNetCommon(userId, privateKey, 0, "browser", 0, 50, gameString, false, 10);
+    }
 #else
     if (m_options.discord()) {
       if (*m_options.discord_mock()) {
@@ -431,7 +438,6 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
       }
     }
 #endif
-  }
   }
 
 	// otherwise, check for a valid system

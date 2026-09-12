@@ -25,6 +25,11 @@
 
 #include <string>
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/emscripten.h>
+#include <emscripten/html5.h>
+#endif
+
 
 class sdl_gl_context : public osd_gl_context
 {
@@ -81,7 +86,13 @@ public:
 
 	virtual void swap_buffer() override
 	{
+#if defined(__EMSCRIPTEN__)
+		// SDL_GL_SwapWindow can block on RAF under Asyncify and deadlock the
+		// single-threaded browser loop. Commit the WebGL frame without waiting.
+		emscripten_webgl_commit_frame();
+#else
 		SDL_GL_SwapWindow(m_window);
+#endif
 	}
 
 private:

@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstdio>
 #include <list>
 #include <memory>
 
@@ -716,7 +717,9 @@ osd_dim sdl_window_info::pick_best_mode()
 void sdl_window_info::update()
 {
 	// adjust the cursor state
+#if !defined(__EMSCRIPTEN__)
 	update_cursor_state();
+#endif
 
 	// if we're visible and running and not in the middle of a resize, draw
 	if (target() != nullptr)
@@ -742,10 +745,17 @@ void sdl_window_info::update()
 		}
 
 		osd_ticks_t event_wait_ticks;
+#if defined(__EMSCRIPTEN__)
+		// Single-threaded browser: no render worker. Ensure the event is
+		// signalled so we always present (a prior wait(0) must not consume it).
+		m_rendered_event.set();
+		event_wait_ticks = 0;
+#else
 		if (video_config.waitvsync && video_config.syncrefresh)
 			event_wait_ticks = osd_ticks_per_second(); // block at most a second
 		else
 			event_wait_ticks = 0;
+#endif
 
 		if (m_rendered_event.wait(event_wait_ticks))
 		{
@@ -779,7 +789,13 @@ void sdl_window_info::update()
 				if (video_config.perftest)
 					measure_fps(update);
 				else
+				{
+#if defined(__EMSCRIPTEN__)
+#endif
 					renderer().draw(update);
+#if defined(__EMSCRIPTEN__)
+#endif
+				}
 			}
 
 			// all done, ready for next

@@ -224,8 +224,13 @@ void osd_common_t::register_options()
 	REGISTER_MODULE(m_mod_man, FONT_NONE);
 
 #if defined(SDLMAME_EMSCRIPTEN)
-	REGISTER_MODULE(m_mod_man, RENDERER_SDL1); // don't bother trying to use video acceleration in browsers
+	// Browser present is WebGL2 texture blit inside the OpenGL module.
+	// Do not register soft/accel fallbacks — slow paths are rejected by design.
+#ifdef SDLMAME_SDL3
+	REGISTER_MODULE(m_mod_man, RENDERER_OPENGL);
 #endif
+	REGISTER_MODULE(m_mod_man, RENDERER_NONE);
+#else
 #if defined(OSD_WINDOWS)
 	REGISTER_MODULE(m_mod_man, RENDERER_D3D); // this is only built for OSD=windows, there's no dummy stub
 #endif
@@ -239,16 +244,13 @@ void osd_common_t::register_options()
 #endif
 #ifdef SDLMAME_SDL3
 	REGISTER_MODULE(m_mod_man, RENDERER_SDL3ACCEL);
-#if !defined(SDLMAME_EMSCRIPTEN)
 	REGISTER_MODULE(m_mod_man, RENDERER_SDL3SOFT);
-#endif
 #else
 	REGISTER_MODULE(m_mod_man, RENDERER_SDL2);
-#if !defined(SDLMAME_EMSCRIPTEN)
 	REGISTER_MODULE(m_mod_man, RENDERER_SDL1);
 #endif
-#endif
 	REGISTER_MODULE(m_mod_man, RENDERER_NONE);
+#endif
 
 	REGISTER_MODULE(m_mod_man, SOUND_WASAPI);
 	REGISTER_MODULE(m_mod_man, SOUND_XAUDIO2);

@@ -30,20 +30,28 @@ namespace ui {
 
 void system_list::cache_data(ui_options const &options)
 {
-	std::unique_lock<std::mutex> lock(m_mutex);
-	if (!m_started)
+	std::string datpath;
+	std::string titles;
 	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		if (m_started)
+			return;
 		m_started = true;
-#if defined(__EMSCRIPTEN__)
-		std::invoke(
-#else
-		m_thread = std::make_unique<std::thread>(
-#endif
-				[this, datpath = std::string(options.history_path()), titles = std::string(options.system_names())]
-				{
-					do_cache_data(datpath, titles);
-				});
+		datpath = options.history_path();
+		titles = options.system_names();
 	}
+
+	// Emscripten has no worker threads here: run caching on the caller.
+	// Must not hold m_mutex — do_cache_data → notify_available also locks it.
+#if defined(__EMSCRIPTEN__)
+	do_cache_data(datpath, titles);
+#else
+	m_thread = std::make_unique<std::thread>(
+			[this, datpath = std::move(datpath), titles = std::move(titles)]
+			{
+				do_cache_data(datpath, titles);
+			});
+#endif
 }
 
 

@@ -351,8 +351,8 @@ private:
 #if defined(__EMSCRIPTEN__)
 private:
 	static running_machine *emscripten_running_machine;
-	static void emscripten_main_loop();
 public:
+	static void emscripten_main_loop();
 	static void emscripten_set_running_machine(running_machine *machine);
 	static running_machine * emscripten_get_running_machine();
 	static ui_manager * emscripten_get_ui();

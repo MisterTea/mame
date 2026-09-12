@@ -1,0 +1,10 @@
+# Emscripten build outputs (copy from repo root after emmake / rebuild_fast.sh)
+dist/*
+!dist/.gitkeep
+
+# Candy proxy ROM downloads (serve.py cache)
+.candy-cache/
+
+# npm
+node_modules/
+package-lock.json

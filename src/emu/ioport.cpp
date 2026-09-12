@@ -2419,11 +2419,13 @@ void ioport_manager::frame_update()
 	s_mamehub_cumulative_hash ^= frame_hash;
 	s_mamehub_cumulative_hash *= 16777619u;
 
+#if !defined(__EMSCRIPTEN__)
 	osd_printf_info("[INPUT_FRAME] frame=%llu emu_ms=%lld hash=%08x inputs=[%s]\n",
 		(unsigned long long)s_mamehub_frame_count,
 		(long long)curtime.to_msec(),
 		s_mamehub_cumulative_hash,
 		pressed_inputs_str.c_str());
+#endif
 
 	// If netplay is active, exchange and verify sync hashes
 	if (netCommon && curtime.to_msec() >= inputStartTime.to_msec()) {

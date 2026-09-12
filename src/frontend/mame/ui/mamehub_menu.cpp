@@ -28,6 +28,10 @@
 #include <string_view>
 #include <unordered_set>
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#endif
+
 namespace ui {
 
 enum
@@ -83,21 +87,24 @@ bool ensure_discord_authenticated(mame_ui_manager &mui)
 static void launch_offline_game(mame_ui_manager &mui, game_driver const &driver, ui_software_info const *software = nullptr)
 {
 	auto &options = mui.machine().options();
+	options.set_system_name(driver.name);
 	if (software && !software->startempty)
 	{
 		std::string software_name = string_format("%s:%s", software->listname, software->shortname);
 		options.set_value(OPTION_SOFTWARENAME, software_name, OPTION_PRIORITY_CMDLINE);
-		options.set_software(std::move(software_name));
+		if (!software->instance.empty())
+			options.set_value(software->instance.c_str(), software_name, OPTION_PRIORITY_CMDLINE);
 	}
 	else
 	{
 		options.set_value(OPTION_SOFTWARENAME, "", OPTION_PRIORITY_CMDLINE);
-		options.set_software("");
 	}
 
 	mame_machine_manager::instance()->schedule_new_driver(driver);
-	mui.machine().resume();
+	std::cout << "launch_offline_game: scheduled " << driver.name
+		<< " software='" << (software && !software->startempty ? software->shortname : "") << "'" << std::endl;
 	mui.machine().schedule_hard_reset();
+	menu::stack_reset(mui);
 }
 
 #if defined(__EMSCRIPTEN__)
@@ -105,40 +112,90 @@ static void launch_offline_game(mame_ui_manager &mui, game_driver const &driver,
 //  menu_mamehub_main (browser: SNES softlist only)
 //-------------------------------------------------
 
+namespace {
+
+void browser_launch_snes_software_impl(std::string const &shortname)
+{
+	if (shortname.empty())
+		return;
+
+	int const index = driver_list::find("snes");
+	if (index < 0)
+	{
+		std::cout << "browser_launch_snes_software: snes driver missing" << std::endl;
+		return;
+	}
+
+	game_driver const &driver = driver_list::driver(index);
+	ui_software_info software;
+	software.driver = &driver;
+	software.listname = "snes";
+	software.shortname = shortname;
+	software.longname = shortname;
+	software.supported = software_support::SUPPORTED;
+	software.part = "cart";
+	software.interface = "snes_cart";
+	software.instance = "cartridge";
+	software.startempty = 0;
+	software.devicetype = "cartridge";
+	software.available = true;
+
+	std::cout << "browser_launch_snes_software: launching snes:" << shortname << std::endl;
+	launch_offline_game(mame_machine_manager::instance()->ui(), driver, &software);
+}
+
+void browser_launch_snes_software(char const *shortname)
+{
+	if (!shortname || !shortname[0])
+		return;
+	try
+	{
+		browser_launch_snes_software_impl(shortname);
+	}
+	catch (std::exception const &ex)
+	{
+		std::cout << "browser_launch_snes_software failed: " << ex.what() << std::endl;
+	}
+	catch (...)
+	{
+		std::cout << "browser_launch_snes_software failed: unknown exception" << std::endl;
+	}
+}
+
+} // anonymous namespace
+
+extern "C" EMSCRIPTEN_KEEPALIVE void mamehub_browser_select_snes_software(char const *shortname)
+{
+	browser_launch_snes_software(shortname);
+}
+
 menu_mamehub_main::menu_mamehub_main(mame_ui_manager &mui, render_target &target)
 	: menu(mui, target)
 {
 	set_heading(_("MAMEHub"));
+	set_needs_prev_menu_item(false);
 }
 
 void menu_mamehub_main::menu_activated()
 {
+	// Only trampoline once per menu instance.
+	if (m_opened_softlist)
+		return;
+	m_opened_softlist = true;
+
+	std::cout << "MAMEHub browser: offline trampoline (menu activate ok)" << std::endl;
+	// Diagnostic: do not push software menu yet — verify frame loop/sleep works.
 }
 
 void menu_mamehub_main::force_menu(mame_ui_manager &mui, render_target &target)
 {
-	// Skip Host/Join/Offline and machine select — open SNES software list.
+	std::cout << "MAMEHub browser: force_menu (empty → offline softlist trampoline)" << std::endl;
 	menu::stack_reset(mui);
-	auto &systems = system_list::instance();
-	systems.cache_data(mui.options());
-	int const index = driver_list::find("snes");
-	if ((index < 0) || (std::size_t(index) >= systems.systems().size()))
-	{
-		menu::stack_push_special_main<menu_mamehub_main>(mui, target);
-		mui.show_menu(target);
-		mui.machine().pause();
-		mui.popup_time(5, "%s", _("SNES driver not present in this build"));
-		return;
-	}
-
-	ui_system_info const &system = systems.systems()[index];
-	menu::stack_push_special_main<menu_select_software>(
-			mui, target, system,
-			[] (game_driver const &selected_driver, ui_software_info const &software)
-			{
-				launch_offline_game(mame_machine_manager::instance()->ui(), selected_driver, &software);
-			});
-	mui.show_menu(target);
+	menu::stack_push_special_main<menu_mamehub_main>(mui, target);
+	// show_menu requires GENERAL handler; during machine_start it is still NOINPUT.
+	// display_startup_screens will activate_menu once the special main is on the stack.
+	if (!mui.show_menu(target))
+		std::cout << "MAMEHub browser: show_menu deferred (handler not GENERAL yet)" << std::endl;
 	mui.machine().pause();
 }
 
@@ -163,6 +220,116 @@ bool menu_mamehub_main::handle(event const *ev)
 	default:
 		return false;
 	}
+}
+
+//-------------------------------------------------
+//  Lightweight browser software picker
+//-------------------------------------------------
+
+namespace {
+
+constexpr std::pair<char const *, char const *> BROWSER_SNES_TITLES[] = {
+	{ "smw",      "Super Mario World" },
+	{ "mariokrt", "Super Mario Kart" },
+	{ "zelda3u",  "The Legend of Zelda: A Link to the Past" },
+	{ "sf2u",     "Street Fighter II" },
+	{ "dkongc",   "Donkey Kong Country" },
+	{ "ff3",      "Final Fantasy III (US) / VI" },
+	{ "chrono",   "Chrono Trigger" },
+	{ "smas",     "Super Mario All-Stars" },
+	{ "fzero",    "F-Zero" },
+	{ "starfox",  "Star Fox" },
+};
+
+} // anonymous namespace
+
+menu_mamehub_browser_software::menu_mamehub_browser_software(
+		mame_ui_manager &mui, render_target &target, game_driver const &driver)
+	: menu(mui, target)
+{
+	(void)driver;
+	set_heading(_("Select SNES Software"));
+	set_needs_prev_menu_item(false);
+	m_entries.reserve(std::size(BROWSER_SNES_TITLES));
+	for (auto const &entry : BROWSER_SNES_TITLES)
+		m_entries.emplace_back(entry.first, entry.second);
+}
+
+void menu_mamehub_browser_software::populate()
+{
+	item_append(_("Type a softlist shortname, or pick a title:"), FLAG_DISABLE, nullptr);
+	item_append(menu_item_type::SEPARATOR);
+
+	if (!m_search.empty())
+	{
+		item_append(
+				string_format(_("Play \"%s\""), m_search),
+				0,
+				(void *)(uintptr_t)1);
+		item_append(menu_item_type::SEPARATOR);
+	}
+
+	for (std::size_t i = 0; i < m_entries.size(); ++i)
+	{
+		auto const &entry = m_entries[i];
+		if (!m_search.empty() && entry.first.find(m_search) == std::string::npos
+				&& strmakelower(entry.second).find(strmakelower(m_search)) == std::string::npos)
+			continue;
+		item_append(entry.second, entry.first, 0, (void *)(uintptr_t)(i + 2));
+	}
+
+	item_append(menu_item_type::SEPARATOR);
+	item_append(_("Exit"), 0, (void *)(uintptr_t)ITEM_EXIT);
+}
+
+bool menu_mamehub_browser_software::handle(event const *ev)
+{
+	if (!ev)
+		return false;
+
+	if (ev->iptkey == IPT_SPECIAL)
+	{
+		if (input_character(m_search, ev->unichar, uchar_is_printable))
+		{
+			reset(reset_options::REMEMBER_REF);
+			return true;
+		}
+	}
+	else if (ev->iptkey == IPT_UI_CANCEL && !m_search.empty())
+	{
+		m_search.clear();
+		reset(reset_options::REMEMBER_REF);
+		return true;
+	}
+
+	if (ev->iptkey != IPT_UI_SELECT || !ev->itemref)
+		return false;
+
+	uintptr_t const ref = uintptr_t(ev->itemref);
+	if (ref == ITEM_EXIT)
+	{
+		machine().schedule_exit();
+		return true;
+	}
+	if (ref == 1)
+	{
+		launch_selected(m_search);
+		return true;
+	}
+	if (ref >= 2 && (ref - 2) < m_entries.size())
+	{
+		launch_selected(m_entries[ref - 2].first);
+		return true;
+	}
+	return false;
+}
+
+void menu_mamehub_browser_software::launch_selected(std::string const &shortname)
+{
+	if (shortname.empty())
+		return;
+	std::cout << "MAMEHub browser: selected software '" << shortname << "'" << std::endl;
+	browser_launch_snes_software(shortname.c_str());
 }
 
 #else
