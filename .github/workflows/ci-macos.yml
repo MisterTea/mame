@@ -28,6 +28,7 @@ jobs:
     - uses: actions/checkout@main
       with:
         fetch-depth: 0
+        submodules: recursive
     - name: Install dependencies
       run: brew install python3 sdl3
     - name: Cache compiler output
