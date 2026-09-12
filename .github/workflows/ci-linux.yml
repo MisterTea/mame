@@ -52,6 +52,12 @@ jobs:
     - name: Install clang
       if: matrix.compiler == 'clang'
       run: sudo apt-get install -y clang
+    - name: Cache compiler output
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ci-linux-${{ matrix.compiler }}
+        max-size: 1G
+        create-symlink: true
     - name: Build
       env:
         OVERRIDE_CC: ${{ matrix.cc }}
@@ -59,7 +65,7 @@ jobs:
         ARCHOPTS: ${{ matrix.archopts }}
         SUBTARGET: ${{ matrix.subtarget }}
         TOOLS: 1
-      run: make -j3
+      run: make -j4
     - name: Validate
       run: ./${{ matrix.executable }} -validate
     - name: Reconcile driver list

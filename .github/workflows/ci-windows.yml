@@ -65,6 +65,12 @@ jobs:
     - uses: actions/checkout@main
       with:
         fetch-depth: 0
+    - name: Cache compiler output
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ci-windows-${{ matrix.compiler }}
+        max-size: 1G
+        create-symlink: true
     - name: Build
       env:
         OVERRIDE_AR: "llvm-ar"
@@ -74,7 +80,7 @@ jobs:
         SUBTARGET: ${{ matrix.subtarget }}
         TOOLS: 1
         USE_SDL3: 1
-      run: make -j3
+      run: make -j4
     - name: Validate
       run: ./${{ matrix.executable }}.exe -validate
     - uses: actions/upload-artifact@main
