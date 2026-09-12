@@ -16,8 +16,15 @@ jobs:
                   submodules: "recursive"
                   path: "mame"
 
+            - name: Cache compiler output
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: ${{ github.job }}
+                  max-size: 1G
+                  create-symlink: true
+
             - name: make
-              run: pushd mame && make -j2 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.so . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
+              run: pushd mame && make -j4 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.so . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
@@ -58,8 +65,15 @@ jobs:
                   submodules: "recursive"
                   path: "mame"
 
+            - name: Cache compiler output
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: ${{ github.job }}
+                  max-size: 1G
+                  create-symlink: true
+
             - name: make mame
-              run: pushd mame && make VERBOSE=1 -j2 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.dylib . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
+              run: pushd mame && make VERBOSE=1 -j4 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.dylib . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
@@ -109,6 +123,12 @@ jobs:
             - uses: msys2/setup-msys2@v2
               with:
                   update: true
+            - name: Cache compiler output
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: ${{ github.job }}
+                  max-size: 1G
+                  create-symlink: true
             - shell: msys2 {0}
               run: |
                   pacman -Syu --noconfirm make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc zip
@@ -116,7 +136,7 @@ jobs:
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 make -j2 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
+                  pushd mame && MINGW64=/mingw64 make -j4 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
@@ -171,6 +191,13 @@ jobs:
               with:
                   update: true
 
+            - name: Cache compiler output
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: ${{ github.job }}
+                  max-size: 1G
+                  create-symlink: true
+
             - shell: msys2 {0}
               run: |
                   pacman -Syu --noconfirm make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc zip
@@ -178,7 +205,7 @@ jobs:
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 make -j2 MSBUILD=1 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && popd
+                  pushd mame && MINGW64=/mingw64 make -j4 MSBUILD=1 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
@@ -242,6 +269,13 @@ jobs:
             - name: Install host build deps
               run: sudo apt-get update -y && sudo apt-get install -y build-essential python3 cmake ninja-build curl rsync
 
+            - name: Cache compiler output
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: ${{ github.job }}
+                  max-size: 1G
+                  create-symlink: true
+
             - name: Build Android deps
               run: |
                   set -euo pipefail
@@ -255,7 +289,7 @@ jobs:
               run: |
                   set -euo pipefail
                   cd mame
-                  make android-arm64 CONFIG=release NOWERROR=1 REGENIE=1 -j"$(nproc)"
+                  make android-arm64 CONFIG=release NOWERROR=1 REGENIE=1 -j4
                   cd android-project
                   chmod +x gradlew
                   ./gradlew assembleDebug --no-daemon
@@ -311,6 +345,13 @@ jobs:
             - name: Install host deps
               run: brew install cmake rsync || true
 
+            - name: Cache compiler output
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: ${{ github.job }}
+                  max-size: 1G
+                  create-symlink: true
+
             - name: Build iOS simulator deps
               run: |
                   set -euo pipefail
@@ -326,7 +367,7 @@ jobs:
               run: |
                   set -euo pipefail
                   cd mame
-                  make ios-simulator CONFIG=release NOWERROR=1 REGENIE=1 -j"$(sysctl -n hw.ncpu)"
+                  make ios-simulator CONFIG=release NOWERROR=1 REGENIE=1 -j4
                   chmod +x ios-project/package_app.sh
                   ./ios-project/package_app.sh
 

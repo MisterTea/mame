@@ -26,6 +26,12 @@ jobs:
     - uses: actions/checkout@main
       with:
         fetch-depth: 0
+    - name: Cache compiler output
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: bgfxshaders-windows
+        max-size: 1G
+        create-symlink: true
     - name: Prevent make from rebuilding GLSL parser source
       run: |
         touch 3rdparty/bgfx/3rdparty/glsl-optimizer/src/glsl/glcpp/glcpp-lex.c
@@ -36,7 +42,7 @@ jobs:
     - name: Build
       env:
         MINGW64: "/mingw64"
-      run: make shaders
+      run: make shaders -j4
     - uses: actions/upload-artifact@main
       with:
         name: mame-bgfx-${{ github.sha }}
