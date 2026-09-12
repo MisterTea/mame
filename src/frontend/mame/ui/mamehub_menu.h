@@ -6,9 +6,6 @@
 #pragma once
 
 #include "ui/menu.h"
-#include "discord_directory_server.h"
-#include "discord_discovery.h"
-#include "discord_service.h"
 
 #include <chrono>
 #include <future>
@@ -18,6 +15,12 @@
 
 class game_driver;
 struct ui_software_info;
+
+#if !defined(__EMSCRIPTEN__)
+#include "discord_directory_server.h"
+#include "discord_discovery.h"
+#include "discord_service.h"
+#endif
 
 namespace ui {
 
@@ -36,6 +39,7 @@ protected:
 	virtual void menu_activated() override;
 };
 
+#if !defined(__EMSCRIPTEN__)
 // First level of host selection: Arcade or a machine with software lists.
 class menu_mamehub_machine : public menu
 {
@@ -117,6 +121,7 @@ private:
 	std::future<void> m_connection;
 	std::chrono::steady_clock::time_point m_connect_deadline;
 };
+#endif // !__EMSCRIPTEN__
 
 } // namespace ui
 

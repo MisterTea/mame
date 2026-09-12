@@ -33,6 +33,9 @@
 #include <span>
 #include <tuple>
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#else
 #include "client_http.hpp"
 #pragma push_macro("SHA1")
 #undef SHA1
@@ -40,6 +43,7 @@
 #pragma pop_macro("SHA1")
 using HttpClient = webpp::Client<webpp::HTTP>;
 using HttpsClient = webpp::Client<webpp::HTTPS>;
+#endif
 
 #define LOG_LOAD 0
 #define LOG(...) do { if (LOG_LOAD) debugload(__VA_ARGS__); } while(0)
@@ -318,18 +322,108 @@ std::tuple<std::string, std::string, std::string, std::string> parse_url(const s
 } // anonymous namespace
 
 
+#if defined(__EMSCRIPTEN__)
+// Fetch via the shell's same-origin candy proxy and write into the Emscripten FS.
+// Uses Asyncify so romload can keep its sync open path.
+EM_ASYNC_JS(int, mamehub_candy_fetch, (const char *url_c, const char *out_path_c), {
+	const url = UTF8ToString(url_c);
+	const outPath = UTF8ToString(out_path_c);
+	const proxyBase = (typeof Module !== "undefined" && Module.candyProxyBase)
+		? Module.candyProxyBase
+		: "/candy-proxy";
+	const fetchUrl = proxyBase + (proxyBase.indexOf("?") >= 0 ? "&" : "?") + "url=" + encodeURIComponent(url);
+	const report = (loaded, total) => {
+		if (typeof Module !== "undefined" && typeof Module.candyProgress === "function")
+			Module.candyProgress(loaded, total, outPath);
+	};
+	try {
+		const resp = await fetch(fetchUrl);
+		if (!resp.ok)
+			throw new Error("HTTP " + resp.status);
+		const total = Number(resp.headers.get("Content-Length")) || 0;
+		let data;
+		if (resp.body && typeof resp.body.getReader === "function") {
+			const reader = resp.body.getReader();
+			const chunks = [];
+			let loaded = 0;
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done)
+					break;
+				chunks.push(value);
+				loaded += value.length;
+				report(loaded, total);
+			}
+			data = new Uint8Array(loaded);
+			let offset = 0;
+			for (const chunk of chunks) {
+				data.set(chunk, offset);
+				offset += chunk.length;
+			}
+		} else {
+			const buf = await resp.arrayBuffer();
+			data = new Uint8Array(buf);
+			report(data.length, data.length);
+		}
+		const dir = outPath.includes("/") ? outPath.slice(0, outPath.lastIndexOf("/")) : "";
+		if (dir)
+			FS.mkdirTree(dir);
+		FS.writeFile(outPath, data);
+		return 1;
+	} catch (err) {
+		const msg = (err && err.message) ? err.message : String(err);
+		if (typeof Module !== "undefined" && typeof Module.printErr === "function")
+			Module.printErr("Candy fetch failed: " + msg + " (" + url + ")");
+		else
+			console.error("Candy fetch failed:", msg, url);
+		return 0;
+	}
+});
+#endif
+
 void candy_mode(const std::string& baseName, const std::string& leafName, const char* mediaPath) {
-	// Candy mode
-	std::string contentString;
 	std::string url;
 	std::string filename;
 	if (leafName.empty()) {
-		url = std::string("http://archive.org/download/MAME220RomsOnlyMerged/") + baseName + std::string(".zip");
+		url = std::string("https://archive.org/download/MAME220RomsOnlyMerged/") + baseName + std::string(".zip");
 		filename = baseName;
 	} else {
-		url = std::string("http://archive.org/download/MAME_0.202_Software_List_ROMs_merged/") + baseName + std::string(".zip/") + baseName + std::string("%2F") + leafName + std::string(".zip");
+		url = std::string("https://archive.org/download/MAME_0.202_Software_List_ROMs_merged/") + baseName + std::string(".zip/") + baseName + std::string("%2F") + leafName + std::string(".zip");
 		filename = baseName + std::string(PATH_SEPARATOR) + leafName;
 	}
+
+#if defined(__EMSCRIPTEN__)
+	std::string out_dir = (mediaPath && mediaPath[0]) ? std::string(mediaPath) : std::string("/roms");
+	// Prefer an absolute path under the Emscripten FS root.
+	if (!out_dir.empty() && out_dir[0] != '/')
+		out_dir.insert(out_dir.begin(), '/');
+	while (!out_dir.empty() && out_dir.back() == '/')
+		out_dir.pop_back();
+	if (out_dir.empty())
+		out_dir = "/roms";
+
+	std::string out_path = out_dir + "/" + filename + ".zip";
+	// Normalize nested softlist paths for the virtual FS.
+	for (char &ch : out_path) {
+		if (ch == '\\')
+			ch = '/';
+	}
+
+	std::cout << "Candy mode (browser): fetching " << url << " -> " << out_path << std::endl;
+	if (!mamehub_candy_fetch(url.c_str(), out_path.c_str())) {
+		// Some archive.org edges prefer a literal slash inside the zip path.
+		if (!leafName.empty()) {
+			std::string alt = std::string("https://archive.org/download/MAME_0.202_Software_List_ROMs_merged/")
+				+ baseName + ".zip/" + baseName + "/" + leafName + ".zip";
+			std::cout << "Candy mode (browser): retry " << alt << std::endl;
+			if (mamehub_candy_fetch(alt.c_str(), out_path.c_str()))
+				return;
+		}
+		std::cout << "Candy mode (browser): download failed for " << filename << ".zip" << std::endl;
+	}
+#else
+	// Candy mode
+	std::string contentString;
 	int redirects = 0;
 	while (redirects < 10) {
 		auto urlTokens = parse_url(url);
@@ -404,6 +498,7 @@ void candy_mode(const std::string& baseName, const std::string& leafName, const 
 		image_file->write(contentString.c_str(), contentString.length());
 	}
 	image_file->close();
+#endif
 }
 
 

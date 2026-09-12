@@ -24,6 +24,25 @@
 #undef SHA1
 #endif
 
+#if defined(__EMSCRIPTEN__)
+// WGA Headers / easylogging are unavailable under Emscripten.
+#include <iostream>
+#ifndef LOG
+#define LOG(level) if (false) std::cerr
+#endif
+#ifndef VLOG
+#define VLOG(level) if (false) std::cerr
+#endif
+#ifndef LOGFATAL
+#define LOGFATAL if (false) std::cerr
+#endif
+#ifndef LOG_IF
+#define LOG_IF(cond, level) if (false) std::cerr
+#endif
+#ifndef LOG_EVERY_N
+#define LOG_EVERY_N(n, level) if (false) std::cerr
+#endif
+#else
 #include "Headers.hpp"
 #undef LOGFATAL
 #if defined(_WIN32)
@@ -32,6 +51,7 @@
 #else
 #define LOGFATAL \
   LOG(ERROR) << ust::generate() << "\n", LOG(FATAL)
+#endif
 #endif
 
 #define SHA1(x) "S" #x
