@@ -7,7 +7,7 @@
 
 //
 
-#include "NSM_Common.h"
+#include "NSM_CommonInterface.h"
 #include "mame.h"
 #include "ui/menu.h"
 #include "ui/ui.h"

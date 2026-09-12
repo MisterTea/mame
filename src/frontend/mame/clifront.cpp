@@ -19,9 +19,11 @@
 #include "luaengine.h"
 #include "mame.h"
 #include "mameopts.h"
+#if !defined(__EMSCRIPTEN__)
 #include "discord_directory_server.h"
 #include "discord_service.h"
 #include "discord_waiting_room.h"
+#endif
 #include "media_ident.h"
 #include "pluginopts.h"
 
@@ -50,8 +52,14 @@
 #include <iostream>
 #include <future>
 
+#include "NSM_CommonInterface.h"
+#include "mamehub_userid.h"
+
+#if !defined(__EMSCRIPTEN__)
 #include "NSM_Common.h"
 #include "PortMappingHandler.hpp"
+#include "LogHandler.hpp"
+#endif
 
 //**************************************************************************
 //  CONSTANTS
@@ -284,7 +292,8 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 		m_osd.set_verbose(m_options.verbose());
 	}
 
-  // Setup easylogging configurations
+  // Setup easylogging configurations (native WGA logger only)
+#if !defined(__EMSCRIPTEN__)
   rotate_mamehub_logs();
   int argc=0;
   char** argv=NULL;
@@ -298,9 +307,15 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 
   // Reconfigure default logger to apply settings above
   el::Loggers::reconfigureLogger("default", defaultConf);
+#endif
 
   // Set up client/server as appropriate
   if (m_options.mamehub()) {
+#if defined(__EMSCRIPTEN__)
+    // Browser builds use the MAMEHub UI for offline SNES softlist selection.
+    // No Discord SDK and no classic lobby connect at startup.
+    (void)mamehub::resolve_user_id(m_options.user_id());
+#else
     if (m_options.discord()) {
       if (*m_options.discord_mock()) {
         mamehub::discord_service::set_mock_user(m_options.discord_mock());
@@ -327,7 +342,7 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 
       // If a private lobby was provided on the command line, perform direct connection
       if (*m_options.discord_lobby()) {
-        string userId = m_options.user_id();
+        string userId = mamehub::resolve_user_id(m_options.user_id());
         std::unique_ptr<mamehub::discord_directory_server> discordDirectory;
         if (m_options.discord_auth() && mamehub::discord_service::instance().is_authenticated()) {
           auto const &discordIdentity = mamehub::discord_service::instance().current_identity();
@@ -383,7 +398,7 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
       // Classic MAMEHub lobby: connect to lobby_host/lobby_port at startup.
       osd_printf_info("Discord mode disabled (-nodiscord); using classic lobby %s:%d\n",
           m_options.lobby_host(), m_options.lobby_port());
-      string userId = m_options.user_id();
+      string userId = mamehub::resolve_user_id(m_options.user_id());
       if (userId.length() == 0) {
         userId = string(16,'0');
         for (int a=0;a<16;a++) {
@@ -415,6 +430,8 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
         }
       }
     }
+#endif
+  }
   }
 
 	// otherwise, check for a valid system

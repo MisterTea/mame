@@ -228,7 +228,7 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_HTTP_ROOT,                                  "web",       core_options::option_type::PATH,       "HTTP server document root" },
 
     // net options
-	{ OPTION_USER_ID,               "",         core_options::option_type::STRING,    "User id for arranging games" },
+	{ OPTION_USER_ID,               "",         core_options::option_type::STRING,    "User id for arranging games (empty = MAC-seeded random username)" },
 	{ OPTION_PASSWORD,               "",         core_options::option_type::STRING,    "Password for arranging games" },
 	{ OPTION_MAMEHUB,               "1",         core_options::option_type::BOOLEAN,    "Run in mamehub mode" },
 	{ OPTION_HOSTNAME,               "127.0.0.1",         core_options::option_type::STRING,    "hostname of server to connect to" },

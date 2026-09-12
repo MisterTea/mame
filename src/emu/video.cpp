@@ -29,8 +29,11 @@
 
 #include "rendersw.hxx"
 
-#include "NSM_Common.h"
+#include "NSM_CommonInterface.h"
+
+#if !defined(__EMSCRIPTEN__)
 #include "TimeHandler.hpp"
+#endif
 
 #include <algorithm>
 #include <chrono>
@@ -691,9 +694,19 @@ void video_manager::update_throttle(attotime emutime)
 		VLOG(1) << "In video update";
 		int64_t curTime;
 		if (netCommon)
+		{
+#if defined(__EMSCRIPTEN__)
+			// Emscripten stub reports milliseconds.
+			curTime = netCommon->getCurrentTime() * 1000;
+#else
 			curTime = netCommon->getCurrentTime();
+#endif
+		}
 		else
-			curTime = wga::GlobalClock::currentTimeMicros();
+		{
+			curTime = int64_t(std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::steady_clock::now().time_since_epoch()).count());
+		}
 
 		attotime expectedEmulationTime(
 				curTime / 1000000,

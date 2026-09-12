@@ -24,7 +24,9 @@
 #include "luaengine.h"
 #include "mameopts.h"
 #include "mamehub.h"
+#if !defined(__EMSCRIPTEN__)
 #include "discord_discovery.h"
+#endif
 #include "NSM_CommonInterface.h"
 #include "pluginopts.h"
 #include "rendlay.h"
@@ -314,7 +316,9 @@ int mame_machine_manager::execute()
 		{
 			deleteNetCommon();
 			mamehub_manager::instance()->reset();
+#if !defined(__EMSCRIPTEN__)
 			mamehub::discord_discovery::instance().reset();
+#endif
 		}
 
 		if (machine.exit_pending() && (!started_empty || is_empty))
