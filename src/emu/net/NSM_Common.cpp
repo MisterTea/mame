@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "ChronoMap.hpp"
+#include "FrameBudget.hpp"
 #include "LogHandler.hpp"
 #include "NSM_Common.h"
 #include "NSM_CommonInterface.h"
@@ -16,12 +17,30 @@ using namespace std;
 
 namespace {
 
-constexpr int64_t NETPLAY_START_LEAD_MICROS = 3 * 1000 * 1000;
+constexpr int64_t NETPLAY_START_LEAD_MICROS = 5 * 1000 * 1000;
 
 } // anonymous namespace
 
 CommonBase *netCommon = NULL;
 static std::atomic<bool> s_abortNetCommon{false};
+
+namespace {
+
+bool waitForPeerInputs(wga::MyPeer &peer, int64_t timestamp) {
+  while (!peer.hasInputValuesAt(timestamp)) {
+    if (peer.isGameOver() || s_abortNetCommon.load()) {
+      return false;
+    }
+    if (peer.getLivingPeerCount() == 0 && peer.getTotalPeerCount() > 1) {
+      peer.signalGameOver();
+      return false;
+    }
+    wga::microsleep(1000);
+  }
+  return true;
+}
+
+} // anonymous namespace
 
 void abortNetCommon() {
   s_abortNetCommon.store(true);
@@ -175,6 +194,8 @@ Common::Common(const string &_userId, const string &privateKeyString,
       userId(_userId),
       lastSendTime(0),
       unmeasuredNoise(_unmeasuredNoise),
+      effectiveLargestPing(35),
+      lastLatencyDecrease(std::chrono::steady_clock::now()),
       cachedInputValues(-1, {}) {
   if (fakeLag) {
     wga::GlobalClock::addNoise();
@@ -256,6 +277,9 @@ void Common::startNetplayClock() {
   // time on each peer.  This barrier is entered by running_machine only after
   // the selected game has loaded and soft-reset locally.
   myPeer->updateState(2, {{"__NETPLAY_GAME_LOADED__", "1"}});
+  if (!waitForPeerInputs(*myPeer, 1)) {
+    throw runtime_error("Netplay game-loaded barrier aborted");
+  }
   auto const loadedState = myPeer->getAllInputValues(1);
   auto const loadedIt = loadedState.find("__NETPLAY_GAME_LOADED__");
   if (loadedIt == loadedState.end()) {
@@ -274,6 +298,9 @@ void Common::startNetplayClock() {
       : 0;
   myPeer->updateState(3, {{"__NETPLAY_START_TIME__", to_string(proposedStartTime)}});
 
+  if (!waitForPeerInputs(*myPeer, 2)) {
+    throw runtime_error("Netplay start-time proposal aborted");
+  }
   auto const proposalState = myPeer->getAllInputValues(2);
   auto const proposalIt = proposalState.find("__NETPLAY_START_TIME__");
   if (proposalIt == proposalState.end()) {
@@ -297,6 +324,9 @@ void Common::startNetplayClock() {
   // This second barrier guarantees that all players know the lobby phase is
   // over before anyone's emulation clock is allowed to advance from zero.
   myPeer->updateState(4, {{"__NETPLAY_START_ACK__", to_string(machineTimeShift)}});
+  if (!waitForPeerInputs(*myPeer, 3)) {
+    throw runtime_error("Netplay start-time acknowledgement aborted");
+  }
   auto const acknowledgementState = myPeer->getAllInputValues(3);
   auto const acknowledgementIt = acknowledgementState.find("__NETPLAY_START_ACK__");
   if (acknowledgementIt == acknowledgementState.end()) {
@@ -321,6 +351,8 @@ void Common::startNetplayClock() {
   netplayClockStarted.store(true);
   if (myPeer) {
     myPeer->resetReachabilityTimers();
+    int const delayMs = max(50, min(600, 50 + getLargestPing()));
+    myPeer->startInputPublisher(machineTimeShift, delayMs);
   }
   LOG(INFO) << "Netplay clock started at time 0";
 }
@@ -353,57 +385,52 @@ double predictedPingVariance = 10.0;
 int numPingSamples = 0;
 
 int Common::getLargestPing() {
-  return max(35, 10 + int(ceil(myPeer->getHalfPingUpperBound() / 1000.0)));
+  int const measured =
+      max(35, int(ceil(myPeer->getHalfPingUpperBound() / 1000.0)));
+  auto const now = std::chrono::steady_clock::now();
+  lock_guard<std::mutex> guard(latencyMutex);
+  if (measured >= effectiveLargestPing) {
+    effectiveLargestPing = measured;
+    lastLatencyDecrease = now;
+  } else {
+    int const elapsedTenths = int(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            now - lastLatencyDecrease).count() / 100);
+    if (elapsedTenths > 0) {
+      effectiveLargestPing =
+          max(measured, effectiveLargestPing - elapsedTenths);
+      lastLatencyDecrease += std::chrono::milliseconds(elapsedTenths * 100);
+    }
+  }
+  return effectiveLargestPing;
 }
 
 string Common::getLatencyString() {
-  /*
-  for (std::map<wga::PublicKey, int>::iterator it = peerIDs.begin();
-       it != peerIDs.end(); it++) {
-    if (it->second == peerID) {
-      char buf[4096];
-      sprintf(buf, "Peer %d: %d ms", peerID,
-              100);  // TODO: Replace with peer ping
-      return string(buf);
-    }
-  }
-  printf("ERROR GETTING LATENCY STRING\n");
-  */
-
   auto latencyData = myPeer->getPeerLatency();
   string latencyString;
-  int i = 0;
   for (const auto &it : latencyData) {
-    i++;
-    latencyString += "Peer " + to_string(i) + ": " +
+    // Label remotes by their game seat (host=0), not a 1-based enumeration —
+    // otherwise every instance shows only "Peer 1" for its single remote.
+    int peerPos = myPeer->getPeerPosition(it.first);
+    if (peerPos < 0) {
+      continue;
+    }
+    if (!latencyString.empty()) {
+      latencyString += "\n";
+    }
+    latencyString += "Peer " + to_string(peerPos) + ": " +
                      to_string(int64_t(it.second.first / 1000.0)) + " / " +
-                     to_string(int64_t(it.second.second / 1000.0)) + "\n";
+                     to_string(int64_t(it.second.second / 1000.0));
   }
   return latencyString;
 }
 
 string Common::getStatisticsString() {
-  /*
-  RakNet::RakNetStatistics *rss;
-  string retval;
-  for (int a = 0; a < rakInterface->NumberOfConnections(); a++) {
-    char message[4096];
-    rss =
-        rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(a));
-    sprintf(message,
-            "Sent: %d\n"
-            "Recv: %d\n"
-            "Loss: %.0f%%\n"
-            "Latency: %dms\n",
-            (int)rss->valueOverLastSecond[RakNet::ACTUAL_BYTES_SENT],
-            (int)rss->valueOverLastSecond[RakNet::ACTUAL_BYTES_RECEIVED],
-            rss->packetlossLastSecond,
-            int((predictedPingMean + sqrt(predictedPingVariance) * 2) / 2));
-    retval += string(message) + string("\n");
+  // Local seat so host overlays "Peer 0" and join overlays "Peer 1".
+  if (!myPeer) {
+    return "";
   }
-  return retval;
-  */
-  return "TODO";
+  return "Peer " + to_string(myPeer->getPosition());
 }
 
 /*
@@ -629,6 +656,7 @@ void Common::sendInputs(int64_t inputTimeMs,
   }
   inputMap.insert(dataToAttach.begin(), dataToAttach.end());
   dataToAttach.clear();
+  myPeer->setInputPublisherDelay(max(50, min(600, 50 + getLargestPing())));
   VLOG(1) << "SENDING INPUTS AT TIME " << inputTimeMs << endl;
   myPeer->updateState(inputTimeMs, inputMap);
   lastSendTime = inputTimeMs;
@@ -670,6 +698,67 @@ std::map<std::string, std::string> Common::getAllInputValues(
   if (cachedInputValues.first == ts) {
     allInputData = cachedInputValues.second;
   } else {
+    int attempt = 0;
+    auto const waitStarted = std::chrono::steady_clock::now();
+    int64_t startingExpiration = 0;
+
+    // Cover our own timeline before testing remotes.
+    myPeer->ensureLocalInputCoverageThrough(ts);
+
+    while (!myPeer->hasInputValuesAt(ts)) {
+      if (isGameOver() || s_abortNetCommon.load()) {
+        return {};
+      }
+      int livingPeerCount = myPeer->getLivingPeerCount();
+      if (livingPeerCount == 0 && myPeer->getTotalPeerCount() > 1) {
+        signalGameOver();
+        return {};
+      }
+      if (myPeer->terminateIfPeerUnreachable(30)) {
+        return {};
+      }
+
+      if (attempt == 0) {
+        startingExpiration = myPeer->getNearestExpirationTime();
+      }
+      ++attempt;
+      // Never stall because our own frontier lagged; extend it before waiting
+      // on remote peers (also unblocks peers waiting on us).
+      myPeer->ensureLocalInputCoverageThrough(ts);
+      // The network update thread independently advances our local frontier.
+      // Sleep on the remote ChronoMap notification rather than polling here.
+      myPeer->waitForInputValuesAt(ts, 100);
+    }
+
+    if (attempt > 0) {
+      int64_t const waitedUs =
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::steady_clock::now() - waitStarted).count();
+      // ChronoMap accounts this as frame wait; only tag its netplay category.
+      wga::addFrameNetplayUs(waitedUs, waitedUs);
+
+      // A frontier miss is normal at frame boundaries. Avoid synchronous log
+      // I/O in the polling loop, since it can delay the same network thread we
+      // are waiting for. Always report material stalls, and sample lesser
+      // over-one-frame waits for diagnostics.
+      auto const logWait = [&]() {
+        LOG(INFO) << "[INPUT_WAIT] requested_ms=" << ts
+                  << " start_frontier_ms=" << startingExpiration
+                  << " end_frontier_ms=" << myPeer->getNearestExpirationTime()
+                  << " waited_us=" << waitedUs << " attempts=" << attempt;
+      };
+      if (waitedUs >= 100000) {
+        logWait();
+      } else if (waitedUs >= 16000) {
+        LOG_EVERY_N(60, INFO) << "[INPUT_WAIT] requested_ms=" << ts
+                              << " start_frontier_ms=" << startingExpiration
+                              << " end_frontier_ms="
+                              << myPeer->getNearestExpirationTime()
+                              << " waited_us=" << waitedUs
+                              << " attempts=" << attempt;
+      }
+    }
+
     allInputData = myPeer->getAllInputValues(ts);
     if (isGameOver()) {
       return {};

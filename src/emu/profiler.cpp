@@ -136,6 +136,26 @@ const char *real_profiler_state::text(running_machine &machine)
 }
 
 
+//-------------------------------------------------
+//  dump_now - rebuild profiler text from the
+//  current accumulators immediately (no 0.5s
+//  throttle). Used to snapshot a single slow frame.
+//-------------------------------------------------
+
+const char *real_profiler_state::dump_now(running_machine &machine)
+{
+	update_text(machine);
+	m_text_time = machine.scheduler().time();
+	return m_text.c_str();
+}
+
+
+void real_profiler_state::clear_data() noexcept
+{
+	memset(m_data, 0, sizeof(m_data));
+}
+
+
 
 //-------------------------------------------------
 //  update_text - update the current std::string

@@ -34,7 +34,9 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
+#include <sstream>
 
 #include <bit>
 #include <cstdio>
@@ -52,7 +54,7 @@
 //  GLOBAL VARIABLES
 //**************************************************************************
 
-// MAMEHub: skip OSD blit when netplay is behind realtime
+// MAMEHub: skip OSD blit when throttle did not sleep (at/behind netplay clock)
 bool SKIP_OSD = false;
 
 // frameskipping tables
@@ -227,8 +229,99 @@ void video_manager::set_frameskip(int frameskip)
 //  operations
 //-------------------------------------------------
 
+static void mamehub_osd_sleep(osd_ticks_t duration)
+{
+	if (!duration)
+		return;
+	auto const t0 = std::chrono::steady_clock::now();
+	osd_sleep(duration);
+	wga::addFrameWaitUs(std::chrono::duration_cast<std::chrono::microseconds>(
+			std::chrono::steady_clock::now() - t0).count());
+}
+
 void video_manager::frame_update(bool from_debugger)
 {
+	auto const nowUs = []() -> int64_t {
+		return std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::steady_clock::now().time_since_epoch()).count();
+	};
+	struct FrameBusyBreakdown
+	{
+		int64_t video_us = 0;
+		int64_t ui_us = 0;
+		int64_t throttle_us = 0;
+		int64_t blit_us = 0;
+		int64_t notify_us = 0;
+	};
+	static FrameBusyBreakdown lastBusy;
+	static bool profilerArmed = false;
+	static bool const detailedProfileEnabled = std::getenv("MAMEHUB_FRAME_PROFILE") != nullptr;
+
+	// Wall vs emulated frame budget. Fail soak if busy work (no sleep/wait)
+	// exceeds the emulated frame length — this machine should run faster than
+	// realtime when it is not blocked on netplay or throttle sleeps.
+	if (!from_debugger && machine().phase() == machine_phase::RUNNING && !machine().paused())
+	{
+		if (detailedProfileEnabled && netCommon && !profilerArmed)
+		{
+			g_profiler.enable(true);
+			profilerArmed = true;
+		}
+		static std::chrono::steady_clock::time_point lastWall = std::chrono::steady_clock::now();
+		static attotime lastEmu = attotime::zero;
+		auto const nowWall = std::chrono::steady_clock::now();
+		attotime const nowEmu = machine().time();
+		int64_t const waitUs = wga::takeFrameWaitUs();
+		int64_t const netplayUs = wga::takeFrameNetplayUs();
+		int64_t const netplayWaitUs = wga::takeFrameNetplayWaitUs();
+		std::string const timerDump = wga::takeFrameTimerDump();
+		std::string const vblankSplit = wga::takeVblankSplitDump();
+		int64_t const wallUs = std::chrono::duration_cast<std::chrono::microseconds>(nowWall - lastWall).count();
+		int64_t const emuUs = (lastEmu == attotime::zero)
+			? 0
+			: int64_t((nowEmu - lastEmu).as_double() * 1.0e6);
+		lastWall = nowWall;
+		lastEmu = nowEmu;
+		int64_t const busyUs = wallUs - waitUs;
+		if (emuUs >= 8000 && emuUs <= 40000 && busyUs > emuUs)
+		{
+			int64_t const accountedUs = lastBusy.video_us + lastBusy.ui_us
+				+ lastBusy.throttle_us + lastBusy.blit_us + lastBusy.notify_us;
+			int64_t const emulateUs = busyUs - accountedUs;
+			std::ostringstream profile;
+			profile << "[FRAME_OVERBUDGET] wall_us=" << wallUs
+				<< " wait_us=" << waitUs
+				<< " busy_us=" << busyUs
+				<< " budget_us=" << emuUs
+				<< " [FRAME_PROFILE] emulate_us=" << emulateUs
+				<< " video_us=" << lastBusy.video_us
+				<< " ui_us=" << lastBusy.ui_us
+				<< " throttle_us=" << lastBusy.throttle_us
+				<< " blit_us=" << lastBusy.blit_us
+				<< " notify_us=" << lastBusy.notify_us
+				<< " accounted_us=" << accountedUs
+				<< " netplay_us=" << netplayUs
+				<< " netplay_wait_us=" << netplayWaitUs
+				<< " netplay_busy_us=" << std::max<int64_t>(0, netplayUs - netplayWaitUs)
+				<< " [FRAME_TIMERS] " << (timerDump.empty() ? "(none)" : timerDump.c_str())
+				<< " [VBLANK_SPLIT] " << vblankSplit;
+			if (detailedProfileEnabled)
+			{
+				char const *const mameProfile = g_profiler.dump_now(machine());
+				if (mameProfile && mameProfile[0])
+					profile << " [FRAME_PROFILE_MAME]\n" << mameProfile;
+			}
+			LOG(INFO) << profile.str();
+			el::Loggers::flushAll();
+		}
+		else
+		{
+			if (detailedProfileEnabled)
+				g_profiler.clear_data();
+		}
+	}
+
+	FrameBusyBreakdown curBusy;
 	// only render sound and video if we're in the running phase
 	machine_phase const phase = machine().phase();
 	bool skipped_it = m_skipping_this_frame;
@@ -238,14 +331,18 @@ void video_manager::frame_update(bool from_debugger)
 		skipped_it = false;
 	}
 	bool const update_screens = (phase == machine_phase::RUNNING) && (!machine().paused() || machine().options().update_in_pause());
+	int64_t t0 = nowUs();
 	bool anything_changed = update_screens && finish_screen_updates();
+	curBusy.video_us = nowUs() - t0;
 
 	// update inputs and draw the user interface
+	t0 = nowUs();
 	machine().osd().input_update(true);
 	anything_changed = emulator_info::draw_user_interface(machine()) || anything_changed;
 
 	// let plugins draw over the UI
 	anything_changed = emulator_info::frame_hook() || anything_changed;
+	curBusy.ui_us = nowUs() - t0;
 
 	// if none of the screens changed and we haven't skipped too many frames in a row,
 	// mark this frame as skipped to prevent throttling; this helps for games that
@@ -257,14 +354,18 @@ void video_manager::frame_update(bool from_debugger)
 
 	// if we're throttling, synchronize before rendering
 	attotime current_time = machine().time();
+	t0 = nowUs();
 	if (!from_debugger && phase > machine_phase::INIT && !m_low_latency && effective_throttle())
 		update_throttle(current_time);
+	curBusy.throttle_us = nowUs() - t0;
 
 	// ask the OSD to update
+	t0 = nowUs();
 	{
 		auto profile = g_profiler.start(PROFILER_BLIT);
 		machine().osd().update(SKIP_OSD || (!from_debugger && skipped_it));
 	}
+	curBusy.blit_us = nowUs() - t0;
 
 	// we synchronize after rendering instead of before, if low latency mode is enabled
 	if (!from_debugger && phase > machine_phase::INIT && m_low_latency && effective_throttle())
@@ -276,7 +377,9 @@ void video_manager::frame_update(bool from_debugger)
 	if (!from_debugger)
 	{
 		// perform tasks for this frame
+		t0 = nowUs();
 		machine().call_notifiers(MACHINE_NOTIFY_FRAME);
+		curBusy.notify_us = nowUs() - t0;
 
 		// update frameskipping
 		if (!netCommon && phase > machine_phase::INIT)
@@ -286,6 +389,7 @@ void video_manager::frame_update(bool from_debugger)
 		if (!skipped_it && phase > machine_phase::INIT)
 			recompute_speed(current_time);
 	}
+	lastBusy = curBusy;
 
 	// call the end-of-frame callback
 	if (phase == machine_phase::RUNNING)
@@ -685,6 +789,7 @@ void video_manager::update_throttle(attotime emutime)
 {
 	// MAMEHub: sync emulation to netplay / WGA global clock instead of stock OSD ticks
 	bool printed = false;
+	bool slept = false;
 
 	while (true)
 	{
@@ -712,22 +817,28 @@ void video_manager::update_throttle(attotime emutime)
 				printed = true;
 
 			// Sleep 1ms and check again
-			osd_sleep(osd_ticks_per_second() / 1000);
+			slept = true;
+			mamehub_osd_sleep(osd_ticks_per_second() / 1000);
 		}
 		else
 		{
+			// Skip OSD only if we never slept this call (already at/behind).
+			// After a real throttle sleep we exit here too — still present.
 			attotime diffTime = expectedEmulationTime - emutime;
 			int msBehind = (diffTime.attoseconds() / ATTOSECONDS_PER_MILLISECOND) + diffTime.seconds() * 1000;
 
-			if (msBehind > 100 && emutime.seconds() > 0)
+			if (!slept && emutime.seconds() > 0)
 			{
-				static int lastSecondBehind = 0;
-				if (lastSecondBehind < emutime.seconds())
-				{
-					LOG(INFO) << "We are behind " << msBehind << "ms.  Skipping video." << std::endl;
-					lastSecondBehind = emutime.seconds();
-				}
 				SKIP_OSD = true;
+				if (msBehind > 100)
+				{
+					static int lastSecondBehind = 0;
+					if (lastSecondBehind < emutime.seconds())
+					{
+						LOG(INFO) << "We are behind " << msBehind << "ms.  Skipping video." << std::endl;
+						lastSecondBehind = emutime.seconds();
+					}
+				}
 			}
 			return;
 		}
@@ -762,7 +873,7 @@ osd_ticks_t video_manager::throttle_until_ticks(osd_ticks_t target_ticks)
 		// see if we can sleep
 		bool const slept = allowed_to_sleep && delta;
 		if (slept)
-			osd_sleep(delta);
+			mamehub_osd_sleep(delta);
 
 		// read the new value
 		osd_ticks_t const new_ticks = osd_ticks();
