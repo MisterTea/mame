@@ -70,12 +70,12 @@ jobs:
       with:
         key: ci-windows-${{ matrix.compiler }}
         max-size: 1G
-        create-symlink: true
+        create-symlink: false
     - name: Build
       env:
         OVERRIDE_AR: "llvm-ar"
-        OVERRIDE_CC: ${{ matrix.cc }}
-        OVERRIDE_CXX: ${{ matrix.cxx }}
+        OVERRIDE_CC: ccache ${{ matrix.cc }}
+        OVERRIDE_CXX: ccache ${{ matrix.cxx }}
         ARCHOPTS: "-fuse-ld=lld"
         SUBTARGET: ${{ matrix.subtarget }}
         TOOLS: 1

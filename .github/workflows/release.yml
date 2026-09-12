@@ -128,7 +128,7 @@ jobs:
               with:
                   key: ${{ github.job }}
                   max-size: 1G
-                  create-symlink: true
+                  create-symlink: false
             - shell: msys2 {0}
               run: |
                   pacman -Syu --noconfirm make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc zip
@@ -136,7 +136,7 @@ jobs:
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 make -j4 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
+                  pushd mame && MINGW64=/mingw64 OVERRIDE_CC='ccache gcc' OVERRIDE_CXX='ccache g++' make -j4 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
@@ -196,7 +196,7 @@ jobs:
               with:
                   key: ${{ github.job }}
                   max-size: 1G
-                  create-symlink: true
+                  create-symlink: false
 
             - shell: msys2 {0}
               run: |
@@ -205,7 +205,7 @@ jobs:
                   #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
                   #pacman -U --noconfirm /tmp/*.tar.xz
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 make -j4 MSBUILD=1 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && popd
+                  pushd mame && MINGW64=/mingw64 OVERRIDE_CC='ccache gcc' OVERRIDE_CXX='ccache g++' make -j4 MSBUILD=1 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
