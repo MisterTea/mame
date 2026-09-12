@@ -142,6 +142,8 @@ public:
 		return m_filoptr != nullptr;
 	}
 	const char *text(running_machine &machine);
+	const char *dump_now(running_machine &machine);
+	void clear_data() noexcept;
 
 	// enable/disable
 	void enable(bool state = true) noexcept
@@ -249,6 +251,8 @@ public:
 	// getters
 	bool enabled() const noexcept { return false; }
 	const char *text(running_machine &machine) { return ""; }
+	const char *dump_now(running_machine &machine) { return ""; }
+	void clear_data() noexcept { }
 
 	// enable/disable
 	void enable(bool state = true) noexcept { }

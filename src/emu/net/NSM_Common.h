@@ -12,12 +12,14 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <iostream>
 #include <list>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 #include <vector>
@@ -160,6 +162,9 @@ class Common : public CommonBase {
   std::string doInflate(const unsigned char *inputString, int length);
   int64_t lastSendTime;
   int unmeasuredNoise;
+  std::mutex latencyMutex;
+  int effectiveLargestPing;
+  std::chrono::steady_clock::time_point lastLatencyDecrease;
   set<int> myPlayers;
   pair<int64_t,
        std::unordered_map<std::string, std::map<std::string, std::string>>>

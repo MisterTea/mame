@@ -37,11 +37,14 @@
 #include "path.h"
 #include "unzip.h"
 #include "xmlfile.h"
+#include "zippath.h"
 
 #include "osdepend.h"
+#include "osdfile.h"
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <new>
 #include <set>
 #include <tuple>
@@ -94,19 +97,54 @@
 
 namespace {
 
-constexpr char MAMEHUB_LOG_FILENAME[] = "MAMEHub.log";
+constexpr char MAMEHUB_LOG_BASENAME_DEFAULT[] = "MAMEHub.log";
 constexpr int MAMEHUB_LOG_FILE_COUNT = 10;
 
-void rotate_mamehub_logs()
+std::string mamehub_log_basename()
+{
+	// Optional override so dual-local instances do not contend on one file
+	// (shared-file locking was observed to freeze the net thread for seconds).
+	char const *env = std::getenv("MAMEHUB_LOG_BASENAME");
+	if (env != nullptr && env[0] != '\0')
+		return std::string(env);
+	return std::string(MAMEHUB_LOG_BASENAME_DEFAULT);
+}
+
+std::string mamehub_log_path_for_index(std::string const &log_dir, int index, std::string const &basename)
+{
+	// index 0 -> <basename>; index N -> <stem>.N.log (preserve .log extension)
+	if (index <= 0)
+		return util::path_concat(log_dir, basename);
+	std::string stem = basename;
+	static char const kLogExt[] = ".log";
+	if (stem.size() > sizeof(kLogExt) - 1 &&
+		stem.compare(stem.size() - (sizeof(kLogExt) - 1), sizeof(kLogExt) - 1, kLogExt) == 0)
+	{
+		stem.resize(stem.size() - (sizeof(kLogExt) - 1));
+	}
+	return util::path_concat(log_dir, util::string_format("%s.%d.log", stem, index));
+}
+
+std::string mamehub_exe_directory(std::string const &exe_arg)
+{
+	std::string full_exe;
+	if (osd_get_full_path(full_exe, exe_arg))
+		full_exe = exe_arg;
+
+	std::string dir = util::zippath_parent(full_exe);
+	if (dir.empty())
+		dir = ".";
+	return dir;
+}
+
+void rotate_mamehub_logs(std::string const &log_dir, std::string const &basename)
 {
 	// Keep the current run plus nine previous runs.  Remove the destination
 	// first because std::rename does not replace an existing file on Windows.
 	for (int index = MAMEHUB_LOG_FILE_COUNT - 2; index >= 0; --index)
 	{
-		std::string const source = index
-				? util::string_format("%s.%d", MAMEHUB_LOG_FILENAME, index)
-				: MAMEHUB_LOG_FILENAME;
-		std::string const destination = util::string_format("%s.%d", MAMEHUB_LOG_FILENAME, index + 1);
+		std::string const source = mamehub_log_path_for_index(log_dir, index, basename);
+		std::string const destination = mamehub_log_path_for_index(log_dir, index + 1, basename);
 		std::remove(destination.c_str());
 		std::rename(source.c_str(), destination.c_str());
 	}
@@ -284,20 +322,28 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
 		m_osd.set_verbose(m_options.verbose());
 	}
 
-  // Setup easylogging configurations
-  rotate_mamehub_logs();
+  // Setup easylogging configurations — always next to the executable
+  std::string const mamehub_log_dir = mamehub_exe_directory(args[0]);
+  std::string const mamehub_log_base = mamehub_log_basename();
+  std::string const mamehub_log_path = mamehub_log_path_for_index(mamehub_log_dir, 0, mamehub_log_base);
+  rotate_mamehub_logs(mamehub_log_dir, mamehub_log_base);
   int argc=0;
   char** argv=NULL;
   el::Configurations defaultConf = wga::LogHandler::SetupLogHandler(&argc, &argv);
-  defaultConf.setGlobally(el::ConfigurationType::Filename, MAMEHUB_LOG_FILENAME);
+  defaultConf.setGlobally(el::ConfigurationType::Filename, mamehub_log_path);
   defaultConf.setGlobally(el::ConfigurationType::ToFile, "true");
+  bool const verbose = m_options.verbose();
+  // INFO always goes to the log file. With -verbose it also mirrors to console
+  // (useful for e2e harnesses that scrape stdout).
+  defaultConf.setGlobally(el::ConfigurationType::ToStandardOutput, verbose ? "true" : "false");
   defaultConf.set(el::Level::Info, el::ConfigurationType::Enabled, "true");
   defaultConf.set(el::Level::Info, el::ConfigurationType::ToFile, "true");
-  defaultConf.setGlobally(el::ConfigurationType::ToStandardOutput, m_options.verbose() ? "true" : "false");
-  el::Loggers::setVerboseLevel(m_options.verbose() ? 2 : 0);
+  defaultConf.set(el::Level::Info, el::ConfigurationType::ToStandardOutput, verbose ? "true" : "false");
+  el::Loggers::setVerboseLevel(verbose ? 2 : 0);
 
   // Reconfigure default logger to apply settings above
   el::Loggers::reconfigureLogger("default", defaultConf);
+  osd_printf_info("MAMEHub log file: %s\n", mamehub_log_path.c_str());
 
   // Set up client/server as appropriate
   if (m_options.mamehub()) {

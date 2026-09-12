@@ -30,4 +30,5 @@ build_one "$TOOLS_DIR/click_highlight.swift" click_highlight
 build_one "$TOOLS_DIR/focus_key.swift" focus_key
 build_one "$TOOLS_DIR/pad.swift" pad
 build_one "$TOOLS_DIR/key.swift" key
+build_one "$TOOLS_DIR/winid.swift" winid
 echo "tools ready in $OUT_DIR"

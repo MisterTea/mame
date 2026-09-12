@@ -10,6 +10,9 @@
 
 #include "emu.h"
 #include "debugger.h"
+#include "FrameBudget.hpp"
+
+#include <chrono>
 
 //**************************************************************************
 //  DEBUGGING
@@ -956,7 +959,13 @@ inline void device_scheduler::execute_timers()
 			if (!timer.m_callback.isnull())
 			{
 				LOG("execute_timers: timer callback %s\n", timer.m_callback.name());
+				int64_t const wait0 = wga::frameWaitUs;
+				auto const t0 = std::chrono::steady_clock::now();
 				timer.m_callback(timer.m_param);
+				int64_t const wallUs = std::chrono::duration_cast<std::chrono::microseconds>(
+						std::chrono::steady_clock::now() - t0).count();
+				int64_t const waitUs = wga::frameWaitUs - wait0;
+				wga::addFrameTimerUs(timer.m_callback.name(), wallUs - waitUs);
 			}
 		}
 
