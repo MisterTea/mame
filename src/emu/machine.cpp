@@ -1621,7 +1621,8 @@ void running_machine::emscripten_set_running_machine(running_machine *machine)
 		// Avoid 1ms — Asyncify unwind overhead dominates at that cadence.
 		double const burst = EM_ASM_DOUBLE({ return Module._mameLastBurstMs || 0; });
 		// Full burst → short yield; slice-starved/idle → also short so we retry.
-		int const sleep_ms = (burst >= 10.0) ? 4 : 6;
+		// Keep ≥2ms: 1ms is dominated by Asyncify unwind overhead.
+		int const sleep_ms = (burst >= 10.0) ? 2 : 4;
 		emscripten_sleep(sleep_ms);
 	}
 }

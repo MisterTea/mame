@@ -1,5 +1,6 @@
-// Default self-host config. Override before loading the shell scripts.
+// Default self-host config (SNES). Arcade packages copy config.arcade.js → config.js.
 window.MAMEHUB_BROWSER = Object.assign({
+  mode: "snes",
   // Public or self-hosted Nostr relays used for lobby + WebRTC signaling.
   relays: [
     "wss://relay.damus.io",

@@ -869,9 +869,15 @@ void video_manager::update_throttle(attotime emutime)
 			if (!printed)
 				printed = true;
 
-			// Sleep 1ms and check again
+			// Coalesce ahead-time into one Asyncify sleep (1ms loops pay unwind tax).
+			attotime const ahead = emutime - expectedEmulationTime;
+			int msAhead = int(ahead.attoseconds() / ATTOSECONDS_PER_MILLISECOND) + ahead.seconds() * 1000;
+			if (msAhead < 1)
+				msAhead = 1;
+			if (msAhead > 16)
+				msAhead = 16;
 			slept = true;
-			mamehub_osd_sleep(osd_ticks_per_second() / 1000);
+			mamehub_osd_sleep((osd_ticks_per_second() * msAhead) / 1000);
 		}
 		else
 		{
@@ -880,11 +886,9 @@ void video_manager::update_throttle(attotime emutime)
 			attotime diffTime = expectedEmulationTime - emutime;
 			int msBehind = (diffTime.attoseconds() / ATTOSECONDS_PER_MILLISECOND) + diffTime.seconds() * 1000;
 
-#if defined(__EMSCRIPTEN__)
-			// Browser canvas goes black if we skip OSD while catching up; always present.
-			(void)msBehind;
-#else
-			if (!slept && emutime.seconds() > 0)
+			// WebGL overlay keeps the last frame when we skip presents, so
+			// browser catch-up can drop OSD like native (was always-present).
+			if (!slept && emutime.seconds() > 0 && msBehind > 33)
 			{
 				SKIP_OSD = true;
 				if (msBehind > 100)
@@ -897,7 +901,6 @@ void video_manager::update_throttle(attotime emutime)
 					}
 				}
 			}
-#endif
 			return;
 		}
 	}
