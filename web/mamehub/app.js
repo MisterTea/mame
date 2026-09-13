@@ -73,6 +73,30 @@
     setTimeout(kick, 1500);
   }
 
+  const cfg0 = window.MAMEHUB_BROWSER || {};
+  const isArcade = (cfg0.mode || "snes") === "arcade";
+  const gameTag = isArcade ? "arcade" : "snes";
+  const pickNoun = isArcade ? "arcade machine" : "SNES software";
+
+  function applyShellBranding() {
+    const brand = isArcade ? "Arcade" : "SNES";
+    document.title = "MAMEHub Online (" + brand + ")";
+    const h1 = document.querySelector("header h1");
+    if (h1)
+      h1.textContent = "MAMEHub Online (" + brand + ")";
+    const placeholder = document.getElementById("canvas-placeholder");
+    if (placeholder)
+      placeholder.textContent = isArcade
+        ? "Start offline → pick an arcade machine → play."
+        : "Start offline → pick SNES software → play.";
+    const input = document.getElementById("softwareAcInput");
+    if (input) {
+      input.placeholder = isArcade ? "Search arcade machines…" : "Search SNES software…";
+      input.setAttribute("aria-label", isArcade ? "Arcade machine" : "SNES software");
+    }
+  }
+  applyShellBranding();
+
   const lobby = new MamehubNostrLobby();
   window.__mamehubActiveLobby = lobby;
   document.getElementById("pubkey").textContent = "npub… " + lobby.publicKey.slice(0, 12) + "…";
@@ -94,7 +118,7 @@
   let rosterMembers = [];
   /** @type {Map<string, string>} edgeKey → connecting|open|failed (host view) */
   const meshLinkStates = new Map();
-  const MAX_LOBBY_PLAYERS = 5;
+  const MAX_LOBBY_PLAYERS = 6;
 
   const joinFromQuery = (() => {
     const join = (qs.get("join") || "").toLowerCase();
@@ -502,7 +526,7 @@
     try {
       await lobby.signal("start", { software: soft, members });
       await lobby.markStarted({
-        game: "snes",
+        game: gameTag,
         userId,
         software: soft
       });
@@ -513,7 +537,7 @@
     log("Host started game — booting emulator (" + members.length + " peers)");
     mySeatPlayer = 0;
     mySeatPeerId = "p0";
-    await bootSnes(soft, {
+    await bootEmulator(soft, {
       mamehub: true,
       isHost: true,
       player: 0,
@@ -673,8 +697,8 @@
     } catch (_) {}
   };
 
-  let snesCatalog = null;
-  let snesCatalogPromise = null;
+  let softwareCatalog = null;
+  let softwareCatalogPromise = null;
   let softwareAcActive = -1;
   let softwareAcFiltered = [];
 
@@ -687,14 +711,37 @@
       .replace(/&#39;/g, "'");
   }
 
-  async function loadSnesCatalog() {
-    if (snesCatalog)
-      return snesCatalog;
-    if (snesCatalogPromise)
-      return snesCatalogPromise;
+  async function loadSoftwareCatalog() {
+    if (softwareCatalog)
+      return softwareCatalog;
+    if (softwareCatalogPromise)
+      return softwareCatalogPromise;
     const cfg = window.MAMEHUB_BROWSER || {};
-    const hashUrl = cfg.hashUrl || "hash/snes.xml";
-    snesCatalogPromise = (async () => {
+    softwareCatalogPromise = (async () => {
+      if (isArcade) {
+        const url = cfg.machinesUrl || "arcade_top_mp.json";
+        log("Loading arcade machine catalog…");
+        const resp = await fetch(url);
+        if (!resp.ok)
+          throw new Error("arcade catalog HTTP " + resp.status);
+        const data = await resp.json();
+        const games = Array.isArray(data.games) ? data.games : [];
+        const entries = games.map((g) => {
+          const id = String(g.mame || g.id || "").trim();
+          const title = String(g.title || g.description || id).trim() || id;
+          return {
+            id,
+            title,
+            titleLower: title.toLowerCase(),
+            idLower: id.toLowerCase(),
+            players: g.players | 0
+          };
+        }).filter((e) => e.id);
+        softwareCatalog = entries;
+        log("Arcade catalog: " + entries.length + " machines");
+        return entries;
+      }
+      const hashUrl = cfg.hashUrl || "hash/snes.xml";
       log("Loading SNES softlist catalog…");
       const resp = await fetch(hashUrl);
       if (!resp.ok)
@@ -709,14 +756,14 @@
         entries.push({ id, title, titleLower: title.toLowerCase(), idLower: id.toLowerCase() });
       }
       entries.sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
-      snesCatalog = entries;
+      softwareCatalog = entries;
       log("SNES catalog: " + entries.length + " titles");
       return entries;
     })().catch((err) => {
-      snesCatalogPromise = null;
+      softwareCatalogPromise = null;
       throw err;
     });
-    return snesCatalogPromise;
+    return softwareCatalogPromise;
   }
 
   function softwareAcPrefixMatch(entry, q) {
@@ -746,11 +793,11 @@
   function renderSoftwareAcList(query) {
     const list = document.getElementById("softwareAcList");
     const input = document.getElementById("softwareAcInput");
-    if (!list || !input || !snesCatalog)
+    if (!list || !input || !softwareCatalog)
       return;
     const q = (query || "").trim().toLowerCase();
     softwareAcFiltered = [];
-    for (const entry of snesCatalog) {
+    for (const entry of softwareCatalog) {
       if (softwareAcPrefixMatch(entry, q)) {
         softwareAcFiltered.push(entry);
         if (softwareAcFiltered.length >= 80)
@@ -834,7 +881,7 @@
       renderSoftwareAcList(input.value);
     });
     input.addEventListener("focus", () => {
-      if (snesCatalog)
+      if (softwareCatalog)
         renderSoftwareAcList(input.value);
     });
     input.addEventListener("blur", () => {
@@ -873,18 +920,22 @@
     const title = document.getElementById("softwarePickerTitle");
     const input = document.getElementById("softwareAcInput");
     mountSoftwareAutocomplete();
+    const noun = isArcade ? "arcade machine" : "SNES software";
     if (mode === "host")
-      title.textContent = "Host game — Select SNES software";
+      title.textContent = "Host game — Select " + noun;
     else if (mode === "join")
-      title.textContent = "Join game — Select SNES software";
+      title.textContent = "Join game — Select " + noun;
     else
-      title.textContent = "Offline — Select SNES software";
+      title.textContent = "Offline — Select " + noun;
     picker.hidden = false;
     try {
-      await loadSnesCatalog();
+      await loadSoftwareCatalog();
       if (input) {
-        const prefer = (mode === "host" || mode === "join") ? "smkart" : "smw";
-        const entry = snesCatalog.find((e) => e.id === prefer) || snesCatalog[0];
+        const cfg = window.MAMEHUB_BROWSER || {};
+        const prefer = isArcade
+          ? (cfg.defaultMachine || "xmen6p")
+          : ((mode === "host" || mode === "join") ? "smkart" : "smw");
+        const entry = softwareCatalog.find((e) => e.id === prefer) || softwareCatalog[0];
         if (entry)
           selectSoftwareAc(entry);
         input.focus();
@@ -894,7 +945,9 @@
       log("Catalog load failed: " + (err && err.message ? err.message : err));
     }
     if (mode === "host")
-      log("Host — select SNES software, then Play. Share the join link; start when a player connects.");
+      log("Host — select " + noun + ", then Play. Share the join link; start when a player connects.");
+    else if (isArcade)
+      log("Offline — select an arcade machine. Candy fetches the machine zip.");
     else
       log("Offline — select SNES software. Candy fetches snes.zip + the cart.");
   }
@@ -927,9 +980,9 @@
     return buf;
   }
 
-  async function bootSnes(software, opts) {
+  async function bootEmulator(software, opts) {
     const cfg = window.MAMEHUB_BROWSER || {};
-    const jsPath = cfg.wasmJs || "dist/mamesneshub.js";
+    const jsPath = cfg.wasmJs || (isArcade ? "dist/mamearcadehub.js" : "dist/mamesneshub.js");
     const romPath = cfg.romPath || "/roms";
     const hashPath = cfg.hashPath || "/hash";
     const hashUrl = cfg.hashUrl || "hash/snes.xml";
@@ -943,31 +996,62 @@
 
     software = (software || "").trim();
     if (!software)
-      throw new Error("No software shortname");
+      throw new Error(isArcade ? "No machine shortname" : "No software shortname");
 
-    const hashData = await loadHashXml(hashUrl);
+    let hashData = null;
+    if (!isArcade) {
+      hashData = await loadHashXml(hashUrl);
+    }
     placeholder.style.display = "none";
     canvas.style.display = "block";
+    // Keep the SDL/WebGL window near native aspect so soft-composite stays cheap.
+    if (isArcade) {
+      canvas.width = 1152;
+      canvas.height = 448;
+      canvas.style.maxWidth = "1152px";
+      canvas.style.aspectRatio = "1152 / 448";
+    } else {
+      canvas.width = 512;
+      canvas.height = 448;
+    }
     canvas.focus();
     if (window.MamehubVirtualGamepad && typeof window.MamehubVirtualGamepad.showForPlay === "function")
       window.MamehubVirtualGamepad.showForPlay();
 
-    const args = [
-      "snes",
-      "-cart", software,
-      "-rompath", romPath,
-      "-hashpath", hashPath,
-      "-window",
-      opts.mamehub ? "-mamehub" : "-nomamehub",
-      "-candy",
-      "-skip_gameinfo",
-      "-nomouse",
-      "-throttle",
-      "-video", "opengl",
-      "-nowaitvsync",
-      "-nosyncrefresh",
-      "-nodiscord"
-    ];
+    const args = isArcade
+      ? [
+          software,
+          "-rompath", romPath,
+          "-window",
+          // Cap OSD window / soft-composite size (xmen6p dual layout is wide).
+          "-resolution", "1152x448",
+          opts.mamehub ? "-mamehub" : "-nomamehub",
+          "-candy",
+          "-skip_gameinfo",
+          "-nomouse",
+          "-throttle",
+          "-video", "opengl",
+          "-nowaitvsync",
+          "-nosyncrefresh",
+          "-nodiscord"
+        ]
+      : [
+          "snes",
+          "-cart", software,
+          "-rompath", romPath,
+          "-hashpath", hashPath,
+          "-window",
+          "-resolution", "512x448",
+          opts.mamehub ? "-mamehub" : "-nomamehub",
+          "-candy",
+          "-skip_gameinfo",
+          "-nomouse",
+          "-throttle",
+          "-video", "opengl",
+          "-nowaitvsync",
+          "-nosyncrefresh",
+          "-nodiscord"
+        ];
     if (opts.mamehub)
       log("Netplay throttle enabled (shared WebRTC clock)");
     else
@@ -1009,8 +1093,10 @@
           try {
             if (typeof FS !== "undefined" && FS.mkdirTree) {
               FS.mkdirTree(romPath);
-              FS.mkdirTree(hashPath);
-              FS.writeFile(hashPath + "/snes.xml", hashData);
+              if (!isArcade && hashData) {
+                FS.mkdirTree(hashPath);
+                FS.writeFile(hashPath + "/snes.xml", hashData);
+              }
             }
           } catch (err) {
             console.warn("FS preload:", err);
@@ -1031,7 +1117,7 @@
       onRuntimeInitialized: () => {
         log("WASM runtime initialized — candy loading " + software +
           (opts.mamehub ? " (netplay)" : ""));
-        if (opts.mamehub)
+        if (opts.mamehub && !isArcade)
           maybeStartInputScript(opts.isHost ? "host" : "join");
       },
       onAbort: (what) => log("WASM abort: " + what)
@@ -1047,8 +1133,10 @@
       Module.mamehubNet.ready = !!net.ready;
     }
 
-    log("Loading " + jsPath + " (snes -cart " + software +
-      (opts.mamehub ? "; mamehub webrtc" : "; offline") + ") …");
+    const bootLabel = isArcade
+      ? (software + (opts.mamehub ? "; mamehub webrtc" : "; offline"))
+      : ("snes -cart " + software + (opts.mamehub ? "; mamehub webrtc" : "; offline"));
+    log("Loading " + jsPath + " (" + bootLabel + ") …");
     await new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = jsPath + "?v=" + Date.now();
@@ -1058,10 +1146,10 @@
     });
   }
 
-  async function startNetplaySnes(software, role, roomOverride) {
+  async function startNetplay(software, role, roomOverride) {
     software = (software || "").trim();
     if (!software)
-      throw new Error("No software shortname");
+      throw new Error(isArcade ? "No machine shortname" : "No software shortname");
 
     const isHost = role === "host";
     let roomId = (roomOverride || "").trim();
@@ -1078,7 +1166,7 @@
 
     if (isHost) {
       const userId = document.getElementById("userId").value.trim() || "host";
-      const hosted = await lobby.host({ game: "snes", userId, software, started: false });
+      const hosted = await lobby.host({ game: gameTag, userId, software, started: false });
       roomId = hosted.roomId;
       hostJoinLink = buildJoinLink(roomId, software);
       rosterMembers = [{
@@ -1091,7 +1179,7 @@
       mySeatPlayer = 0;
       mySeatPeerId = "p0";
       showHostLobby(software);
-      log("Published Nostr lobby announce room=" + roomId + " cart=" + software);
+      log("Published Nostr lobby announce room=" + roomId + " soft=" + software);
       log("Join link ready — Start when the mesh is fully green.");
     } else {
       if (!roomId)
@@ -1099,7 +1187,7 @@
       await lobby.join(roomId);
       rosterMembers = [];
       showJoinLobby(software, "Looking for host…");
-      log("Subscribed to Nostr room=" + roomId + " cart=" + software);
+      log("Subscribed to Nostr room=" + roomId + " soft=" + software);
     }
 
     const net = new MamehubWebRtcNetplay({
@@ -1173,7 +1261,7 @@
     log("Host started — booting synchronized emulator as P" + (mySeatPlayer + 1));
     hideJoinLobby();
     const peerIds = rosterMembers.map((m) => m.peerId);
-    await bootSnes(software, {
+    await bootEmulator(software, {
       mamehub: true,
       isHost: false,
       player: mySeatPlayer,
@@ -1211,12 +1299,12 @@
   document.getElementById("softwarePlayBtn").onclick = () => {
     const shortname = selectedSoftwareShortname();
     if (!shortname)
-      return log("Pick a SNES title (or type a softlist shortname)");
+      return log("Pick a " + pickNoun + " (or type a shortname)");
     document.getElementById("software-picker").hidden = true;
     closeSoftwareAcList();
     const run = pendingRole
-      ? startNetplaySnes(shortname, pendingRole)
-      : bootSnes(shortname, { mamehub: false });
+      ? startNetplay(shortname, pendingRole)
+      : bootEmulator(shortname, { mamehub: false });
     run.catch((err) => log("Start failed: " + (err && err.message ? err.message : err)));
   };
 
@@ -1269,7 +1357,7 @@
     hideModeButtons();
     showJoinLobby(joinFromQuery.software, "Opening join link…");
     log("Join link detected room=" + joinFromQuery.roomId + " soft=" + joinFromQuery.software);
-    startNetplaySnes(joinFromQuery.software, "join", joinFromQuery.roomId).catch((err) => {
+    startNetplay(joinFromQuery.software, "join", joinFromQuery.roomId).catch((err) => {
       const msg = err && err.message ? err.message : String(err);
       if (!document.getElementById("joinLobbyState")?.textContent?.includes("kicked") &&
           !document.getElementById("joinLobbyState")?.textContent?.includes("cannot join") &&

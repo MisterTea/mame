@@ -2,19 +2,30 @@
 
 Static WASM shell coordinated over **Nostr** (no central MAMEHub backend, no Discord Social SDK).
 
-## Build (SNES only)
+## Build
 
 Requires [Emscripten](https://emscripten.org/) 3.1.35+ on your PATH (`emmake`, `emcc`).
 
-**Fast iteration** (after the first full genie run):
+**SNES (default)** — `src/mame/snes.flt` → `mamesneshub.*`:
 
 ```bash
 ./web/mamehub/rebuild_fast.sh
-# after genie.lua / link-flag changes only:
+# after genie.lua / link-flag / .flt changes:
 REGENIE=1 ./web/mamehub/rebuild_fast.sh
 ```
 
-Uses all CPU cores, skips project regen by default, and links with `-O0` so Asyncify `wasm-opt` is much cheaper than `-O2`. Keep `OPTIMIZE=3` for object files (don’t flip OPTIMIZE every time — that forces a full recompile).
+**Arcade (100 popular 2P+ titles, includes `xmen6p`)** — `src/mame/arcade.flt` → `mamearcadehub.*` (does **not** overwrite SNES dist files):
+
+```bash
+# regenerate title list + .flt (needs a native mame/mamehub binary):
+python3 scripts/mamehub/build_arcade_top_mp.py /path/to/mamehub
+REGENIE=1 SUBTARGET=arcade ./web/mamehub/rebuild_fast.sh
+SUBTARGET=arcade ./web/mamehub/rebuild_fast.sh
+```
+
+Serve with arcade config: copy `config.arcade.js` over `config.js`, or point a local override at `mode: "arcade"` / `wasmJs: "dist/mamearcadehub.js"`.
+
+Uses all CPU cores, skips project regen by default. Keep `OPTIMIZE=3` for object files (don’t flip OPTIMIZE every time — that forces a full recompile).
 
 First-time / after changing `scripts/genie.lua` options:
 
@@ -22,14 +33,6 @@ First-time / after changing `scripts/genie.lua` options:
 emmake make SUBTARGET=snes REGENIE=1 WEBASSEMBLY=1 -j$(sysctl -n hw.ncpu 2>/dev/null || nproc)
 cp mamesneshub.js mamesneshub.wasm web/mamehub/dist/
 ```
-
-Slower “release-ish” link (set link back to `-O2` in `scripts/genie.lua` if you need it):
-
-```bash
-emmake make SUBTARGET=snes WEBASSEMBLY=1 -j$(sysctl -n hw.ncpu 2>/dev/null || nproc)
-```
-
-`src/mame/snes.flt` limits the driver set to SNES.
 
 Copy artifacts and serve with the candy proxy:
 
@@ -43,7 +46,7 @@ cd web/mamehub && python3 serve.py --port 8765 --open
 
 ## Windows / macOS packages
 
-Double-clickable launcher + shell/wasm/hash (needs Go):
+Double-clickable launcher + shell/wasm (needs Go):
 
 ```bash
 ./web/mamehub/package_windows.sh
@@ -51,14 +54,17 @@ Double-clickable launcher + shell/wasm/hash (needs Go):
 
 ./web/mamehub/package_macos.sh
 # → web/mamehub/release/MAMEHubOnline-SNES-macos.zip  (universal arm64+amd64)
+
+PROFILE=arcade ./web/mamehub/package_windows.sh
+PROFILE=arcade ./web/mamehub/package_macos.sh
+# → MAMEHubOnline-Arcade-{windows,macos}.zip
 ```
 
 Recipients unzip and run `MAMEHubOnline.exe` (Windows) or `MAMEHubOnline` (macOS). That starts the local server + candy proxy and opens the default browser. Keep the process running while playing.
 
 Local Python equivalent: `python3 serve.py --open`.
 
-**Why builds feel slow:** every link runs Binaryen Asyncify over a ~30–40MB wasm (often 2–10+ minutes at `-O2`). Avoid `REGENIE=1`, don’t `rm mamesneshub.wasm`, don’t change `OPTIMIZE=` between builds, and use `./web/mamehub/rebuild_fast.sh`.
-
+**Why builds feel slow:** every link runs Binaryen Asyncify over a large wasm (often many minutes at `-O2`). Avoid `REGENIE=1` unless needed, don’t delete existing wasm of the *same* subtarget, don’t change `OPTIMIZE=` between builds, and use `./web/mamehub/rebuild_fast.sh`.
 ## Identity
 
 - Pass `-user_id <name>` to set an explicit id.

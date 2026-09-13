@@ -1,0 +1,807 @@
+{
+  "version": 1,
+  "count": 100,
+  "notes": "Exactly 100 unique popular arcade titles with MAME players>=2. Primary IAM/KLOV Top 100 + Wikipedia highest-grossing fills, then backfill. Variants collapsed to one MAME set; xmen6p forced.",
+  "games": [
+    {
+      "title": "X-Men (6 Players)",
+      "mame": "xmen6p",
+      "players": 6,
+      "sourcefile": "konami/xmen.cpp",
+      "description": "X-Men (6 Players ver ECB)",
+      "source": "klov+forced"
+    },
+    {
+      "title": "Warlords",
+      "mame": "warlords",
+      "players": 4,
+      "sourcefile": "atari/centiped.cpp",
+      "description": "Warlords",
+      "source": "klov"
+    },
+    {
+      "title": "Joust",
+      "mame": "joust",
+      "players": 2,
+      "sourcefile": "williams/williams.cpp",
+      "description": "Joust (Green label)",
+      "source": "klov"
+    },
+    {
+      "title": "Tron",
+      "mame": "tron",
+      "players": 2,
+      "sourcefile": "bally/mcr.cpp",
+      "description": "Tron (8/9)",
+      "source": "klov"
+    },
+    {
+      "title": "Track & Field",
+      "mame": "trackfld",
+      "players": 4,
+      "sourcefile": "konami/trackfld.cpp",
+      "description": "Track &amp; Field",
+      "source": "klov"
+    },
+    {
+      "title": "Gauntlet",
+      "mame": "gauntlet",
+      "players": 4,
+      "sourcefile": "atari/gauntlet.cpp",
+      "description": "Gauntlet (rev 14)",
+      "source": "klov"
+    },
+    {
+      "title": "Rampage",
+      "mame": "rampage",
+      "players": 3,
+      "sourcefile": "bally/mcr3.cpp",
+      "description": "Rampage (Rev 3, 8/27/86)",
+      "source": "klov"
+    },
+    {
+      "title": "Double Dragon",
+      "mame": "ddragon",
+      "players": 2,
+      "sourcefile": "technos/ddragon.cpp",
+      "description": "Double Dragon (World set 1)",
+      "source": "klov"
+    },
+    {
+      "title": "Golden Axe",
+      "mame": "goldnaxe",
+      "players": 2,
+      "sourcefile": "sega/segas16b.cpp",
+      "description": "Golden Axe (set 6, US) (8751 317-123A)",
+      "source": "klov"
+    },
+    {
+      "title": "Smash TV",
+      "mame": "smashtv",
+      "players": 2,
+      "sourcefile": "williams/midyunit.cpp",
+      "description": "Smash T.V. (rev 8.00)",
+      "source": "klov"
+    },
+    {
+      "title": "Mortal Kombat",
+      "mame": "mk",
+      "players": 2,
+      "sourcefile": "williams/midtunit.cpp",
+      "description": "Mortal Kombat (rev 5.0 T-Unit 03/19/93)",
+      "source": "klov"
+    },
+    {
+      "title": "NBA Jam",
+      "mame": "nbajam",
+      "players": 4,
+      "sourcefile": "williams/midtunit.cpp",
+      "description": "NBA Jam (rev 3.01 4/07/93)",
+      "source": "klov"
+    },
+    {
+      "title": "Terminator 2: Judgment Day",
+      "mame": "term2",
+      "players": 2,
+      "sourcefile": "williams/midyunit.cpp",
+      "description": "Terminator 2 - Judgment Day (rev LA4 08/03/92)",
+      "source": "klov"
+    },
+    {
+      "title": "Lethal Enforcers",
+      "mame": "lethalen",
+      "players": 2,
+      "sourcefile": "konami/lethal.cpp",
+      "description": "Lethal Enforcers (ver UAE, 11/19/92 15:04)",
+      "source": "klov"
+    },
+    {
+      "title": "Captain America and The Avengers",
+      "mame": "captaven",
+      "players": 4,
+      "sourcefile": "dataeast/captaven.cpp",
+      "description": "Captain America and The Avengers (Asia Version 1.4)",
+      "source": "klov"
+    },
+    {
+      "title": "Area 51",
+      "mame": "area51",
+      "players": 2,
+      "sourcefile": "atari/jaguar.cpp",
+      "description": "Area 51 (R3000)",
+      "source": "klov"
+    },
+    {
+      "title": "Soul Edge",
+      "mame": "souledge",
+      "players": 2,
+      "sourcefile": "namco/namcos11.cpp",
+      "description": "Soul Edge Ver. II (Asia, SO4/VER.C)",
+      "source": "klov"
+    },
+    {
+      "title": "The House of the Dead",
+      "mame": "hotd",
+      "players": 2,
+      "sourcefile": "sega/model2.cpp",
+      "description": "The House of the Dead (Revision A)",
+      "source": "klov"
+    },
+    {
+      "title": "NFL Blitz",
+      "mame": "blitz",
+      "players": 2,
+      "sourcefile": "williams/seattle.cpp",
+      "description": "NFL Blitz (ver 1.21, Dec 5 1997)",
+      "source": "klov"
+    },
+    {
+      "title": "Gauntlet Legends",
+      "mame": "gauntleg",
+      "players": 4,
+      "sourcefile": "williams/vegas.cpp",
+      "description": "Gauntlet Legends (version 1.6)",
+      "source": "klov"
+    },
+    {
+      "title": "The House of the Dead 2",
+      "mame": "hotd2",
+      "players": 2,
+      "sourcefile": "sega/naomi.cpp",
+      "description": "The House of the Dead 2 (USA)",
+      "source": "klov"
+    },
+    {
+      "title": "Time Crisis II",
+      "mame": "timecrs2",
+      "players": 3,
+      "sourcefile": "namco/namcos23.cpp",
+      "description": "Time Crisis II (US, TSS3 Ver. B)",
+      "source": "klov"
+    },
+    {
+      "title": "CarnEvil",
+      "mame": "carnevil",
+      "players": 2,
+      "sourcefile": "williams/seattle.cpp",
+      "description": "CarnEvil (v1.0.3)",
+      "source": "klov"
+    },
+    {
+      "title": "Gauntlet Dark Legacy",
+      "mame": "gauntdl",
+      "players": 4,
+      "sourcefile": "williams/vegas.cpp",
+      "description": "Gauntlet Dark Legacy (version DL 2.52)",
+      "source": "klov"
+    },
+    {
+      "title": "Tank",
+      "mame": "tank",
+      "players": 2,
+      "sourcefile": "atari/atarittl.cpp",
+      "description": "Tank/Tank Cocktail",
+      "source": "klov"
+    },
+    {
+      "title": "Wizard of Wor",
+      "mame": "wow",
+      "players": 2,
+      "sourcefile": "bally/astrocde.cpp",
+      "description": "Wizard of Wor",
+      "source": "klov"
+    },
+    {
+      "title": "Frogger",
+      "mame": "frogger",
+      "players": 2,
+      "sourcefile": "galaxian/galaxian.cpp",
+      "description": "Frogger",
+      "source": "klov"
+    },
+    {
+      "title": "Gorf",
+      "mame": "gorf",
+      "players": 2,
+      "sourcefile": "bally/astrocde.cpp",
+      "description": "Gorf",
+      "source": "klov"
+    },
+    {
+      "title": "Qix",
+      "mame": "qix",
+      "players": 2,
+      "sourcefile": "taito/qix.cpp",
+      "description": "Qix (Rev 2)",
+      "source": "klov"
+    },
+    {
+      "title": "Burgertime",
+      "mame": "btime",
+      "players": 2,
+      "sourcefile": "dataeast/btime.cpp",
+      "description": "Burger Time (Data East set 1)",
+      "source": "klov"
+    },
+    {
+      "title": "Jungle King",
+      "mame": "junglek",
+      "players": 2,
+      "sourcefile": "taito/taitosj.cpp",
+      "description": "Jungle King (Japan)",
+      "source": "klov"
+    },
+    {
+      "title": "Moon Patrol",
+      "mame": "mpatrol",
+      "players": 2,
+      "sourcefile": "irem/m52.cpp",
+      "description": "Moon Patrol",
+      "source": "klov"
+    },
+    {
+      "title": "Pengo",
+      "mame": "pengo",
+      "players": 2,
+      "sourcefile": "pacman/pengo.cpp",
+      "description": "Pengo (World, not encrypted, rev A)",
+      "source": "klov"
+    },
+    {
+      "title": "Q*bert",
+      "mame": "qbert",
+      "players": 2,
+      "sourcefile": "gottlieb/gottlieb.cpp",
+      "description": "Q*bert (US set 1)",
+      "source": "klov"
+    },
+    {
+      "title": "Time Pilot",
+      "mame": "timeplt",
+      "players": 2,
+      "sourcefile": "konami/timeplt.cpp",
+      "description": "Time Pilot",
+      "source": "klov"
+    },
+    {
+      "title": "Zaxxon",
+      "mame": "zaxxon",
+      "players": 2,
+      "sourcefile": "sega/zaxxon.cpp",
+      "description": "Zaxxon (set 1, rev D)",
+      "source": "klov"
+    },
+    {
+      "title": "Elevator Action",
+      "mame": "elevator",
+      "players": 2,
+      "sourcefile": "taito/taitosj.cpp",
+      "description": "Elevator Action (BA3, 4 PCB version, 1.1)",
+      "source": "klov"
+    },
+    {
+      "title": "Gyruss",
+      "mame": "gyruss",
+      "players": 2,
+      "sourcefile": "konami/gyruss.cpp",
+      "description": "Gyruss",
+      "source": "klov"
+    },
+    {
+      "title": "Tapper",
+      "mame": "tapper",
+      "players": 2,
+      "sourcefile": "bally/mcr.cpp",
+      "description": "Tapper (Budweiser, 1/27/84)",
+      "source": "klov"
+    },
+    {
+      "title": "Choplifter",
+      "mame": "choplift",
+      "players": 2,
+      "sourcefile": "sega/system1.cpp",
+      "description": "Choplifter (8751 315-5151)",
+      "source": "klov"
+    },
+    {
+      "title": "Ghosts 'n Goblins",
+      "mame": "gng",
+      "players": 2,
+      "sourcefile": "capcom/gng.cpp",
+      "description": "Ghosts'n Goblins (World? set 1)",
+      "source": "klov"
+    },
+    {
+      "title": "Arkanoid",
+      "mame": "arkanoid",
+      "players": 2,
+      "sourcefile": "taito/arkanoid.cpp",
+      "description": "Arkanoid (World, older)",
+      "source": "klov"
+    },
+    {
+      "title": "1943: The Battle of Midway",
+      "mame": "1943",
+      "players": 2,
+      "sourcefile": "capcom/1943.cpp",
+      "description": "1943: The Battle of Midway (Euro)",
+      "source": "klov"
+    },
+    {
+      "title": "Rastan",
+      "mame": "rastan",
+      "players": 2,
+      "sourcefile": "taito/rastan.cpp",
+      "description": "Rastan (World Rev 1)",
+      "source": "klov"
+    },
+    {
+      "title": "Bad Dudes vs. DragonNinja",
+      "mame": "baddudes",
+      "players": 2,
+      "sourcefile": "dataeast/dec0.cpp",
+      "description": "Bad Dudes vs. Dragonninja (US, revision 1)",
+      "source": "klov"
+    },
+    {
+      "title": "Cyberball",
+      "mame": "cyberbal",
+      "players": 4,
+      "sourcefile": "atari/cyberbal.cpp",
+      "description": "Cyberball (rev 4)",
+      "source": "klov"
+    },
+    {
+      "title": "Ghouls 'n Ghosts",
+      "mame": "ghouls",
+      "players": 2,
+      "sourcefile": "capcom/cps1.cpp",
+      "description": "Ghouls'n Ghosts (World)",
+      "source": "klov"
+    },
+    {
+      "title": "Tetris (Atari)",
+      "mame": "atetris",
+      "players": 2,
+      "sourcefile": "atari/atetris.cpp",
+      "description": "Tetris (set 1)",
+      "source": "klov"
+    },
+    {
+      "title": "Raiden",
+      "mame": "raiden",
+      "players": 2,
+      "sourcefile": "seibu/raiden.cpp",
+      "description": "Raiden (World set 1)",
+      "source": "klov"
+    },
+    {
+      "title": "Rampart",
+      "mame": "rampart",
+      "players": 3,
+      "sourcefile": "atari/rampart.cpp",
+      "description": "Rampart (Trackball)",
+      "source": "klov"
+    },
+    {
+      "title": "King of the Monsters",
+      "mame": "kotm",
+      "players": 2,
+      "sourcefile": "snk/neogeo.cpp",
+      "description": "King of the Monsters (set 1)",
+      "source": "klov"
+    },
+    {
+      "title": "Street Fighter II: Champion Edition",
+      "mame": "sf2ce",
+      "players": 2,
+      "sourcefile": "capcom/cps1.cpp",
+      "description": "Street Fighter II': Champion Edition (World 920513)",
+      "source": "wikipedia"
+    },
+    {
+      "title": "Mortal Kombat II",
+      "mame": "mk2",
+      "players": 2,
+      "sourcefile": "williams/midtunit.cpp",
+      "description": "Mortal Kombat II (rev L3.1)",
+      "source": "wikipedia"
+    },
+    {
+      "title": "Virtua Fighter",
+      "mame": "vf",
+      "players": 2,
+      "sourcefile": "sega/model1.cpp",
+      "description": "Virtua Fighter",
+      "source": "wikipedia"
+    },
+    {
+      "title": "Virtua Fighter 2",
+      "mame": "vf2",
+      "players": 2,
+      "sourcefile": "sega/model2.cpp",
+      "description": "Virtua Fighter 2 (Version 2.1)",
+      "source": "wikipedia"
+    },
+    {
+      "title": "Tekken 2",
+      "mame": "tekken2",
+      "players": 2,
+      "sourcefile": "namco/namcos11.cpp",
+      "description": "Tekken 2 Ver.B (World, TES2/VER.D)",
+      "source": "wikipedia"
+    },
+    {
+      "title": "Tekken 3",
+      "mame": "tekken3",
+      "players": 2,
+      "sourcefile": "namco/namcos12.cpp",
+      "description": "Tekken 3 (World, TET2/VER.E1)",
+      "source": "wikipedia"
+    },
+    {
+      "title": "Final Fight",
+      "mame": "ffight",
+      "players": 2,
+      "sourcefile": "capcom/cps1.cpp",
+      "description": "Final Fight (World, set 1)",
+      "source": "wikipedia"
+    },
+    {
+      "title": "Teenage Mutant Ninja Turtles",
+      "mame": "tmnt",
+      "players": 4,
+      "sourcefile": "konami/tmnt.cpp",
+      "description": "Teenage Mutant Ninja Turtles (World 4 Players, version X)",
+      "source": "wikipedia"
+    },
+    {
+      "title": "Karate Champ",
+      "mame": "kchamp",
+      "players": 2,
+      "sourcefile": "dataeast/kchamp.cpp",
+      "description": "Karate Champ (US)",
+      "source": "wikipedia"
+    },
+    {
+      "title": "Killer Instinct",
+      "mame": "kinst",
+      "players": 2,
+      "sourcefile": "rare/kinst.cpp",
+      "description": "Killer Instinct",
+      "source": "wikipedia"
+    },
+    {
+      "title": "The King of Fighters '97",
+      "mame": "kof97",
+      "players": 2,
+      "sourcefile": "snk/neogeo.cpp",
+      "description": "The King of Fighters '97 (NGM-2320)",
+      "source": "wikipedia"
+    },
+    {
+      "title": "The Simpsons",
+      "mame": "simpsons",
+      "players": 4,
+      "sourcefile": "konami/simpsons.cpp",
+      "description": "The Simpsons (4 Players World, set 1)",
+      "source": "backfill"
+    },
+    {
+      "title": "Cadillacs and Dinosaurs",
+      "mame": "dino",
+      "players": 3,
+      "sourcefile": "capcom/cps1.cpp",
+      "description": "Cadillacs and Dinosaurs (World 930201)",
+      "source": "backfill"
+    },
+    {
+      "title": "The Punisher",
+      "mame": "punisher",
+      "players": 2,
+      "sourcefile": "capcom/cps1.cpp",
+      "description": "The Punisher (World 930422)",
+      "source": "backfill"
+    },
+    {
+      "title": "Captain Commando",
+      "mame": "captcomm",
+      "players": 4,
+      "sourcefile": "capcom/cps1.cpp",
+      "description": "Captain Commando (World 911202)",
+      "source": "backfill"
+    },
+    {
+      "title": "Knights of the Round",
+      "mame": "knights",
+      "players": 3,
+      "sourcefile": "capcom/cps1.cpp",
+      "description": "Knights of the Round (World 911127)",
+      "source": "backfill"
+    },
+    {
+      "title": "Warriors of Fate",
+      "mame": "wof",
+      "players": 3,
+      "sourcefile": "capcom/cps1.cpp",
+      "description": "Warriors of Fate (World 921031)",
+      "source": "backfill"
+    },
+    {
+      "title": "Dungeons & Dragons: Tower of Doom",
+      "mame": "ddtod",
+      "players": 4,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "Dungeons & Dragons: Tower of Doom (Europe 940412)",
+      "source": "backfill"
+    },
+    {
+      "title": "Dungeons & Dragons: Shadow over Mystara",
+      "mame": "ddsom",
+      "players": 4,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "Dungeons & Dragons: Shadow over Mystara (Europe 960619)",
+      "source": "backfill"
+    },
+    {
+      "title": "Alien vs. Predator",
+      "mame": "avsp",
+      "players": 3,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "Alien vs. Predator (Europe 940520)",
+      "source": "backfill"
+    },
+    {
+      "title": "Armored Warriors",
+      "mame": "armwar",
+      "players": 3,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "Armored Warriors (Europe 941024)",
+      "source": "backfill"
+    },
+    {
+      "title": "Marvel vs. Capcom: Clash of Super Heroes",
+      "mame": "mvsc",
+      "players": 2,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "Marvel Vs. Capcom: Clash of Super Heroes (Europe 980123)",
+      "source": "backfill"
+    },
+    {
+      "title": "X-Men: Children of the Atom",
+      "mame": "xmcota",
+      "players": 2,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "X-Men: Children of the Atom (Europe 950331)",
+      "source": "backfill"
+    },
+    {
+      "title": "Marvel Super Heroes",
+      "mame": "msh",
+      "players": 2,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "Marvel Super Heroes (Europe 951024)",
+      "source": "backfill"
+    },
+    {
+      "title": "Super Street Fighter II Turbo",
+      "mame": "ssf2t",
+      "players": 2,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "Super Street Fighter II Turbo (World 940223)",
+      "source": "backfill"
+    },
+    {
+      "title": "Street Fighter Alpha 3",
+      "mame": "sfa3",
+      "players": 2,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "Street Fighter Alpha 3 (Europe 980904)",
+      "source": "backfill"
+    },
+    {
+      "title": "Ultimate Mortal Kombat 3",
+      "mame": "umk3",
+      "players": 2,
+      "sourcefile": "williams/midwunit.cpp",
+      "description": "Ultimate Mortal Kombat 3 (rev 1.2)",
+      "source": "backfill"
+    },
+    {
+      "title": "NBA Jam TE",
+      "mame": "nbajamte",
+      "players": 4,
+      "sourcefile": "williams/midtunit.cpp",
+      "description": "NBA Jam Tournament Edition (rev 4.0 3/23/94)",
+      "source": "backfill"
+    },
+    {
+      "title": "NFL Blitz 99",
+      "mame": "blitz99",
+      "players": 4,
+      "sourcefile": "williams/seattle.cpp",
+      "description": "NFL Blitz '99 (ver 1.30, Sep 22 1998)",
+      "source": "backfill"
+    },
+    {
+      "title": "Sunset Riders",
+      "mame": "ssriders",
+      "players": 4,
+      "sourcefile": "konami/tmnt2.cpp",
+      "description": "Sunset Riders (4 Players ver EAC)",
+      "source": "backfill"
+    },
+    {
+      "title": "Vendetta",
+      "mame": "vendetta",
+      "players": 4,
+      "sourcefile": "konami/vendetta.cpp",
+      "description": "Vendetta (World, 4 Players, ver. T)",
+      "source": "backfill"
+    },
+    {
+      "title": "Crime Fighters",
+      "mame": "crimfght",
+      "players": 2,
+      "sourcefile": "konami/crimfght.cpp",
+      "description": "Crime Fighters (World 2 players)",
+      "source": "backfill"
+    },
+    {
+      "title": "Teenage Mutant Ninja Turtles: Turtles in Time",
+      "mame": "tmnt2",
+      "players": 4,
+      "sourcefile": "konami/tmnt2.cpp",
+      "description": "Teenage Mutant Ninja Turtles: Turtles in Time (4 Players ver UAA)",
+      "source": "backfill"
+    },
+    {
+      "title": "X-Men vs. Street Fighter",
+      "mame": "xmvsf",
+      "players": 2,
+      "sourcefile": "capcom/cps2.cpp",
+      "description": "X-Men Vs. Street Fighter (Europe 961004)",
+      "source": "backfill"
+    },
+    {
+      "title": "Marvel vs. Capcom 2",
+      "mame": "mvsc2",
+      "players": 2,
+      "sourcefile": "sega/naomi.cpp",
+      "description": "Marvel Vs. Capcom 2: New Age of Heroes (Export, Korea, Rev A)",
+      "source": "backfill"
+    },
+    {
+      "title": "Metal Slug",
+      "mame": "mslug",
+      "players": 2,
+      "sourcefile": "snk/neogeo.cpp",
+      "description": "Metal Slug - Super Vehicle-001",
+      "source": "backfill"
+    },
+    {
+      "title": "Metal Slug X",
+      "mame": "mslugx",
+      "players": 2,
+      "sourcefile": "snk/neogeo.cpp",
+      "description": "Metal Slug X - Super Vehicle-001 (NGM-2500 ~ NGH-2500)",
+      "source": "backfill"
+    },
+    {
+      "title": "Metal Slug 3",
+      "mame": "mslug3",
+      "players": 2,
+      "sourcefile": "snk/neogeo.cpp",
+      "description": "Metal Slug 3 (NGM-2560)",
+      "source": "backfill"
+    },
+    {
+      "title": "Gun.Smoke",
+      "mame": "gunsmoke",
+      "players": 2,
+      "sourcefile": "capcom/gunsmoke.cpp",
+      "description": "Gun.Smoke (World, 1985-11-15)",
+      "source": "backfill"
+    },
+    {
+      "title": "Ikari Warriors",
+      "mame": "ikari",
+      "players": 2,
+      "sourcefile": "snk/snk.cpp",
+      "description": "Ikari Warriors (US JAMMA)",
+      "source": "backfill"
+    },
+    {
+      "title": "Contra",
+      "mame": "contra",
+      "players": 2,
+      "sourcefile": "konami/contra.cpp",
+      "description": "Contra (US / Asia, set 1)",
+      "source": "backfill"
+    },
+    {
+      "title": "Super Contra",
+      "mame": "scontra",
+      "players": 2,
+      "sourcefile": "konami/thunderx.cpp",
+      "description": "Super Contra (set 1)",
+      "source": "backfill"
+    },
+    {
+      "title": "Bubble Bobble",
+      "mame": "bublbobl",
+      "players": 2,
+      "sourcefile": "taito/bublbobl.cpp",
+      "description": "Bubble Bobble (Japan, Ver 0.1)",
+      "source": "backfill"
+    },
+    {
+      "title": "Snow Bros.",
+      "mame": "snowbros",
+      "players": 2,
+      "sourcefile": "kaneko/snowbros.cpp",
+      "description": "Snow Bros. - Nick & Tom (set 1)",
+      "source": "backfill"
+    },
+    {
+      "title": "Bomb Jack",
+      "mame": "bombjack",
+      "players": 2,
+      "sourcefile": "tecmo/bombjack.cpp",
+      "description": "Bomb Jack",
+      "source": "backfill"
+    },
+    {
+      "title": "Wonder Boy",
+      "mame": "wboy",
+      "players": 2,
+      "sourcefile": "sega/system1.cpp",
+      "description": "Wonder Boy (set 1, 315-5177)",
+      "source": "backfill"
+    },
+    {
+      "title": "Wonder Boy III: Monster Lair",
+      "mame": "wbml",
+      "players": 2,
+      "sourcefile": "sega/system1.cpp",
+      "description": "Wonder Boy: Monster Land (Japan New Ver., MC-8123, 317-0043)",
+      "source": "backfill"
+    },
+    {
+      "title": "Shinobi",
+      "mame": "shinobi",
+      "players": 2,
+      "sourcefile": "sega/segas16a.cpp",
+      "description": "Shinobi (set 6, System 16A) (unprotected)",
+      "source": "backfill"
+    },
+    {
+      "title": "Golden Axe: The Revenge of Death Adder",
+      "mame": "ga2",
+      "players": 4,
+      "sourcefile": "sega/segas32.cpp",
+      "description": "Golden Axe: The Revenge of Death Adder (World, Rev B)",
+      "source": "backfill"
+    }
+  ]
+}

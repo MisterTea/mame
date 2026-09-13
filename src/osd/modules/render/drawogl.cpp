@@ -46,6 +46,8 @@ typedef uint64_t HashT;
 
 #if defined(__EMSCRIPTEN__)
 #include "rendersw.hxx"
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #endif
 
@@ -65,6 +67,32 @@ typedef uint64_t HashT;
 
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
+
+// Cap soft-present / render-target size so dual-screen layouts stay realtime in
+// multi-tab browser runs. Prim bounds must match this size (see get_primitives).
+static osd_dim mamehub_clamp_present_dim(osd_dim nd)
+{
+	int w = nd.width();
+	int h = nd.height();
+	constexpr int64_t k_max_present_pixels = 1152LL * 448LL; // ~2× native dualhsxs
+	if (w > 0 && h > 0)
+	{
+		int64_t const pixels = int64_t(w) * int64_t(h);
+		if (pixels > k_max_present_pixels)
+		{
+			double const scale = std::sqrt(double(k_max_present_pixels) / double(pixels));
+			w = std::max(1, int(double(w) * scale));
+			h = std::max(1, int(double(h) * scale));
+			w &= ~1;
+			h &= ~1;
+			if (w < 2)
+				w = 2;
+			if (h < 2)
+				h = 2;
+		}
+	}
+	return osd_dim(w, h);
+}
 
 EM_JS(void, mamehub_webgl_blit, (int w, int h, int pitch, uintptr_t src), {
 	if (w <= 0 || h <= 0 || pitch < w)
@@ -411,6 +439,9 @@ public:
 	virtual render_primitive_list *get_primitives() override
 	{
 		osd_dim nd = window().get_size_pixels();
+#if defined(__EMSCRIPTEN__)
+		nd = mamehub_clamp_present_dim(nd);
+#endif
 		if (nd != m_blit_dim)
 		{
 			m_blit_dim = nd;
@@ -1297,6 +1328,9 @@ int renderer_ogl::draw(const int update)
 	int  pendingPrimitive=GL_NO_PRIMITIVE, curPrimitive=GL_NO_PRIMITIVE;
 
 	osd_dim wdim = window().get_size_pixels();
+#if defined(__EMSCRIPTEN__)
+	wdim = mamehub_clamp_present_dim(wdim);
+#endif
 
 	if (has_flags(FI_CHANGED) || (wdim.width() != m_width) || (wdim.height() != m_height))
 	{
