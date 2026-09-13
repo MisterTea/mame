@@ -31,7 +31,9 @@
 
 #include "NSM_CommonInterface.h"
 
-#if !defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#else
 #include "TimeHandler.hpp"
 #endif
 
@@ -236,10 +238,21 @@ static void mamehub_osd_sleep(osd_ticks_t duration)
 {
 	if (!duration)
 		return;
+#if defined(__EMSCRIPTEN__)
+	// Stock osd_sleep is a no-op under Emscripten (nested Asyncify risk from
+	// generic code). Netplay throttle must actually wait on the shared clock.
+	int ms = int((duration * 1000) / osd_ticks_per_second());
+	if (ms < 1)
+		ms = 1;
+	if (ms > 50)
+		ms = 50;
+	emscripten_sleep(ms);
+#else
 	auto const t0 = std::chrono::steady_clock::now();
 	osd_sleep(duration);
 	wga::addFrameWaitUs(std::chrono::duration_cast<std::chrono::microseconds>(
 			std::chrono::steady_clock::now() - t0).count());
+#endif
 }
 
 void video_manager::frame_update(bool from_debugger)
@@ -274,11 +287,19 @@ void video_manager::frame_update(bool from_debugger)
 		static attotime lastEmu = attotime::zero;
 		auto const nowWall = std::chrono::steady_clock::now();
 		attotime const nowEmu = machine().time();
+#if defined(__EMSCRIPTEN__)
+		int64_t const waitUs = 0;
+		int64_t const netplayUs = 0;
+		int64_t const netplayWaitUs = 0;
+		std::string const timerDump;
+		std::string const vblankSplit;
+#else
 		int64_t const waitUs = wga::takeFrameWaitUs();
 		int64_t const netplayUs = wga::takeFrameNetplayUs();
 		int64_t const netplayWaitUs = wga::takeFrameNetplayWaitUs();
 		std::string const timerDump = wga::takeFrameTimerDump();
 		std::string const vblankSplit = wga::takeVblankSplitDump();
+#endif
 		int64_t const wallUs = std::chrono::duration_cast<std::chrono::microseconds>(nowWall - lastWall).count();
 		int64_t const emuUs = (lastEmu == attotime::zero)
 			? 0
@@ -315,7 +336,9 @@ void video_manager::frame_update(bool from_debugger)
 					profile << " [FRAME_PROFILE_MAME]\n" << mameProfile;
 			}
 			LOG(INFO) << profile.str();
+#if !defined(__EMSCRIPTEN__)
 			el::Loggers::flushAll();
+#endif
 		}
 		else
 		{
@@ -341,12 +364,7 @@ void video_manager::frame_update(bool from_debugger)
 	// update inputs and draw the user interface
 	t0 = nowUs();
 	machine().osd().input_update(true);
-#if defined(__EMSCRIPTEN__)
-	// In-emulator UI draw currently hangs under Asyncify/WebGL. Skip for now so
-	// gameplay frames can present; shell UI covers selection.
-#else
 	anything_changed = emulator_info::draw_user_interface(machine()) || anything_changed;
-#endif
 
 	// let plugins draw over the UI
 	anything_changed = emulator_info::frame_hook() || anything_changed;
@@ -795,14 +813,9 @@ bool video_manager::finish_screen_updates()
 
 void video_manager::update_throttle(attotime emutime)
 {
-#if defined(__EMSCRIPTEN__)
-	// Browser builds are paced by requestAnimationFrame. Blocking osd_sleep here
-	// freezes the tab (no pthreads / Asyncify yield in stock osd_sleep).
-	if (!netCommon)
-		return;
-#endif
-
-	// MAMEHub: sync emulation to netplay / WGA global clock instead of stock OSD ticks
+	// MAMEHub: sync emulation to netplay / WGA global clock (or a local
+	// realtime epoch offline). Under Emscripten, mamehub_osd_sleep yields via
+	// Asyncify so this is safe in the RAF loop.
 	bool printed = false;
 	bool slept = false;
 
@@ -816,8 +829,28 @@ void video_manager::update_throttle(attotime emutime)
 		}
 		else
 		{
-			curTime = int64_t(std::chrono::duration_cast<std::chrono::microseconds>(
-				std::chrono::steady_clock::now().time_since_epoch()).count());
+			// Offline: pace against a local steady-clock epoch anchored to emu time
+			// (absolute time_since_epoch would always look "behind" and never sleep).
+			using namespace std::chrono;
+			static steady_clock::time_point offlineEpoch;
+			static bool haveOfflineEpoch = false;
+			int64_t const emuUs =
+				int64_t(emutime.seconds()) * 1000000
+				+ emutime.attoseconds() / ATTOSECONDS_PER_MICROSECOND;
+			auto const now = steady_clock::now();
+			if (!haveOfflineEpoch)
+			{
+				offlineEpoch = now - microseconds(std::max<int64_t>(0, emuUs));
+				haveOfflineEpoch = true;
+			}
+			else
+			{
+				int64_t const wallUs = duration_cast<microseconds>(now - offlineEpoch).count();
+				// Soft-reset / rewind: re-anchor so we do not free-run forever.
+				if (emuUs + 200000 < wallUs)
+					offlineEpoch = now - microseconds(std::max<int64_t>(0, emuUs));
+			}
+			curTime = duration_cast<microseconds>(steady_clock::now() - offlineEpoch).count();
 		}
 
 		attotime expectedEmulationTime(
@@ -847,6 +880,10 @@ void video_manager::update_throttle(attotime emutime)
 			attotime diffTime = expectedEmulationTime - emutime;
 			int msBehind = (diffTime.attoseconds() / ATTOSECONDS_PER_MILLISECOND) + diffTime.seconds() * 1000;
 
+#if defined(__EMSCRIPTEN__)
+			// Browser canvas goes black if we skip OSD while catching up; always present.
+			(void)msBehind;
+#else
 			if (!slept && emutime.seconds() > 0)
 			{
 				SKIP_OSD = true;
@@ -860,6 +897,7 @@ void video_manager::update_throttle(attotime emutime)
 					}
 				}
 			}
+#endif
 			return;
 		}
 	}

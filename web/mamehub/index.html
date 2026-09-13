@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MAMEHub Browser</title>
+  <title>MAMEHub Online (SNES)</title>
   <style>
     :root {
       --bg: #12141a;
@@ -104,15 +104,168 @@
       max-width: 960px;
     }
     #software-picker h2 {
+      margin: 0 0 0.85rem;
+      font-size: 1.05rem;
+    }
+    #software-ac {
+      position: relative;
+      flex: 1 1 18rem;
+      min-width: 14rem;
+      max-width: 36rem;
+    }
+    #softwareAcInput {
+      width: 100%;
+    }
+    #softwareAcList {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 2px);
+      z-index: 20;
+      max-height: 16rem;
+      overflow: auto;
+      margin: 0;
+      padding: 0.25rem 0;
+      list-style: none;
+      border: 1px solid #2a303a;
+      border-radius: 6px;
+      background: #12161e;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    }
+    #softwareAcList[hidden] { display: none; }
+    #softwareAcList li {
+      padding: 0.45rem 0.75rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      color: var(--fg);
+    }
+    #softwareAcList li:hover,
+    #softwareAcList li[aria-selected="true"] {
+      background: rgba(61, 154, 106, 0.22);
+    }
+    #softwareAcList .ac-title { flex: 1; min-width: 0; }
+    #softwareAcList .ac-id {
+      color: var(--muted);
+      font-family: ui-monospace, monospace;
+      font-size: 0.85em;
+      flex: 0 0 auto;
+    }
+    #softwareAcList .ac-empty {
+      color: var(--muted);
+      cursor: default;
+    }
+    #host-lobby, #join-lobby {
+      border: 1px solid #2a303a;
+      background: #151a22;
+      padding: 1rem 1.1rem;
+      border-radius: 8px;
+      max-width: 960px;
+    }
+    #host-lobby h2, #join-lobby h2 {
       margin: 0 0 0.35rem;
       font-size: 1.05rem;
     }
-    #software-picker p {
-      margin: 0 0 0.85rem;
+    #host-lobby p, #join-lobby p {
+      margin: 0 0 0.65rem;
     }
-    #software-picker select {
-      min-width: 18rem;
+    #hostLobbyMembers {
+      margin: 0.5rem 0 0;
+      padding: 0;
+      list-style: none;
     }
+    #hostLobbyMembers li {
+      padding: 0.4rem 0.55rem;
+      border: 1px solid #2a303a;
+      border-radius: 6px;
+      background: #12161e;
+      margin-top: 0.35rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.92rem;
+    }
+    #hostLobbyMembers .member-status {
+      color: var(--muted);
+      font-family: ui-monospace, monospace;
+      font-size: 0.85em;
+    }
+    #hostLobbyMembers .member-status.connected {
+      color: var(--accent);
+    }
+    #hostLobbyMembers .kick-btn {
+      background: #2a303a;
+      color: var(--fg);
+      border: 1px solid #3a4250;
+      font-weight: 600;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.8rem;
+    }
+    #hostMeshGraph {
+      display: block;
+      width: min(100%, 320px);
+      height: 200px;
+      margin: 0.75rem 0 0.25rem;
+      background: #0e1218;
+      border: 1px solid #2a303a;
+      border-radius: 8px;
+    }
+    #hostMeshHint {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin: 0.25rem 0 0;
+    }
+    #hostStartGameBtn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    #copyJoinLinkStatus {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    #instructions-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: rgba(8, 10, 14, 0.72);
+    }
+    #instructions-modal[hidden] { display: none; }
+    #instructions-dialog {
+      width: min(36rem, 100%);
+      max-height: min(85vh, 40rem);
+      overflow: auto;
+      border: 1px solid #2a303a;
+      border-radius: 10px;
+      background: #151a22;
+      padding: 1.15rem 1.25rem 1.25rem;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+    }
+    #instructions-dialog h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.15rem;
+    }
+    #instructions-dialog h3 {
+      margin: 1rem 0 0.35rem;
+      font-size: 0.95rem;
+      color: var(--fg);
+    }
+    #instructions-dialog p,
+    #instructions-dialog li {
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+    #instructions-dialog ul {
+      margin: 0.25rem 0 0;
+      padding-left: 1.15rem;
+    }
+    #instructions-dialog li + li { margin-top: 0.35rem; }
+    #instructions-dialog .row { margin-top: 1.1rem; }
     #virtual-gamepad {
       position: absolute;
       inset: 0;
@@ -198,6 +351,42 @@
     #virtual-gamepad .pad-face .b { grid-area: b; }
     #virtual-gamepad .pad-face .x { grid-area: x; }
     #virtual-gamepad .pad-face .y { grid-area: y; }
+    #controls-panel {
+      border: 1px solid #2a303a;
+      background: #151a22;
+      padding: 1rem 1.1rem;
+      border-radius: 8px;
+      max-width: 960px;
+    }
+    #controls-panel h2 {
+      margin: 0 0 0.35rem;
+      font-size: 1.05rem;
+    }
+    #controls-panel p {
+      margin: 0 0 0.85rem;
+    }
+    #controls-bind-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+      gap: 0.45rem;
+      margin-bottom: 0.85rem;
+    }
+    #controls-bind-list button.bind-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      width: 100%;
+      background: #1a1f28;
+      color: var(--fg);
+      border: 1px solid #2a303a;
+      font-weight: 500;
+    }
+    #controls-bind-list button.bind-row.listening {
+      border-color: var(--accent);
+      color: #b8e0c8;
+    }
+    #controls-bind-list .bind-label { color: var(--muted); }
+    #controls-bind-list .bind-key { font-family: ui-monospace, monospace; }
     @media (max-width: 720px) {
       #canvas-wrap { min-height: 360px; }
       #virtual-gamepad .pad-dpad,
@@ -218,34 +407,102 @@
 </head>
 <body>
   <header>
-    <h1>MAMEHub Browser</h1>
-    <p>Self-host shell — Nostr lobby signaling + WebRTC. Offline SNES first.</p>
+    <h1>MAMEHub Online (SNES)</h1>
+    <p>Self-host shell — Nostr lobby signaling + WebRTC.</p>
   </header>
   <main>
     <div class="row">
       <button id="startOfflineBtn" type="button">Start offline</button>
       <button id="gamepadToggleBtn" type="button" class="secondary" aria-pressed="false" title="Toggle on-screen gamepad">Gamepad</button>
+      <button id="controlsBtn" type="button" class="secondary" title="Open MAME Input Settings">Controls</button>
+      <button id="instructionsBtn" type="button" class="secondary" title="How to play">Instructions</button>
       <span id="pubkey" style="color:var(--muted);font-size:0.85rem"></span>
     </div>
     <div class="row">
       <input id="userId" placeholder="user_id (optional)" size="24" />
-      <input id="game" placeholder="game" value="snes" size="12" />
       <button id="hostBtn" type="button" class="secondary">Host lobby</button>
-      <input id="roomId" placeholder="room id" size="20" />
-      <button id="joinBtn" type="button" class="secondary">Join</button>
     </div>
     <div id="software-picker" hidden>
-      <h2>Offline — Select SNES software</h2>
-      <p>Machine is always SNES (Discord unused). Candy downloads <code>snes.zip</code> and the cart from archive.org.</p>
+      <h2 id="softwarePickerTitle">Offline — Select SNES software</h2>
       <div class="row">
-        <select id="softwareSelect" aria-label="SNES software"></select>
-        <input id="softwareCustom" placeholder="or softlist shortname" size="16" />
+        <div id="software-ac">
+          <input id="softwareAcInput" type="text" autocomplete="off" spellcheck="false"
+            placeholder="Search SNES software…"
+            aria-label="SNES software"
+            aria-autocomplete="list"
+            aria-controls="softwareAcList"
+            role="combobox"
+            aria-expanded="false" />
+          <ul id="softwareAcList" role="listbox" hidden></ul>
+        </div>
         <button id="softwarePlayBtn" type="button">Play</button>
         <button id="softwareCancelBtn" type="button" class="secondary">Cancel</button>
       </div>
     </div>
+    <div id="host-lobby" hidden>
+      <h2>Host lobby</h2>
+      <p id="hostLobbyGame"></p>
+      <div class="row">
+        <button id="copyJoinLinkBtn" type="button">Copy join link</button>
+        <span id="copyJoinLinkStatus"></span>
+      </div>
+      <p id="hostLobbyWaiting" style="margin-top:0.75rem">Waiting for players to join…</p>
+      <ul id="hostLobbyMembers" hidden></ul>
+      <svg id="hostMeshGraph" hidden aria-label="WebRTC mesh status"></svg>
+      <p id="hostMeshHint"></p>
+      <div class="row" style="margin-top:0.85rem">
+        <button id="hostStartGameBtn" type="button" disabled title="Wait until the mesh is fully connected">Start game</button>
+      </div>
+    </div>
+    <div id="join-lobby" hidden>
+      <h2>Joining game</h2>
+      <p id="joinLobbyGame"></p>
+      <p id="joinLobbyState">Connecting to host…</p>
+    </div>
+    <div id="instructions-modal" hidden>
+      <div id="instructions-dialog" role="dialog" aria-modal="true" aria-labelledby="instructionsTitle">
+        <h2 id="instructionsTitle">How to play</h2>
+        <h3>Host a game</h3>
+        <ul>
+          <li>Click <strong>Host lobby</strong>, pick the SNES cart, then <strong>Play</strong>.</li>
+          <li>Use <strong>Copy join link</strong> and send that URL to players (up to 4 joiners).</li>
+          <li>Seats are join order: host is <strong>P1</strong>, first joiner <strong>P2</strong>, then P3…</li>
+          <li>Everyone uses the same <strong>P1</strong> keyboard / on-screen pad; MAMEHub maps that to your seat (P2, P3, …).</li>
+          <li>Wait for the mesh graph to show all <strong>green</strong> links, then <strong>Start game</strong>.</li>
+          <li><strong>Kick</strong> anyone with red links; later players shift down a seat.</li>
+        </ul>
+        <h3>Join a game</h3>
+        <ul>
+          <li>Open the host’s join link — the cart is already chosen.</li>
+          <li>Your browser meshes with the host and every earlier joiner.</li>
+          <li>Wait until the host starts the game.</li>
+        </ul>
+        <h3>Change inputs</h3>
+        <ul>
+          <li>After the emulator is running, click <strong>Controls</strong> (or press Tab) to open MAME <strong>Input Settings</strong>.</li>
+          <li>Before play, <strong>Controls</strong> opens a shell remap panel for sticky keyboard → pad bindings.</li>
+        </ul>
+        <h3>Gamepad button</h3>
+        <ul>
+          <li><strong>Gamepad</strong> shows or hides the on-screen SNES pad (touch / mouse).</li>
+          <li>On phones and tablets it starts visible by default; on desktop it starts hidden.</li>
+        </ul>
+        <div class="row">
+          <button id="instructionsCloseBtn" type="button" class="secondary">Close</button>
+        </div>
+      </div>
+    </div>
+    <div id="controls-panel" hidden>
+      <h2>Keyboard controls (shell)</h2>
+      <p>Emulator not running yet — remaps here drive sticky <code>force_input</code> after play starts. Once the game is up, <strong>Controls</strong> opens MAME Input Settings instead.</p>
+      <div id="controls-bind-list"></div>
+      <div class="row">
+        <button id="controlsResetBtn" type="button" class="secondary">Reset defaults</button>
+        <button id="controlsCloseBtn" type="button" class="secondary">Close</button>
+      </div>
+    </div>
     <div id="canvas-wrap">
-      <div id="canvas-placeholder">Start offline → pick SNES software → candy fetches ROMs → play.</div>
+      <div id="canvas-placeholder">Start offline → pick SNES software → play.</div>
       <canvas id="canvas" width="512" height="448" tabindex="1"></canvas>
       <div id="virtual-gamepad" hidden aria-hidden="true" aria-label="On-screen SNES gamepad">
         <div class="pad-cluster pad-shoulders">
@@ -276,14 +533,12 @@
     </div>
     <div id="log"></div>
   </main>
-  <footer>
-    <p>Relays: <code>config.js</code>. Artifacts: <code>dist/mamesneshub.js</code> + <code>.wasm</code>. Softlist defs: <code>hash/snes.xml</code>. Use <code>python3 serve.py</code> so candy can proxy system + cart zips from archive.org.</p>
-  </footer>
+  <footer></footer>
   <script src="config.js?v=html3"></script>
   <script src="vendor/nostr.bundle.js"></script>
-  <script src="nostr_lobby.js?v=mp6"></script>
-  <script src="webrtc_peer.js?v=mp6"></script>
-  <script src="virtual_gamepad.js?v=html3"></script>
-  <script src="app.js?v=mp6"></script>
+  <script src="nostr_lobby.js?v=mp35"></script>
+  <script src="webrtc_peer.js?v=mp35"></script>
+  <script src="virtual_gamepad.js?v=mp35"></script>
+  <script src="app.js?v=mp35"></script>
 </body>
 </html>

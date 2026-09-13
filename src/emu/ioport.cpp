@@ -2551,16 +2551,13 @@ void ioport_manager::frame_update()
   //LOG(INFO) << "AT TIME " << curMachineTime.seconds << "." << curMachineTime.attoseconds << endl;
 
   if(netCommon) {
-    // Calculate the time that the new inputs will take effect
+    // Shared netplay timeline (wall since epoch). Emulation is throttled toward it;
+    // seq_pressed on emscripten also reads this timeline so held inputs apply while
+    // catching up.
     int delayFromPing = max(50,min(600,50 + netCommon->getLargestPing()));
-    //attoseconds_t attosecondsToLead = 0;
-    //attosecondsToLead = ATTOSECONDS_PER_MILLISECOND*delayFromPing;
     auto futureInputTime = netCommon->getCurrentTime()/1000 + delayFromPing;
     auto sendTime = futureInputTime;
-
-    // If we were going to send inputs much before where we should be now, just send it at the expected current time
     int64_t curTime = curMachineTime.to_msec();
-    //sendTime = max(sendTime, curTime - 1000);
 
 		// Align on ~60Hz frame boundary (16ms)
 		sendTime = (sendTime - (sendTime % 16)) + 16;
@@ -2569,11 +2566,9 @@ void ioport_manager::frame_update()
 
 		if (sendTime < inputStartTime.to_msec()) {
 			VLOG(1) << "SEND TIME BEFORE START TIME";
-      // Inputs before the input start time are not valid.
     }
     else if (sendTime <= netCommon->getLastSendTime()) {
 		VLOG(1) << "SEND TIME BEFORE LAST SEND TIME: " << sendTime << " " << netCommon->getLastSendTime();
-      // This input would occur in the past or be a duplicate, ignore it.
     } else {
       VLOG(1) << "SENDING INPUTS AT TIME " << sendTime << " emu time: " << netCommon->getCurrentTime()/1000 << endl;
 	  VLOG(1) << "Last send time: " << netCommon->getLastSendTime() << endl;

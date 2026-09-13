@@ -114,6 +114,12 @@ def main() -> int:
 		default=Path(__file__).resolve().parent / ".candy-cache",
 		help="directory for cached candy downloads",
 	)
+	parser.add_argument(
+		"--open",
+		action=argparse.BooleanOptionalAction,
+		default=False,
+		help="open the default browser to the local URL",
+	)
 	args = parser.parse_args()
 	root = args.root.resolve()
 	cache = args.cache.resolve()
@@ -121,11 +127,17 @@ def main() -> int:
 	CandyHandler.cache_dir = cache
 	handler = partial(CandyHandler, directory=str(root))
 	server = http.server.ThreadingHTTPServer((args.bind, args.port), handler)
+	url = f"http://{args.bind}:{args.port}/"
 	print(
-		f"Serving {root} on http://{args.bind}:{args.port}/ "
+		f"Serving {root} on {url} "
 		f"(candy proxy at /candy-proxy, cache {cache})",
 		flush=True,
 	)
+	if args.open:
+		import threading
+		import webbrowser
+
+		threading.Timer(0.4, lambda: webbrowser.open(url)).start()
 	try:
 		server.serve_forever()
 	except KeyboardInterrupt:

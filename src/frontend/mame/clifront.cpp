@@ -367,7 +367,7 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
       string gameString = m_options.system_name();
       if (!m_options.software_name().empty())
         gameString += ";" + m_options.software_name();
-      createNetCommon(userId, privateKey, 0, "browser", 0, 50, gameString, false, 10);
+      createNetCommon(userId, privateKey, 0, "browser", 0, 50, gameString, m_options.fake_lag(), 10);
     }
 #else
     if (m_options.discord()) {

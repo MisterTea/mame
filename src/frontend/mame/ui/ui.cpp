@@ -19,6 +19,7 @@
 #include "mame.h"
 #include "ui/filemngr.h"
 #include "ui/info.h"
+#include "ui/inputopts.h"
 #include "ui/mainmenu.h"
 #include "ui/menu.h"
 #include "ui/quitmenu.h"
@@ -1404,6 +1405,29 @@ bool mame_ui_manager::show_menu(render_target &target)
 	m_ui_target = &target;
 	if (ui::menu::stack_empty(*this))
 		ui::menu::stack_push<ui::menu_main>(*this, *m_ui_target);
+	activate_menu();
+	return true;
+}
+
+
+//-------------------------------------------------
+//  show_input_settings - open Input Settings menu
+//-------------------------------------------------
+
+bool mame_ui_manager::show_input_settings()
+{
+	if (ui_callback_type::GENERAL != m_handler_callback_type &&
+		ui_callback_type::MENU != m_handler_callback_type)
+		return false;
+
+	m_ui_target = &current_ui_target();
+	if (!machine().paused() && options().menu_pause())
+	{
+		machine().pause();
+		m_paused_for_menu = true;
+	}
+	ui::menu::stack_reset(*this);
+	ui::menu::stack_push<ui::menu_input_options>(*this, *m_ui_target);
 	activate_menu();
 	return true;
 }
@@ -2922,3 +2946,17 @@ void ui_colors::refresh(const ui_options &options)
 	m_dipsw_color = options.dipsw_color();
 	m_slider_color = options.slider_color();
 }
+
+
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+
+extern "C" EMSCRIPTEN_KEEPALIVE int mamehub_browser_show_input_settings(void)
+{
+	ui_manager *const base = running_machine::emscripten_get_ui();
+	auto *const ui = dynamic_cast<mame_ui_manager *>(base);
+	if (!ui)
+		return 0;
+	return ui->show_input_settings() ? 1 : 0;
+}
+#endif

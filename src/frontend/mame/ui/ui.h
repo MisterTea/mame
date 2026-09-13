@@ -204,6 +204,7 @@ public:
 	bool show_profiler() const;
 	bool show_menu();
 	bool show_menu(render_target &target);
+	bool show_input_settings();
 	virtual bool is_menu_active() override;
 	bool can_paste();
 	void image_handler_ingame();

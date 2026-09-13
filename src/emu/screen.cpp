@@ -20,7 +20,9 @@
 #include "nanosvg.h"
 #include "png.h"
 
+#if !defined(__EMSCRIPTEN__)
 #include "FrameBudget.hpp"
+#endif
 
 #include <chrono>
 #include <cstdio>
@@ -1680,16 +1682,20 @@ TIMER_CALLBACK_MEMBER(screen_device::vblank_begin)
 	m_vblank_start_time = machine().time();
 	m_vblank_end_time = m_vblank_start_time + attotime(0, m_vblank_period);
 
+#if !defined(__EMSCRIPTEN__)
 	int64_t const wait0 = wga::frameWaitUs;
 	int64_t const cpu0 = wga::threadCpuUs();
 	auto const wall0 = std::chrono::steady_clock::now();
+#endif
 
 	// if this is the primary screen and we need to update now
 	if (m_is_primary_screen && !(m_video_attributes & VIDEO_UPDATE_AFTER_VBLANK))
 		machine().video().frame_update();
 
+#if !defined(__EMSCRIPTEN__)
 	int64_t const cpu1 = wga::threadCpuUs();
 	auto const wall1 = std::chrono::steady_clock::now();
+#endif
 
 	// call the screen specific callbacks
 	for (auto &item : m_callback_list)
@@ -1705,11 +1711,13 @@ TIMER_CALLBACK_MEMBER(screen_device::vblank_begin)
 	else
 		m_vblank_end_timer->adjust(time_until_vblank_end());
 
+#if !defined(__EMSCRIPTEN__)
 	int64_t const cpu2 = wga::threadCpuUs();
 	auto const wall2 = std::chrono::steady_clock::now();
 	int64_t const fuWall = std::chrono::duration_cast<std::chrono::microseconds>(wall1 - wall0).count();
 	int64_t const afterWall = std::chrono::duration_cast<std::chrono::microseconds>(wall2 - wall1).count();
 	wga::addVblankSplit(fuWall, cpu1 - cpu0, afterWall, cpu2 - cpu1, wga::frameWaitUs - wait0);
+#endif
 }
 
 
