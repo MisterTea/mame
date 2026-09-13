@@ -17,6 +17,23 @@
 
 namespace {
 
+#if defined(__EMSCRIPTEN__)
+// Browser defaults: avoid Alt/Option (history navigation with arrows). SNES-ish Z/X/A/S + Q/W shoulders.
+#define CORE_INPUT_P1_BUTTON1_SEQ input_seq(KEYCODE_Z, input_seq::or_code, MOUSECODE_BUTTON1_INDEXED(0), input_seq::or_code, GUNCODE_BUTTON1_INDEXED(0))
+#define CORE_INPUT_P1_BUTTON2_SEQ input_seq(KEYCODE_X, input_seq::or_code, MOUSECODE_BUTTON3_INDEXED(0), input_seq::or_code, GUNCODE_BUTTON2_INDEXED(0))
+#define CORE_INPUT_P1_BUTTON3_SEQ input_seq(KEYCODE_W, input_seq::or_code, MOUSECODE_BUTTON2_INDEXED(0))
+#define CORE_INPUT_P1_BUTTON4_SEQ input_seq(KEYCODE_A)
+#define CORE_INPUT_P1_BUTTON5_SEQ input_seq(KEYCODE_S)
+#define CORE_INPUT_P1_BUTTON6_SEQ input_seq(KEYCODE_Q)
+#else
+#define CORE_INPUT_P1_BUTTON1_SEQ input_seq(KEYCODE_LCONTROL, input_seq::or_code, MOUSECODE_BUTTON1_INDEXED(0), input_seq::or_code, GUNCODE_BUTTON1_INDEXED(0))
+#define CORE_INPUT_P1_BUTTON2_SEQ input_seq(KEYCODE_LALT, input_seq::or_code, MOUSECODE_BUTTON3_INDEXED(0), input_seq::or_code, GUNCODE_BUTTON2_INDEXED(0))
+#define CORE_INPUT_P1_BUTTON3_SEQ input_seq(KEYCODE_SPACE, input_seq::or_code, MOUSECODE_BUTTON2_INDEXED(0))
+#define CORE_INPUT_P1_BUTTON4_SEQ input_seq(KEYCODE_LSHIFT)
+#define CORE_INPUT_P1_BUTTON5_SEQ input_seq(KEYCODE_Z)
+#define CORE_INPUT_P1_BUTTON6_SEQ input_seq(KEYCODE_X)
+#endif
+
 #define CORE_INPUT_TYPES_P1 \
 		CORE_INPUT_TYPES_BEGIN(p1) \
 		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  JOYSTICK_UP,         N_p("input-name", "%p Up"),                  input_seq(KEYCODE_UP) ) \
@@ -31,12 +48,12 @@ namespace {
 		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  JOYSTICKLEFT_DOWN,   N_p("input-name", "%p Left Stick/Down"),     input_seq(KEYCODE_D) ) \
 		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  JOYSTICKLEFT_LEFT,   N_p("input-name", "%p Left Stick/Left"),     input_seq(KEYCODE_S) ) \
 		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  JOYSTICKLEFT_RIGHT,  N_p("input-name", "%p Left Stick/Right"),    input_seq(KEYCODE_F) ) \
-		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON1,             N_p("input-name", "%p Button 1"),            input_seq(KEYCODE_LCONTROL, input_seq::or_code, MOUSECODE_BUTTON1_INDEXED(0), input_seq::or_code, GUNCODE_BUTTON1_INDEXED(0)) ) \
-		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON2,             N_p("input-name", "%p Button 2"),            input_seq(KEYCODE_LALT, input_seq::or_code, MOUSECODE_BUTTON3_INDEXED(0), input_seq::or_code, GUNCODE_BUTTON2_INDEXED(0)) ) \
-		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON3,             N_p("input-name", "%p Button 3"),            input_seq(KEYCODE_SPACE, input_seq::or_code, MOUSECODE_BUTTON2_INDEXED(0)) ) \
-		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON4,             N_p("input-name", "%p Button 4"),            input_seq(KEYCODE_LSHIFT) ) \
-		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON5,             N_p("input-name", "%p Button 5"),            input_seq(KEYCODE_Z) ) \
-		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON6,             N_p("input-name", "%p Button 6"),            input_seq(KEYCODE_X) ) \
+		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON1,             N_p("input-name", "%p Button 1"),            CORE_INPUT_P1_BUTTON1_SEQ ) \
+		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON2,             N_p("input-name", "%p Button 2"),            CORE_INPUT_P1_BUTTON2_SEQ ) \
+		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON3,             N_p("input-name", "%p Button 3"),            CORE_INPUT_P1_BUTTON3_SEQ ) \
+		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON4,             N_p("input-name", "%p Button 4"),            CORE_INPUT_P1_BUTTON4_SEQ ) \
+		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON5,             N_p("input-name", "%p Button 5"),            CORE_INPUT_P1_BUTTON5_SEQ ) \
+		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON6,             N_p("input-name", "%p Button 6"),            CORE_INPUT_P1_BUTTON6_SEQ ) \
 		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON7,             N_p("input-name", "%p Button 7"),            input_seq(KEYCODE_C) ) \
 		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON8,             N_p("input-name", "%p Button 8"),            input_seq(KEYCODE_V) ) \
 		INPUT_PORT_DIGITAL_TYPE(  1, PLAYER1,  BUTTON9,             N_p("input-name", "%p Button 9"),            input_seq(KEYCODE_B) ) \

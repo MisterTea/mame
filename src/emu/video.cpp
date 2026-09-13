@@ -287,11 +287,19 @@ void video_manager::frame_update(bool from_debugger)
 		static attotime lastEmu = attotime::zero;
 		auto const nowWall = std::chrono::steady_clock::now();
 		attotime const nowEmu = machine().time();
+#if defined(__EMSCRIPTEN__)
+		int64_t const waitUs = 0;
+		int64_t const netplayUs = 0;
+		int64_t const netplayWaitUs = 0;
+		std::string const timerDump;
+		std::string const vblankSplit;
+#else
 		int64_t const waitUs = wga::takeFrameWaitUs();
 		int64_t const netplayUs = wga::takeFrameNetplayUs();
 		int64_t const netplayWaitUs = wga::takeFrameNetplayWaitUs();
 		std::string const timerDump = wga::takeFrameTimerDump();
 		std::string const vblankSplit = wga::takeVblankSplitDump();
+#endif
 		int64_t const wallUs = std::chrono::duration_cast<std::chrono::microseconds>(nowWall - lastWall).count();
 		int64_t const emuUs = (lastEmu == attotime::zero)
 			? 0
@@ -328,7 +336,9 @@ void video_manager::frame_update(bool from_debugger)
 					profile << " [FRAME_PROFILE_MAME]\n" << mameProfile;
 			}
 			LOG(INFO) << profile.str();
+#if !defined(__EMSCRIPTEN__)
 			el::Loggers::flushAll();
+#endif
 		}
 		else
 		{
@@ -354,12 +364,7 @@ void video_manager::frame_update(bool from_debugger)
 	// update inputs and draw the user interface
 	t0 = nowUs();
 	machine().osd().input_update(true);
-#if defined(__EMSCRIPTEN__)
-	// In-emulator UI draw currently hangs under Asyncify/WebGL. Skip for now so
-	// gameplay frames can present; shell UI covers selection.
-#else
 	anything_changed = emulator_info::draw_user_interface(machine()) || anything_changed;
-#endif
 
 	// let plugins draw over the UI
 	anything_changed = emulator_info::frame_hook() || anything_changed;

@@ -83,15 +83,22 @@
       return event;
     }
 
-    async host({ game, userId, software }) {
+    async host({ game, userId, software, started }) {
       this.roomId = randomRoomId();
+      return this.publishAnnounce({ game, userId, software, started: !!started });
+    }
+
+    async publishAnnounce({ game, userId, software, started }) {
+      if (!this.roomId)
+        throw new Error("no room");
       const content = JSON.stringify({
         type: "announce",
         roomId: this.roomId,
         game: game || "snes",
         software: software || "",
         userId: userId || "",
-        pubkey: this.pubkey
+        pubkey: this.pubkey,
+        started: !!started
       });
       const event = await this.publish({
         kind: KIND_APP,
@@ -104,6 +111,7 @@
           ["game", game || "snes"],
           ["soft", software || ""],
           ["uid", userId || ""],
+          ["started", started ? "1" : "0"],
           ["expiration", String(Math.floor(Date.now() / 1000) + 3600)]
         ],
         content
@@ -113,6 +121,10 @@
       return { roomId: this.roomId, event };
     }
 
+    async markStarted({ game, userId, software }) {
+      return this.publishAnnounce({ game, userId, software, started: true });
+    }
+
     async join(roomId) {
       this.roomId = roomId;
       this._subscribeRoom(roomId);
@@ -120,9 +132,10 @@
       return { roomId };
     }
 
-    async hello({ software } = {}) {
+    async hello({ software, userId } = {}) {
       return this.signal("hello", {
         software: software || "",
+        userId: userId || "",
         pubkey: this.pubkey,
         ts: Date.now()
       });

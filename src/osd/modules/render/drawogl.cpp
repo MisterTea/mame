@@ -44,6 +44,11 @@ typedef uint64_t HashT;
 #include "emuopts.h"
 #include "render.h"
 
+#if defined(__EMSCRIPTEN__)
+#include "rendersw.hxx"
+#include <cstring>
+#endif
+
 
 #if !defined(OSD_WINDOWS) && !defined(OSD_MAC)
 
@@ -378,6 +383,11 @@ public:
 		, m_last_vofs(0.0f)
 		, m_surf_w(0)
 		, m_surf_h(0)
+#if defined(__EMSCRIPTEN__)
+		, m_present_w(0)
+		, m_present_h(0)
+		, m_present_cap(0)
+#endif
 	{
 		for (int i=0; i < HASH_SIZE + OVERFLOW_SIZE; i++)
 			m_texhash[i] = nullptr;
@@ -503,6 +513,14 @@ private:
 	int32_t         m_surf_w;
 	int32_t         m_surf_h;
 	GLfloat         m_texVerticex[8];
+
+#if defined(__EMSCRIPTEN__)
+	// Soft-composite screen + UI, then one WebGL2 upload (FF GL hangs under Asyncify).
+	std::unique_ptr<uint32_t[]> m_present_buf;
+	int             m_present_w;
+	int             m_present_h;
+	size_t          m_present_cap;
+#endif
 
 #if defined(USE_DISPATCH_GL)
 	std::unique_ptr<osd_gl_dispatch> gl_dispatch; // name is magic, can't be changed
@@ -1447,32 +1465,25 @@ int renderer_ogl::draw(const int update)
 
 	window().m_primlist->acquire_lock();
 #if defined(__EMSCRIPTEN__)
-	// Legacy fixed-function GL prims hang under Asyncify. Upload the largest
-	// RGB32/ARGB32 screen quad via WebGL2 texture blit instead.
+	// Soft-composite all prims (screen + UI), then one WebGL2 blit. Fixed-function
+	// GL prim drawing hangs under Asyncify+LEGACY_GL.
 	{
-		render_primitive const *best = nullptr;
-		u32 best_area = 0;
-		for (render_primitive const &prim : *window().m_primlist)
+		int const w = m_width;
+		int const h = m_height;
+		if (w > 0 && h > 0)
 		{
-			if (prim.type != render_primitive::QUAD || prim.texture.base == nullptr)
-				continue;
-			u32 const fmt = PRIMFLAG_GET_TEXFORMAT(prim.flags);
-			if (fmt != TEXFORMAT_RGB32 && fmt != TEXFORMAT_ARGB32)
-				continue;
-			u32 const area = prim.texture.width * prim.texture.height;
-			if (area > best_area)
+			size_t const need = size_t(w) * size_t(h);
+			if (need > m_present_cap)
 			{
-				best_area = area;
-				best = &prim;
+				m_present_cap = need * 2;
+				m_present_buf = std::make_unique<uint32_t[]>(m_present_cap);
 			}
-		}
-		if (best != nullptr)
-		{
-			auto const *const src = reinterpret_cast<u32 const *>(best->texture.base);
-			int const w = int(best->texture.width);
-			int const h = int(best->texture.height);
-			int const pitch = int(best->texture.rowpixels);
-			mamehub_webgl_blit(w, h, pitch, reinterpret_cast<uintptr_t>(src));
+			m_present_w = w;
+			m_present_h = h;
+			std::memset(m_present_buf.get(), 0, need * sizeof(uint32_t));
+			software_renderer<uint32_t, 0, 0, 0, 16, 8, 0>::draw_primitives(
+					*window().m_primlist, m_present_buf.get(), w, h, w);
+			mamehub_webgl_blit(w, h, w, reinterpret_cast<uintptr_t>(m_present_buf.get()));
 		}
 	}
 	window().m_primlist->release_lock();

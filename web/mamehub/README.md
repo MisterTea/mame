@@ -35,11 +35,27 @@ Copy artifacts and serve with the candy proxy:
 
 ```bash
 cp mamesneshub.js mamesneshub.wasm web/mamehub/dist/
-cd web/mamehub && python3 serve.py --port 8765
+cd web/mamehub && python3 serve.py --port 8765 --open
 # open http://127.0.0.1:8765/
 ```
 
 `serve.py` serves the static shell and `/candy-proxy?url=…` (archive.org hosts only). Browser candy mode uses Asyncify `fetch` through that proxy into the Emscripten `/roms` path.
+
+## Windows / macOS packages
+
+Double-clickable launcher + shell/wasm/hash (needs Go):
+
+```bash
+./web/mamehub/package_windows.sh
+# → web/mamehub/release/MAMEHubOnline-SNES-windows.zip
+
+./web/mamehub/package_macos.sh
+# → web/mamehub/release/MAMEHubOnline-SNES-macos.zip  (universal arm64+amd64)
+```
+
+Recipients unzip and run `MAMEHubOnline.exe` (Windows) or `MAMEHubOnline` (macOS). That starts the local server + candy proxy and opens the default browser. Keep the process running while playing.
+
+Local Python equivalent: `python3 serve.py --open`.
 
 **Why builds feel slow:** every link runs Binaryen Asyncify over a ~30–40MB wasm (often 2–10+ minutes at `-O2`). Avoid `REGENIE=1`, don’t `rm mamesneshub.wasm`, don’t change `OPTIMIZE=` between builds, and use `./web/mamehub/rebuild_fast.sh`.
 
@@ -53,16 +69,20 @@ cd web/mamehub && python3 serve.py --port 8765
 
 There is **no central lobby server**. Discovery and WebRTC signaling use public (or self-hosted) **Nostr relays** in `config.js`.
 
-1. **Host lobby** → pick cart → **Play** — publishes a Nostr announce (kind 30078) and waits for joiner.
-2. Share the **room id** out-of-band (chat, URL, etc.).
-3. **Join** with that room id → same cart → **Play** — publishes a Nostr `hello`; host replies with a WebRTC offer over Nostr.
-4. SDP/ICE continue on Nostr (kind **30078** addressable events + live subscribe/`querySync` poll); **inputs** stay on the WebRTC DataChannel.
+1. **Host lobby** → pick cart → **Play** — publishes a Nostr announce and shows a lobby with **Copy join link** and a **mesh graph**.
+2. Share the join URL (`?join=1&room=…&soft=…`). Joiners get seats in order (host P1, first joiner P2, …). Kick shifts later seats down.
+3. Every peer builds a **full WebRTC mesh** (not host-star). The host can **Start game** only when every edge is green; red edges mean kick that peer. After start, new joiners are rejected.
+4. SDP/ICE continue on Nostr (kind **30078**); **inputs** stay on the WebRTC DataChannels (each peer broadcasts puts to all others).
 
 Room filter on relays is `#r` only (room id). The `app` tag is checked in the browser — combining `#app`+`#r` returns empty on some public relays (damus/nos.lol).
 
-WGA (native UDP) is not used in the browser. Optional TURN in `iceServers` helps hard NATs; STUN alone is often enough on the same LAN.
+WGA (native UDP) is not used in the browser. Lockstep timing is reimplemented over the WebRTC DataChannel: shared start barrier, continuous host clock broadcast + RTT ping/pong (guest slews toward host), and `-throttle` so emulation waits on that clock via Asyncify `emscripten_sleep`. Optional TURN in `iceServers` helps hard NATs; STUN alone is often enough on the same LAN.
+
+Simulate latency in the browser (native `-fake_lag` only affects WGA): append `?fakelag=1` or `?lag=150&lagjitter=40` (outbound DataChannel delay; both peers ⇒ ~2× RTT). Optional `?lagdrop=0.01` drops non-critical puts only (start barriers / clock sync are never dropped). Also passes `-fake_lag` for a small local clock skew.
 
 Offline remains **Start offline** (`-nomamehub`).
+
+Mute for automated tests: append `?mute=1` (passes `-sound none`) or `?volume=-96`.
 
 ## ROM loading (candy)
 
@@ -74,3 +94,12 @@ With `-candy` (enabled by the shell), missing machine/softlist zips are fetched 
 Enter a softlist shortname in the **cart** field (from `hash/snes.xml`). The shell loads that XML into the Emscripten FS, passes `-cart <shortname>`, and candy downloads both the system zip and the chosen software zip.
 
 Pure static hosting cannot reach archive.org from the browser (CORS); run `serve.py` or point `candyProxyBase` at another same-origin proxy you control.
+
+## On-screen gamepad & keyboard
+
+- **Instructions** opens a short how-to (host / join / inputs / gamepad).
+- **Mobile** (UA / coarse pointer + no hover / iPadOS touch Mac): the on-screen SNES pad is shown by default. Desktop stays hidden until **Gamepad**.
+- **Controls** opens MAME **Input Settings** once the emulator is running (same as Tab → Input Settings). Before play, it falls back to a shell remap panel (`force_input` / `localStorage`).
+- Software picker loads every title from `hash/snes.xml` into a prefix-search autocomplete.
+- Shell defaults (pre-play force_input) and browser MAME defaults: arrows = D-pad, **Z/X/A/S = B/A/Y/X**, Q/W = L/R (avoids Alt/Option, which triggers browser back with arrows). Start/Select remain `1`/`5` in MAME; shell also maps Enter / Left Shift.
+- **In-emulator UI** (Tab menu, FPS, etc.) is soft-composited each frame and presented via WebGL2 (fixed-function GL hangs under Asyncify). Startup info / file-manager screens remain skipped.

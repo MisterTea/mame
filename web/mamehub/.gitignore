@@ -5,6 +5,13 @@ dist/*
 # Candy proxy ROM downloads (serve.py cache)
 .candy-cache/
 
+# Windows package output
+release/
+
+# Local Go launcher binary
+launcher/mamehub-launcher
+launcher/MAMEHubOnline.exe
+
 # npm
 node_modules/
 package-lock.json
