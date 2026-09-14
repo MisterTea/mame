@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
 			{
 				cfg_path.resize(separator + 1);
 				cfg_path.append(L"cfg");
-				options.set_default_value(OPTION_CFG_DIRECTORY, utf8_from_wstring(cfg_path));
+				options.set_default_value(OPTION_CFG_DIRECTORY, osd::text::from_wstring(cfg_path));
 			}
 		}
 		result = emulator_info::start_frontend(options, osd, args);
