@@ -191,6 +191,12 @@ public class MAME extends SDLActivity {
 			return;
 		}
 		File cfg = new File(cfgDir, "snes.cfg");
+		// MAME stores the user's per-system input mappings in this same file.
+		// Only seed the preferred view on first launch; recreating it on every
+		// activity start discards those mappings before MAME can load them.
+		if (cfg.exists()) {
+			return;
+		}
 		try (FileWriter fw = new FileWriter(cfg)) {
 			fw.write("<?xml version=\"1.0\"?>\n");
 			fw.write("<mameconfig version=\"10\">\n");

@@ -245,6 +245,25 @@ int main(int argc, char *argv[])
 			FreeConsole();
 		}
 		osd.register_options();
+
+		// A relative cfg directory follows the launcher's working directory.  In
+		// particular, Explorer shortcuts and Discord can supply a different one.
+		// Anchor the portable configuration beside the MAMEHub executable;
+		// command-line and INI overrides still take precedence.
+		wchar_t executable_path[32768];
+		DWORD const executable_path_length = GetModuleFileNameW(
+				nullptr, executable_path, std::size(executable_path));
+		if (executable_path_length && (executable_path_length < std::size(executable_path)))
+		{
+			std::wstring cfg_path(executable_path, executable_path_length);
+			std::wstring::size_type const separator = cfg_path.find_last_of(L"\\/");
+			if (separator != std::wstring::npos)
+			{
+				cfg_path.resize(separator + 1);
+				cfg_path.append(L"cfg");
+				options.set_default_value(OPTION_CFG_DIRECTORY, utf8_from_wstring(cfg_path));
+			}
+		}
 		result = emulator_info::start_frontend(options, osd, args);
 		if (false && !is_console)
 			osd_output::pop(&winerror);

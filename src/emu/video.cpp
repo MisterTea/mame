@@ -54,7 +54,7 @@
 //  GLOBAL VARIABLES
 //**************************************************************************
 
-// MAMEHub: skip OSD blit when throttle did not sleep (at/behind netplay clock)
+// MAMEHub: skip OSD blit when behind netplay clock by >=1ms
 bool SKIP_OSD = false;
 
 // frameskipping tables
@@ -787,9 +787,15 @@ bool video_manager::finish_screen_updates()
 
 void video_manager::update_throttle(attotime emutime)
 {
-	// MAMEHub: sync emulation to netplay / WGA global clock instead of stock OSD ticks
-	bool printed = false;
-	bool slept = false;
+	// MAMEHub: sync emulation to netplay / WGA global clock instead of stock OSD ticks.
+	// Target a one-frame lead over shared now so a Present hitch burns slack
+	// instead of immediately putting us behind. Skip OSD when behind by >=1ms.
+	static int s_renderSkips = 0;
+	static auto s_statsWindowStart = std::chrono::steady_clock::now();
+
+	attotime frameLead = attotime::from_msec(16);
+	if (screen_device *const screen = screen_device_enumerator(machine().root_device()).first())
+		frameLead = screen->frame_period();
 
 	while (true)
 	{
@@ -806,42 +812,64 @@ void video_manager::update_throttle(attotime emutime)
 		if (emutime != attotime::zero)
 			LOG_EVERY_N(300, INFO) << "Time difference: " << expectedEmulationTime.to_msec() << " vs " << emutime.to_msec();
 
-		if (expectedEmulationTime < emutime)
+		// Too far ahead of (now + 1 frame): sleep until we're only one frame ahead.
+		attotime const targetLead = expectedEmulationTime + frameLead;
+		if (emutime > targetLead)
 		{
 			if (SKIP_OSD)
 			{
 				SKIP_OSD = false;
-				LOG(INFO) << "We are caught up " << ((emutime - expectedEmulationTime).attoseconds() / ATTOSECONDS_PER_MILLISECOND) << "ms" << std::endl;
+				LOG(INFO) << "We are caught up "
+					<< ((emutime - expectedEmulationTime).attoseconds() / ATTOSECONDS_PER_MILLISECOND)
+					<< "ms (target lead 1 frame)" << std::endl;
 			}
-			if (!printed)
-				printed = true;
-
-			// Sleep 1ms and check again
-			slept = true;
 			mamehub_osd_sleep(osd_ticks_per_second() / 1000);
+			continue;
+		}
+
+		// Behind shared now by >=1ms: skip Present so catch-up is not display-capped.
+		int msBehind = 0;
+		if (expectedEmulationTime > emutime)
+		{
+			attotime const diffTime = expectedEmulationTime - emutime;
+			msBehind = int(diffTime.attoseconds() / ATTOSECONDS_PER_MILLISECOND)
+				+ diffTime.seconds() * 1000;
+		}
+
+		if (msBehind >= 1 && emutime.seconds() > 0)
+		{
+			SKIP_OSD = true;
+			++s_renderSkips;
+			if (msBehind > 100)
+			{
+				static int lastSecondBehind = 0;
+				if (lastSecondBehind < emutime.seconds())
+				{
+					LOG(INFO) << "We are behind " << msBehind << "ms.  Skipping video." << std::endl;
+					lastSecondBehind = emutime.seconds();
+				}
+			}
 		}
 		else
 		{
-			// Skip OSD only if we never slept this call (already at/behind).
-			// After a real throttle sleep we exit here too — still present.
-			attotime diffTime = expectedEmulationTime - emutime;
-			int msBehind = (diffTime.attoseconds() / ATTOSECONDS_PER_MILLISECOND) + diffTime.seconds() * 1000;
-
-			if (!slept && emutime.seconds() > 0)
-			{
-				SKIP_OSD = true;
-				if (msBehind > 100)
-				{
-					static int lastSecondBehind = 0;
-					if (lastSecondBehind < emutime.seconds())
-					{
-						LOG(INFO) << "We are behind " << msBehind << "ms.  Skipping video." << std::endl;
-						lastSecondBehind = emutime.seconds();
-					}
-				}
-			}
-			return;
+			SKIP_OSD = false;
 		}
+
+		auto const now = std::chrono::steady_clock::now();
+		auto const elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+				now - s_statsWindowStart).count();
+		if (elapsedMs >= 1000)
+		{
+			LOG(INFO) << "[PACE_STATS] window_ms=" << elapsedMs
+				<< " render_skips=" << s_renderSkips
+				<< " lead_target_ms="
+				<< (frameLead.attoseconds() / ATTOSECONDS_PER_MILLISECOND
+					+ frameLead.seconds() * 1000)
+				<< " behind_ms=" << msBehind;
+			s_renderSkips = 0;
+			s_statsWindowStart = now;
+		}
+		return;
 	}
 }
 
