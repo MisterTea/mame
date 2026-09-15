@@ -34,7 +34,7 @@ class ChatLog {
 std::list<ChatLog> chatLogs;
 std::vector<char> chatString;
 int chatEnabled = false;
-int statsVisible = true;
+int statsVisible = false;
 int chatCounter = 0;
 std::map<std::string, std::string> lastChatFromUserId;
 std::map<std::string, int> userIdColorMap;
