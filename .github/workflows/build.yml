@@ -1,5 +1,10 @@
 name: Build
 
+# Object cache is mame/build (generated Makefiles + .o). REGENIE only re-runs
+# GENie; turn it on when makefile/scripts/genie/this workflow hash differs from
+# build/.genie-input-hash. Ordinary .cpp/.h edits keep REGENIE=0 so make does
+# not rewrite $(MAKEFILE) and treat every object as stale.
+
 on:
     workflow_dispatch:
     push:
@@ -13,7 +18,7 @@ jobs:
 
         steps:
             - name: Update OS
-              run: sudo apt update -y && sudo apt-get install -y git build-essential python3 libsdl2-dev libsdl2-ttf-dev libfontconfig-dev libpulse-dev qt6-base-dev qt6-base-dev-tools p7zip-full libsodium-dev
+              run: sudo apt update -y && sudo apt-get install -y git build-essential python3 libsdl2-dev libsdl2-ttf-dev libfontconfig-dev libpulse-dev qt6-base-dev qt6-base-dev-tools p7zip-full libsodium-dev ccache
 
             - uses: actions/checkout@v4
               with:
@@ -23,19 +28,58 @@ jobs:
             - name: Cache compiler output
               uses: hendrikmuhs/ccache-action@v1.2
               with:
-                  key: ${{ github.job }}
-                  max-size: 1G
+                  key: ${{ github.job }}-${{ runner.os }}
+                  restore-keys: ${{ github.job }}-${{ runner.os }}
+                  max-size: 4G
                   create-symlink: true
+                  verbose: 1
+
+            - name: Restore object cache
+              id: obj-cache
+              uses: actions/cache/restore@v4
+              with:
+                  path: mame/build
+                  key: mamehub-obj-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
+                  restore-keys: |
+                      mamehub-obj-${{ runner.os }}-${{ github.job }}-
+
+            - name: Restore source mtimes
+              if: steps.obj-cache.outputs.cache-matched-key != ''
+              working-directory: mame
+              run: python3 scripts/mamehub/ci_restore_mtimes.py
 
             - name: make
-              run: pushd mame && make -j4 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.so . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
+              env:
+                  OVERRIDE_CC: ccache gcc
+                  OVERRIDE_CXX: ccache g++
+                  GENIE_INPUT_HASH: ${{ hashFiles('mame/makefile', 'mame/scripts/**', 'mame/3rdparty/genie/src/**', 'mame/.github/workflows/build.yml') }}
+              run: |
+                  set -euo pipefail
+                  cd mame
+                  extra=($(bash scripts/mamehub/ci_regenie_args.sh))
+                  make -j4 "${extra[@]}"
+                  bash scripts/mamehub/ci_regenie_args.sh --stamp
+                  cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.so .
+
+            - name: Save object cache
+              if: always() && !cancelled()
+              uses: actions/cache/save@v4
+              with:
+                  path: mame/build
+                  key: ${{ steps.obj-cache.outputs.cache-primary-key }}
+
+            - name: Stage artifact
+              run: |
+                  set -euo pipefail
+                  cd mame
+                  rm -Rf build .git src 3rdparty
+                  ./mamehub -cc
+                  mv mame.ini mame.ini.sample
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
               with:
-                  # Artifact name
                   name: mamehub_ubuntu_beta
-                  # A file, directory or wildcard pattern that describes what to upload
                   path: mame/*
 
     build_mac:
@@ -43,7 +87,7 @@ jobs:
 
         steps:
             - name: Update OS
-              run: brew install sdl3 sdl3_ttf openssl libsodium
+              run: brew install sdl3 sdl3_ttf openssl libsodium ccache
 
             - uses: actions/checkout@v4
               with:
@@ -53,19 +97,58 @@ jobs:
             - name: Cache compiler output
               uses: hendrikmuhs/ccache-action@v1.2
               with:
-                  key: ${{ github.job }}
-                  max-size: 1G
+                  key: ${{ github.job }}-${{ runner.os }}
+                  restore-keys: ${{ github.job }}-${{ runner.os }}
+                  max-size: 4G
                   create-symlink: true
+                  verbose: 1
+
+            - name: Restore object cache
+              id: obj-cache
+              uses: actions/cache/restore@v4
+              with:
+                  path: mame/build
+                  key: mamehub-obj-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
+                  restore-keys: |
+                      mamehub-obj-${{ runner.os }}-${{ github.job }}-
+
+            - name: Restore source mtimes
+              if: steps.obj-cache.outputs.cache-matched-key != ''
+              working-directory: mame
+              run: python3 scripts/mamehub/ci_restore_mtimes.py
 
             - name: make mame
-              run: pushd mame && make VERBOSE=1 -j4 && cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.dylib . && rm -Rf build .git src 3rdparty && ./mamehub -cc && mv mame.ini mame.ini.sample && popd
+              env:
+                  OVERRIDE_CC: ccache clang
+                  OVERRIDE_CXX: ccache clang++
+                  GENIE_INPUT_HASH: ${{ hashFiles('mame/makefile', 'mame/scripts/**', 'mame/3rdparty/genie/src/**', 'mame/.github/workflows/build.yml') }}
+              run: |
+                  set -euo pipefail
+                  cd mame
+                  extra=($(bash scripts/mamehub/ci_regenie_args.sh))
+                  make VERBOSE=1 -j4 "${extra[@]}"
+                  bash scripts/mamehub/ci_regenie_args.sh --stamp
+                  cp 3rdparty/discord_social_sdk/lib/release/libdiscord_partner_sdk.dylib .
+
+            - name: Save object cache
+              if: always() && !cancelled()
+              uses: actions/cache/save@v4
+              with:
+                  path: mame/build
+                  key: ${{ steps.obj-cache.outputs.cache-primary-key }}
+
+            - name: Stage artifact
+              run: |
+                  set -euo pipefail
+                  cd mame
+                  rm -Rf build .git src 3rdparty
+                  ./mamehub -cc
+                  mv mame.ini mame.ini.sample
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
               with:
-                  # Artifact name
                   name: mamehub_mac_beta
-                  # A file, directory or wildcard pattern that describes what to upload
                   path: mame/*
 
     build_windows:
@@ -82,34 +165,74 @@ jobs:
                   repository: jedisct1/libsodium
                   ref: stable
                   path: "libsodium"
-            
+
             - name: Install OpenSSL Full
               run: choco install openssl
 
             - uses: msys2/setup-msys2@v2
               with:
                   update: true
+
             - name: Cache compiler output
               uses: hendrikmuhs/ccache-action@v1.2
               with:
-                  key: ${{ github.job }}
-                  max-size: 1G
+                  key: ${{ github.job }}-${{ runner.os }}
+                  restore-keys: ${{ github.job }}-${{ runner.os }}
+                  max-size: 4G
                   create-symlink: false
-            - shell: msys2 {0}
+                  verbose: 1
+
+            - name: Restore object cache
+              id: obj-cache
+              uses: actions/cache/restore@v4
+              with:
+                  path: mame/build
+                  key: mamehub-obj-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
+                  restore-keys: |
+                      mamehub-obj-${{ runner.os }}-${{ github.job }}-
+
+            - name: Restore source mtimes
+              if: steps.obj-cache.outputs.cache-matched-key != ''
+              working-directory: mame
+              run: python scripts/mamehub/ci_restore_mtimes.py
+
+            - name: Build
+              shell: msys2 {0}
+              env:
+                  GENIE_INPUT_HASH: ${{ hashFiles('mame/makefile', 'mame/scripts/**', 'mame/3rdparty/genie/src/**', 'mame/.github/workflows/build.yml') }}
               run: |
                   pacman -Syu --noconfirm make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-ccache
-                  #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-libs-9.3.0-2-any.pkg.tar.xz
-                  #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
-                  #pacman -U --noconfirm /tmp/*.tar.xz
+                  if [[ -n "${CCACHE_DIR:-}" ]]; then
+                    export CCACHE_DIR="$(cygpath -u "$CCACHE_DIR")"
+                  fi
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 OVERRIDE_CC='ccache gcc' OVERRIDE_CXX='ccache g++' make -j4 VERBOSE=1 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
+                  pushd mame
+                  extra=($(bash scripts/mamehub/ci_regenie_args.sh))
+                  MINGW64=/mingw64 OVERRIDE_CC='ccache gcc' OVERRIDE_CXX='ccache g++' make -j4 VERBOSE=1 "${extra[@]}"
+                  bash scripts/mamehub/ci_regenie_args.sh --stamp
+                  cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll .
+                  popd
+
+            - name: Save object cache
+              if: always() && !cancelled()
+              uses: actions/cache/save@v4
+              with:
+                  path: mame/build
+                  key: ${{ steps.obj-cache.outputs.cache-primary-key }}
+
+            - name: Stage artifact
+              shell: msys2 {0}
+              run: |
+                  pushd mame
+                  rm -Rf build .git src 3rdparty
+                  ./mamehub.exe -cc
+                  mv mame.ini mame.ini.sample
+                  popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
               with:
-                  # Artifact name
                   name: mamehub_windows_gcc_beta
-                  # A file, directory or wildcard pattern that describes what to upload
                   path: mame/*
 
     build_windows_msvc:
@@ -140,25 +263,63 @@ jobs:
             - name: Cache compiler output
               uses: hendrikmuhs/ccache-action@v1.2
               with:
-                  key: ${{ github.job }}
-                  max-size: 1G
+                  key: ${{ github.job }}-${{ runner.os }}
+                  restore-keys: ${{ github.job }}-${{ runner.os }}
+                  max-size: 4G
                   create-symlink: false
+                  verbose: 1
 
-            - shell: msys2 {0}
+            - name: Restore object cache
+              id: obj-cache
+              uses: actions/cache/restore@v4
+              with:
+                  path: mame/build
+                  key: mamehub-obj-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
+                  restore-keys: |
+                      mamehub-obj-${{ runner.os }}-${{ github.job }}-
+
+            - name: Restore source mtimes
+              if: steps.obj-cache.outputs.cache-matched-key != ''
+              working-directory: mame
+              run: python scripts/mamehub/ci_restore_mtimes.py
+
+            - name: Build
+              shell: msys2 {0}
+              env:
+                  GENIE_INPUT_HASH: ${{ hashFiles('mame/makefile', 'mame/scripts/**', 'mame/3rdparty/genie/src/**', 'mame/.github/workflows/build.yml') }}
               run: |
                   pacman -Syu --noconfirm make mingw-w64-x86_64-python mingw-w64-x86_64-qt5 wget mingw-w64-x86_64-gcc mingw-w64-x86_64-ccache
-                  #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-libs-9.3.0-2-any.pkg.tar.xz
-                  #wget -P /tmp  http://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-gcc-9.3.0-2-any.pkg.tar.xz
-                  #pacman -U --noconfirm /tmp/*.tar.xz
+                  if [[ -n "${CCACHE_DIR:-}" ]]; then
+                    export CCACHE_DIR="$(cygpath -u "$CCACHE_DIR")"
+                  fi
                   pushd libsodium && ./configure --enable-static --disable-shared && make && make install && popd
-                  pushd mame && MINGW64=/mingw64 OVERRIDE_CC='ccache gcc' OVERRIDE_CXX='ccache g++' make -j4 MSBUILD=1 VERBOSE=1 && cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll . && rm -Rf build .git src 3rdparty && ./mamehub.exe -cc && mv mame.ini mame.ini.sample && popd
+                  pushd mame
+                  extra=($(bash scripts/mamehub/ci_regenie_args.sh))
+                  MINGW64=/mingw64 OVERRIDE_CC='ccache gcc' OVERRIDE_CXX='ccache g++' make -j4 MSBUILD=1 VERBOSE=1 "${extra[@]}"
+                  bash scripts/mamehub/ci_regenie_args.sh --stamp
+                  cp 3rdparty/discord_social_sdk/bin/release/discord_partner_sdk.dll .
+                  popd
+
+            - name: Save object cache
+              if: always() && !cancelled()
+              uses: actions/cache/save@v4
+              with:
+                  path: mame/build
+                  key: ${{ steps.obj-cache.outputs.cache-primary-key }}
+
+            - name: Stage artifact
+              shell: msys2 {0}
+              run: |
+                  pushd mame
+                  rm -Rf build .git src 3rdparty
+                  ./mamehub.exe -cc
+                  mv mame.ini mame.ini.sample
+                  popd
 
             - name: Upload mame binary
               uses: actions/upload-artifact@v4
               with:
-                  # Artifact name
                   name: mamehub_windows_msvc_beta
-                  # A file, directory or wildcard pattern that describes what to upload
                   path: mame/*
 
     build_android:
@@ -189,6 +350,8 @@ jobs:
               with:
                   distribution: temurin
                   java-version: "17"
+                  cache: gradle
+                  cache-dependency-path: mame/android-project/**/*.gradle*
 
             - name: Setup Android SDK / NDK
               uses: android-actions/setup-android@v3
@@ -201,14 +364,37 @@ jobs:
                   echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
 
             - name: Install host build deps
-              run: sudo apt-get update -y && sudo apt-get install -y build-essential python3 cmake ninja-build curl rsync
+              run: sudo apt-get update -y && sudo apt-get install -y build-essential python3 cmake ninja-build curl rsync ccache
 
             - name: Cache compiler output
               uses: hendrikmuhs/ccache-action@v1.2
               with:
-                  key: ${{ github.job }}
-                  max-size: 1G
+                  key: ${{ github.job }}-${{ runner.os }}
+                  restore-keys: ${{ github.job }}-${{ runner.os }}
+                  max-size: 4G
                   create-symlink: true
+                  verbose: 1
+
+            - name: Restore Android deps
+              id: android-deps
+              uses: actions/cache@v4
+              with:
+                  path: /tmp/mamehub-android-deps
+                  key: mamehub-android-deps-${{ hashFiles('mame/tests/e2e/mamehub/build_android_deps.sh') }}
+
+            - name: Restore object cache
+              id: obj-cache
+              uses: actions/cache/restore@v4
+              with:
+                  path: mame/build
+                  key: mamehub-obj-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
+                  restore-keys: |
+                      mamehub-obj-${{ runner.os }}-${{ github.job }}-
+
+            - name: Restore source mtimes
+              if: steps.obj-cache.outputs.cache-matched-key != ''
+              working-directory: mame
+              run: python3 scripts/mamehub/ci_restore_mtimes.py
 
             - name: Build Android deps (OpenSSL / libsodium / SDL2)
               run: |
@@ -220,11 +406,27 @@ jobs:
                   echo "SDL_INSTALL_ROOT=/tmp/mamehub-android-deps/sdl-arm64" >> "$GITHUB_ENV"
 
             - name: Cross-compile libmainhub.so (android-arm64)
+              env:
+                  GENIE_INPUT_HASH: ${{ hashFiles('mame/makefile', 'mame/scripts/**', 'mame/3rdparty/genie/src/**', 'mame/.github/workflows/build.yml') }}
               run: |
                   set -euo pipefail
                   cd mame
-                  make android-arm64 CONFIG=release NOWERROR=1 REGENIE=1 -j4
+                  extra=($(bash scripts/mamehub/ci_regenie_args.sh))
+                  NDK_CLANG="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+                  NDK_CLANGXX="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++"
+                  make android-arm64 CONFIG=release NOWERROR=1 -j4 \
+                    OVERRIDE_CC="ccache ${NDK_CLANG}" \
+                    OVERRIDE_CXX="ccache ${NDK_CLANGXX}" \
+                    "${extra[@]}"
+                  bash scripts/mamehub/ci_regenie_args.sh --stamp
                   test -f android-project/app/src/main/libs/arm64-v8a/libmainhub.so
+
+            - name: Save object cache
+              if: always() && !cancelled()
+              uses: actions/cache/save@v4
+              with:
+                  path: mame/build
+                  key: ${{ steps.obj-cache.outputs.cache-primary-key }}
 
             - name: Assemble debug APK
               run: |
@@ -266,14 +468,37 @@ jobs:
                   fi
 
             - name: Install host deps
-              run: brew install cmake rsync || true
+              run: brew install cmake rsync ccache || true
 
             - name: Cache compiler output
               uses: hendrikmuhs/ccache-action@v1.2
               with:
-                  key: ${{ github.job }}
-                  max-size: 1G
+                  key: ${{ github.job }}-${{ runner.os }}
+                  restore-keys: ${{ github.job }}-${{ runner.os }}
+                  max-size: 4G
                   create-symlink: true
+                  verbose: 1
+
+            - name: Restore iOS deps
+              id: ios-deps
+              uses: actions/cache@v4
+              with:
+                  path: /tmp/mamehub-ios-deps
+                  key: mamehub-ios-deps-${{ hashFiles('mame/tests/e2e/mamehub/build_ios_deps.sh') }}
+
+            - name: Restore object cache
+              id: obj-cache
+              uses: actions/cache/restore@v4
+              with:
+                  path: mame/build
+                  key: mamehub-obj-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
+                  restore-keys: |
+                      mamehub-obj-${{ runner.os }}-${{ github.job }}-
+
+            - name: Restore source mtimes
+              if: steps.obj-cache.outputs.cache-matched-key != ''
+              working-directory: mame
+              run: python3 scripts/mamehub/ci_restore_mtimes.py
 
             - name: Build iOS simulator deps (OpenSSL / libsodium / SDL2)
               run: |
@@ -287,13 +512,29 @@ jobs:
                   } >> "$GITHUB_ENV"
 
             - name: Cross-compile + package iOS Simulator app
+              env:
+                  GENIE_INPUT_HASH: ${{ hashFiles('mame/makefile', 'mame/scripts/**', 'mame/3rdparty/genie/src/**', 'mame/.github/workflows/build.yml') }}
               run: |
                   set -euo pipefail
                   cd mame
-                  make ios-simulator CONFIG=release NOWERROR=1 REGENIE=1 -j4
+                  extra=($(bash scripts/mamehub/ci_regenie_args.sh))
+                  CLANG="$(xcrun --sdk iphonesimulator -f clang)"
+                  CLANGXX="$(xcrun --sdk iphonesimulator -f clang++)"
+                  make ios-simulator CONFIG=release NOWERROR=1 -j4 \
+                    OVERRIDE_CC="ccache ${CLANG}" \
+                    OVERRIDE_CXX="ccache ${CLANGXX}" \
+                    "${extra[@]}"
+                  bash scripts/mamehub/ci_regenie_args.sh --stamp
                   chmod +x ios-project/package_app.sh
                   ./ios-project/package_app.sh
                   test -d ios-project/build/ios-simulator/MAMEHub.app
+
+            - name: Save object cache
+              if: always() && !cancelled()
+              uses: actions/cache/save@v4
+              with:
+                  path: mame/build
+                  key: ${{ steps.obj-cache.outputs.cache-primary-key }}
 
             - name: Stage artifact
               run: |
