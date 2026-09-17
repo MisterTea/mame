@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Build arcade_top_mp.json (exactly 100 unique 2P+ titles) + src/mame/arcade.flt
 # Primary: IAM/KLOV Top 100 + Wikipedia highest-grossing fills, then multiplayer backfill.
-# Forced: xmen6p. Variants collapsed (one preferred MAME set per commercial title).
+# Forced: xmen6p, bombrman. Variants collapsed (one preferred MAME set per commercial title).
 
 from __future__ import annotations
 
@@ -136,6 +136,7 @@ CANDIDATES: list[tuple[str, str, str]] = [
     ("Bubble Bobble", "bublbobl", "backfill"),
     ("Snow Bros.", "snowbros", "backfill"),
     ("Bomb Jack", "bombjack", "backfill"),
+    ("Bomber Man", "bombrman", "backfill"),
     ("Wonder Boy", "wboy", "backfill"),
     ("Wonder Boy III: Monster Lair", "wbml", "backfill"),  # may be wrong id
     ("Shinobi", "shinobi", "backfill"),
@@ -369,9 +370,12 @@ def main() -> int:
     # Dedupe candidates by mame id, preserve order; force xmen6p first among X-Men
     seen_ids: set[str] = set()
     ordered: list[tuple[str, str, str]] = []
-    # Ensure xmen6p is present early
-    forced = ("X-Men (6 Players)", "xmen6p", "klov+forced")
-    for title, mid, src in [forced, *CANDIDATES]:
+    # Ensure xmen6p and bombrman are present early enough to make the 100
+    forced = [
+        ("X-Men (6 Players)", "xmen6p", "klov+forced"),
+        ("Bomber Man", "bombrman", "backfill+forced"),
+    ]
+    for title, mid, src in [*forced, *CANDIDATES]:
         if mid in seen_ids:
             continue
         seen_ids.add(mid)
@@ -413,6 +417,9 @@ def main() -> int:
     if not any(e["mame"] == "xmen6p" for e in selected):
         print("FATAL: xmen6p not in selection", file=sys.stderr)
         return 1
+    if not any(e["mame"] == "bombrman" for e in selected):
+        print("FATAL: bombrman not in selection", file=sys.stderr)
+        return 1
     if len(selected) < 100:
         print(f"FATAL: only {len(selected)} games (need 100)", file=sys.stderr)
         return 1
@@ -425,7 +432,7 @@ def main() -> int:
         "notes": (
             "Exactly 100 unique popular arcade titles with MAME players>=2. "
             "Primary IAM/KLOV Top 100 + Wikipedia highest-grossing fills, then backfill. "
-            "Variants collapsed to one MAME set; xmen6p forced."
+            "Variants collapsed to one MAME set; xmen6p and bombrman forced."
         ),
         "games": selected,
     }

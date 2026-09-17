@@ -36,6 +36,9 @@
   };
 
   const qs = new URLSearchParams(window.location.search || "");
+  function queryPreferredGame() {
+    return (qs.get("game") || qs.get("machine") || qs.get("soft") || qs.get("software") || "").trim();
+  }
   const dumpInputsRequested = (() => {
     const v = (qs.get("dumpinputs") || qs.get("dump_inputs") || "").toLowerCase();
     return v === "1" || v === "true" || v === "yes" || v === "on";
@@ -1492,7 +1495,7 @@
       if (isArcade) {
         const url = cfg.machinesUrl || "arcade_top_mp.json";
         log("Loading arcade machine catalog…");
-        const resp = await fetch(url);
+        const resp = await fetch(url, { cache: "no-store" });
         if (!resp.ok)
           throw new Error("arcade catalog HTTP " + resp.status);
         const data = await resp.json();
@@ -1555,11 +1558,17 @@
       return true;
     if (entry.idLower.startsWith(q) || entry.titleLower.startsWith(q))
       return true;
-    // Match word prefixes inside the title ("mario" → "Super Mario World")
-    const parts = entry.titleLower.split(/[^a-z0-9+]+/);
+    if (entry.idLower.includes(q) || entry.titleLower.includes(q))
+      return true;
+    const parts = entry.titleLower.split(/[^a-z0-9+]+/).filter(Boolean);
     for (const p of parts) {
-      if (p && p.startsWith(q))
+      if (p.startsWith(q))
         return true;
+    }
+    const tokens = q.split(/[^a-z0-9+]+/).filter(Boolean);
+    if (tokens.length > 1) {
+      const hay = [entry.idLower, ...parts];
+      return tokens.every((tok) => hay.some((p) => p.startsWith(tok) || p.includes(tok)));
     }
     return false;
   }
@@ -1811,12 +1820,18 @@
       await loadSoftwareCatalog();
       if (input) {
         const cfg = window.MAMEHUB_BROWSER || {};
-        const prefer = isArcade
-          ? (cfg.defaultMachine || "xmen6p")
-          : ((mode === "host" || mode === "join")
-            ? (cfg.defaultHostSoftware || cfg.defaultSoftware)
-            : (cfg.defaultSoftware || cfg.defaultHostSoftware));
-        const entry = (prefer && softwareCatalog.find((e) => e.id === prefer)) || softwareCatalog[0];
+        const fromQuery = queryPreferredGame();
+        let entry = fromQuery ? (softwareAcMatchList(fromQuery)[0] || null) : null;
+        if (!entry) {
+          const prefer = isArcade
+            ? (cfg.defaultMachine || "xmen6p")
+            : ((mode === "host" || mode === "join")
+              ? (cfg.defaultHostSoftware || cfg.defaultSoftware)
+              : (cfg.defaultSoftware || cfg.defaultHostSoftware));
+          const preferLower = String(prefer || "").toLowerCase();
+          entry = (preferLower && softwareCatalog.find((e) =>
+            e.idLower === preferLower || e.titleLower === preferLower)) || softwareCatalog[0] || null;
+        }
         if (entry)
           selectSoftwareAc(entry);
         input.focus();

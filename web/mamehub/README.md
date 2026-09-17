@@ -95,6 +95,8 @@ Offline remains **Start offline** (`-nomamehub`).
 
 Mute for automated tests: append `?mute=1` (passes `-sound none`) or `?volume=-96`.
 
+Pre-fill the offline / host picker with the first catalog match for `?game=bomber man` (aliases `machine`, `soft`, `software`). Join links still use `soft` with `room`.
+
 ## ROM loading (candy)
 
 With `-candy` (enabled by the shell), missing machine/softlist zips are fetched from archive.org the same way as desktop candy:

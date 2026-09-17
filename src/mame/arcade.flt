@@ -20,6 +20,7 @@ dataeast/kchamp.cpp
 galaxian/galaxian.cpp
 gottlieb/gottlieb.cpp
 irem/m52.cpp
+irem/m90.cpp
 kaneko/snowbros.cpp
 konami/contra.cpp
 konami/crimfght.cpp
@@ -43,7 +44,6 @@ sega/model2.cpp
 sega/naomi.cpp
 sega/segas16a.cpp
 sega/segas16b.cpp
-sega/segas32.cpp
 sega/system1.cpp
 sega/zaxxon.cpp
 seibu/raiden.cpp

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "count": 100,
-  "notes": "Exactly 100 unique popular arcade titles with MAME players>=2. Primary IAM/KLOV Top 100 + Wikipedia highest-grossing fills, then backfill. Variants collapsed to one MAME set; xmen6p forced.",
+  "notes": "Exactly 100 unique popular arcade titles with MAME players>=2. Primary IAM/KLOV Top 100 + Wikipedia highest-grossing fills, then backfill. Variants collapsed to one MAME set; xmen6p and bombrman forced.",
   "games": [
     {
       "title": "X-Men (6 Players)",
@@ -10,6 +10,14 @@
       "sourcefile": "konami/xmen.cpp",
       "description": "X-Men (6 Players ver ECB)",
       "source": "klov+forced"
+    },
+    {
+      "title": "Bomber Man",
+      "mame": "bombrman",
+      "players": 2,
+      "sourcefile": "irem/m90.cpp",
+      "description": "Bomber Man (Japan)",
+      "source": "backfill+forced"
     },
     {
       "title": "Warlords",
@@ -793,14 +801,6 @@
       "players": 2,
       "sourcefile": "sega/segas16a.cpp",
       "description": "Shinobi (set 6, System 16A) (unprotected)",
-      "source": "backfill"
-    },
-    {
-      "title": "Golden Axe: The Revenge of Death Adder",
-      "mame": "ga2",
-      "players": 4,
-      "sourcefile": "sega/segas32.cpp",
-      "description": "Golden Axe: The Revenge of Death Adder (World, Rev B)",
       "source": "backfill"
     }
   ]
