@@ -8,17 +8,52 @@
 #include <emscripten.h>
 
 #include <atomic>
+#include <algorithm>
+#include <cctype>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <map>
 #include <mutex>
 #include <sstream>
 #include <unordered_map>
+#include <vector>
 
 using namespace std;
 
 CommonBase *netCommon = nullptr;
+
+namespace {
+unordered_map<string, string> s_offlineForced;
+}
+
+bool mamehubBrowserOfflineForced(const std::string &key)
+{
+	auto it = s_offlineForced.find(key);
+	return it != s_offlineForced.end() && it->second == "1";
+}
+
+static void apply_offline_force_fields(char const *key, bool down)
+{
+	running_machine *machine = running_machine::emscripten_get_running_machine();
+	if (!machine || !key || !machine->ioport().safe_to_read())
+		return;
+	string want(key);
+	for (auto &port : machine->ioport().ports())
+	{
+		if (!port.second)
+			continue;
+		for (ioport_field &field : port.second->fields())
+		{
+			if (field.is_analog())
+				continue;
+			if ((string("INPUT/") + field.mamehub_id()) == want)
+				field.set_value(down ? 1 : 0);
+		}
+	}
+}
 
 MemoryBlock::MemoryBlock(const std::string &_name, int _size)
 	: name(_name), data(nullptr), size(_size), ownsMemory(true)
@@ -38,6 +73,41 @@ MemoryBlock::~MemoryBlock()
 }
 
 namespace {
+
+// WGA SlidingWindowEstimator analogue (95th %ile upper bound, last 256 samples).
+class PingWindow
+{
+public:
+	void add_sample_us(double sampleUs)
+	{
+		m_samples.push_back(sampleUs);
+		while (m_samples.size() > 256)
+			m_samples.pop_front();
+		m_mean = 0;
+		for (double s : m_samples)
+			m_mean += s;
+		if (!m_samples.empty())
+			m_mean /= double(m_samples.size());
+	}
+
+	double mean_us() const { return m_mean; }
+
+	double upper_us() const
+	{
+		if (m_samples.empty())
+			return 0;
+		vector<double> sorted(m_samples.begin(), m_samples.end());
+		sort(sorted.begin(), sorted.end());
+		size_t idx = min(sorted.size() - 1, size_t(ceil(sorted.size() * 0.95)) - 1);
+		return sorted[idx];
+	}
+
+	bool empty() const { return m_samples.empty(); }
+
+private:
+	deque<double> m_samples;
+	double m_mean = 0;
+};
 
 // Minimal ChronoMap: intervals [start,end) of key/value changes.
 class BrowserChronoMap
@@ -193,10 +263,67 @@ public:
 		});
 	}
 
-	int getLargestPing() override { return m_pingMs > 0 ? m_pingMs : 80; }
+	// Half-RTT 95th %ile (ms), ratcheted like native Common::getLargestPing.
+	int getLargestPing() override
+	{
+		int measured = 80;
+		{
+			lock_guard<mutex> lock(m_pingMutex);
+			double worstHalfUs = 0;
+			for (auto const &kv : m_peerPing)
+			{
+				if (kv.second.empty())
+					continue;
+				worstHalfUs = max(worstHalfUs, kv.second.upper_us() / 2.0);
+			}
+			if (worstHalfUs > 0)
+				measured = max(35, int(ceil(worstHalfUs / 1000.0)));
+		}
+		auto const now = chrono::steady_clock::now();
+		if (measured >= m_effectivePingMs)
+		{
+			m_effectivePingMs = measured;
+			m_lastPingDecrease = now;
+		}
+		else
+		{
+			int elapsedTenths = int(chrono::duration_cast<chrono::milliseconds>(
+				now - m_lastPingDecrease).count() / 100);
+			if (elapsedTenths > 0)
+			{
+				m_effectivePingMs = max(measured, m_effectivePingMs - elapsedTenths);
+				m_lastPingDecrease += chrono::milliseconds(elapsedTenths * 100);
+			}
+		}
+		return m_effectivePingMs;
+	}
 	void createMemoryBlock(const std::string &, unsigned char *, int) override {}
-	std::string getLatencyString() override { return "webrtc ~" + to_string(getLargestPing()) + "ms"; }
-	std::string getStatisticsString() override { return ""; }
+	// Native format: "Peer <seat>: <mean half-RTT ms> / <half-RTT upper ms>"
+	std::string getLatencyString() override
+	{
+		lock_guard<mutex> lock(m_pingMutex);
+		string out;
+		for (auto const &kv : m_peerPing)
+		{
+			if (kv.second.empty())
+				continue;
+			int seat = peer_seat(kv.first);
+			if (seat < 0)
+				continue;
+			if (!out.empty())
+				out += "\n";
+			out += "Peer " + to_string(seat) + ": " +
+				to_string(int64_t(kv.second.mean_us() / 2000.0)) + " / " +
+				to_string(int64_t(kv.second.upper_us() / 2000.0));
+		}
+		if (out.empty())
+			out = "Peer ?: -- / " + to_string(m_effectivePingMs);
+		return out;
+	}
+	std::string getStatisticsString() override
+	{
+		return "Peer " + to_string(m_player);
+	}
 	std::string getMyUserName() override { return m_userId; }
 	std::set<int> getMyPlayers() override { return { m_player }; }
 	void setMyPlayers(std::set<int> p) override
@@ -280,12 +407,29 @@ public:
 		m_timeShiftUs = 0;
 		m_clockStarted = true;
 		m_lastSyncSendMs = 0;
+		m_lastPingDecrease = chrono::steady_clock::now();
+		m_effectivePingMs = 80;
+		m_inputWaitEpisodes = 0;
+		m_inputWaitSleeps = 0;
+		m_lastInputWaitTs = -1;
+		EM_ASM({
+			if (typeof Module !== "undefined") {
+				Module.__mamehubInputWaitEpisodes = 0;
+				Module.__mamehubInputWaitSleeps = 0;
+				Module.__mamehubInputWaitsPerMin = 0;
+			}
+		});
 		// Advance past the barrier range so the first machine-time input publish
 		// (and peer reads at ts>=1000) share a contiguous ChronoMap timeline.
 		publish(4, 1000, {{"__NETPLAY_READY__", "1"}});
 		m_lastSendTime = 1000;
-		// Kick continuous RTT / clock sync (WGA ClockSynchronizer analogue).
-		maybe_send_sync(true);
+		// WGA BiDirectionalRpc::initTimeShift sends a burst of PINGs before play;
+		// warm the sliding-window estimator the same way.
+		for (int i = 0; i < 12; ++i)
+		{
+			maybe_send_sync(true);
+			emscripten_sleep(20);
+		}
 	}
 
 	std::string getGameName() override { return m_gameName; }
@@ -313,6 +457,17 @@ public:
 		// Also clear the unmapped P1 key if we remapped.
 		if (mapped != key)
 			m_forced.erase(key);
+		string dump = value.empty() ? (mapped + " clear") : (mapped + "=" + value);
+		EM_ASM({
+			if (typeof Module !== "undefined" && Module.__mamehubDumpInputs) {
+				var s = UTF8ToString($0);
+				console.log("INPUT_DUMP cpp force " + s);
+				if (typeof Module.printErr === "function")
+					Module.printErr("INPUT_DUMP cpp force " + s);
+			}
+		}, dump.c_str());
+		// Sticky forces are applied on the next sendInputs() from ioport —
+		// never invent ChronoMap puts here.
 	}
 
 	void clearForcedInputs()
@@ -326,6 +481,15 @@ public:
 		m_timeShiftUs = -1000 * int64_t((rand() % 200) + 50); // −50..−249 ms
 	}
 
+	int64_t local_expiration()
+	{
+		lock_guard<mutex> lock(m_mutex);
+		auto it = m_peers.find(m_peerId);
+		if (it == m_peers.end())
+			return 0;
+		return it->second.expiration();
+	}
+
 	std::map<std::string, std::string> getAllInputValues(int64_t ts, const std::string &key) override
 	{
 		if (m_gameOver)
@@ -334,13 +498,122 @@ public:
 			return {};
 		if (ts < 1000)
 			return {};
-		// Never block the frame loop waiting for peers. Delay-lockstep already
-		// schedules sends into the future; waiting here prevents sendInputs from
-		// running and deadlocks ChronoMap expiration on both sides.
-		wait_all_expiration_budget(ts, 0);
+
+		// Wait for every remote peer to cover `ts`. Local coverage must come
+		// from real sendInputs() polls only — never fabricate idle ChronoMap puts.
+		// Count at most one wait-episode per machine timestamp (many fields share ts).
+		bool enteredWait = false;
+		while (!remotes_cover(ts))
+		{
+			if (m_gameOver)
+				return {};
+			if (!enteredWait)
+			{
+				enteredWait = true;
+				if (ts != m_lastInputWaitTs)
+				{
+					m_lastInputWaitTs = ts;
+					++m_inputWaitEpisodes;
+					EM_ASM({
+						if (typeof Module !== "undefined") {
+							Module.__mamehubInputWaitFromCpp = 1;
+							Module.__mamehubInputWaitEpisodes = $0;
+							Module.__mamehubInputWaitSleeps = $1;
+							var elapsedMin = Math.max(1 / 60, $2 / 60000.0);
+							Module.__mamehubInputWaitsPerMin = $0 / elapsedMin;
+						}
+					}, (double)m_inputWaitEpisodes, (double)m_inputWaitSleeps,
+						(double)chrono::duration_cast<chrono::milliseconds>(
+							chrono::steady_clock::now() - m_epoch).count());
+				}
+			}
+			++m_inputWaitSleeps;
+			if ((m_inputWaitSleeps % 250) == 0)
+			{
+				EM_ASM({
+					if (typeof Module !== "undefined") {
+						Module.__mamehubInputWaitFromCpp = 1;
+						Module.__mamehubInputWaitEpisodes = $0;
+						Module.__mamehubInputWaitSleeps = $1;
+						var elapsedMin = Math.max(1 / 60, $2 / 60000.0);
+						Module.__mamehubInputWaitsPerMin = $0 / elapsedMin;
+						console.log("INPUT_WAIT episodes=" + $0 +
+							" sleeps=" + $1 +
+							" per_min=" + Module.__mamehubInputWaitsPerMin.toFixed(1));
+					}
+				}, (double)m_inputWaitEpisodes, (double)m_inputWaitSleeps,
+					(double)chrono::duration_cast<chrono::milliseconds>(
+						chrono::steady_clock::now() - m_epoch).count());
+			}
+			maybe_send_sync(false);
+			emscripten_sleep(1);
+		}
+		if (enteredWait)
+		{
+			EM_ASM({
+				if (typeof Module !== "undefined") {
+					Module.__mamehubInputWaitEpisodes = $0;
+					Module.__mamehubInputWaitSleeps = $1;
+					var elapsedMin = Math.max(1 / 60, $2 / 60000.0);
+					Module.__mamehubInputWaitsPerMin = $0 / elapsedMin;
+				}
+			}, (double)m_inputWaitEpisodes, (double)m_inputWaitSleeps,
+				(double)chrono::duration_cast<chrono::milliseconds>(
+					chrono::steady_clock::now() - m_epoch).count());
+		}
 		if (m_gameOver)
 			return {};
+		int64_t localExp = local_expiration();
+		if (localExp <= ts)
+		{
+			string msg = "getAllInputValues: missing local ChronoMap coverage ts=" +
+				to_string(ts) + " local_expiration=" + to_string(localExp) +
+				" key=" + key;
+			EM_ASM({
+				var s = UTF8ToString($0);
+				console.error(s);
+				if (typeof Module !== "undefined" && typeof Module.printErr === "function")
+					Module.printErr(s);
+			}, msg.c_str());
+			throw runtime_error(msg);
+		}
+
 		auto all = collect(ts);
+		// Compact Start/B-only dumps — full-map dumps per field starved machine catch-up
+		// (~60s behind wall) so attract never advanced.
+		if (EM_ASM_INT({ return (typeof Module !== "undefined" && Module.__mamehubDumpInputs) ? 1 : 0; }) &&
+			(key.find("Start") != string::npos || key.find("/P1 B") != string::npos ||
+			 key.find("/P2 B") != string::npos || key.find("/P3 B") != string::npos))
+		{
+			string wantVal = "(missing)";
+			auto wit = all.find(key);
+			if (wit != all.end())
+			{
+				wantVal.clear();
+				for (auto const &pv : wit->second)
+				{
+					if (!wantVal.empty())
+						wantVal += ",";
+					wantVal += pv.first + ":" + pv.second;
+				}
+			}
+			// Log only when this key's peer values change (per-key). A single
+			// shared sig re-logged every Start/B field each frame and stalled catch-up.
+			string thumb = "{" + wantVal + "}";
+			auto &prev = m_lastDumpedReadByKey[key];
+			if (thumb != prev)
+			{
+				prev = thumb;
+				string line = "ts=" + to_string(ts) + " exp=" + to_string(localExp) +
+					" " + key + "=" + thumb;
+				EM_ASM({
+					var s = UTF8ToString($0);
+					console.log("INPUT_DUMP cpp chronomap " + s);
+					if (typeof Module !== "undefined" && typeof Module.printErr === "function")
+						Module.printErr("INPUT_DUMP cpp chronomap " + s);
+				}, line.c_str());
+			}
+		}
 		auto it = all.find(key);
 		if (it == all.end())
 			return {};
@@ -357,8 +630,8 @@ public:
 		if (m_gameOver || inputTimeMs <= 1)
 			return;
 		maybe_send_sync(false);
-		// attach + sticky forced inputs overwrite polled zeros (browser automation /
-		// virtual pad when SDL key events are unavailable).
+		// Sticky browser force_input / attach overwrite polled zeros for this
+		// real emulator input sample only.
 		for (auto const &kv : m_attach)
 			inputMap[kv.first] = kv.second;
 		m_attach.clear();
@@ -366,9 +639,63 @@ public:
 			inputMap[kv.first] = kv.second;
 		int64_t start = m_peers[m_peerId].expiration();
 		if (inputTimeMs <= start)
+		{
+			EM_ASM({
+				if (typeof Module !== "undefined" && Module.__mamehubDumpInputs) {
+					console.log("INPUT_DUMP cpp send SKIP end<=start end=" + $0 + " start=" + $1);
+					if (typeof Module.printErr === "function")
+						Module.printErr("INPUT_DUMP cpp send SKIP end<=start end=" + $0 + " start=" + $1);
+				}
+			}, (double)inputTimeMs, (double)start);
 			return;
+		}
 		if (inputTimeMs <= m_lastSendTime)
+		{
+			EM_ASM({
+				if (typeof Module !== "undefined" && Module.__mamehubDumpInputs) {
+					console.log("INPUT_DUMP cpp send SKIP end<=lastSend end=" + $0 + " last=" + $1);
+					if (typeof Module.printErr === "function")
+						Module.printErr("INPUT_DUMP cpp send SKIP end<=lastSend end=" + $0 + " last=" + $1);
+				}
+			}, (double)inputTimeMs, (double)m_lastSendTime);
 			return;
+		}
+		{
+			// Compact send dump: Start/B only (full maps every ~16ms starve catch-up via DOM log).
+			vector<string> parts;
+			for (auto const &kv : inputMap)
+			{
+				if (kv.first.find("Start") == string::npos &&
+					kv.first.find("/P1 B") == string::npos &&
+					kv.first.find("/P2 B") == string::npos &&
+					kv.first.find("/P3 B") == string::npos)
+					continue;
+				parts.push_back(kv.first + "=" + kv.second);
+			}
+			sort(parts.begin(), parts.end());
+			string sig;
+			for (auto const &p : parts)
+			{
+				if (!sig.empty())
+					sig += " ";
+				sig += p;
+			}
+			if (sig.empty())
+				sig = "(no Start/B)";
+			if (sig != m_lastDumpedInputSig)
+			{
+				m_lastDumpedInputSig = sig;
+				string line = "end=" + to_string(inputTimeMs) + " start=" + to_string(start) + " " + sig;
+				EM_ASM({
+					if (typeof Module !== "undefined" && Module.__mamehubDumpInputs) {
+						var s = UTF8ToString($0);
+						console.log("INPUT_DUMP cpp send " + s);
+						if (typeof Module.printErr === "function")
+							Module.printErr("INPUT_DUMP cpp send " + s);
+					}
+				}, line.c_str());
+			}
+		}
 		publish(start, inputTimeMs, std::move(inputMap));
 		m_lastSendTime = inputTimeMs;
 		EM_ASM({
@@ -472,21 +799,34 @@ public:
 		}
 		else if (type == "pong")
 		{
+			string id = get_str("id");
 			int64_t n = get_num("n");
 			int64_t h = get_num("h");
 			int64_t nowWall = int64_t(mamehub_wall_ms());
 			if (n > 0 && nowWall >= n)
 			{
 				int64_t rttMs = nowWall - n;
-				m_pingMs = int(std::min<int64_t>(600, std::max<int64_t>(40, rttMs)));
-				// Guests slew toward host clock (WGA ClockSynchronizer analogue).
+				rttMs = std::min<int64_t>(5000, std::max<int64_t>(1, rttMs));
+				double rttUs = double(rttMs) * 1000.0;
+				{
+					lock_guard<mutex> lock(m_pingMutex);
+					string peerKey = id.empty() ? string("remote") : id;
+					m_peerPing[peerKey].add_sample_us(rttUs);
+				}
+				// Guests: estimate host clock from pong (h + RTT/2), EMA the
+				// desired shift, then slew ±1ms/sample (WGA ClockSynchronizer).
 				if (!m_hosting && h > 0 && m_clockStarted)
 				{
-					int64_t rttUs = rttMs * 1000;
-					int64_t estimatedHostNow = h + rttUs / 2;
-					int64_t localNow = raw_steady_us() + m_timeShiftUs;
-					int64_t delta = estimatedHostNow - localNow;
-					// Clamp slew to ±1ms per sample (same idea as WGA maxCorrection).
+					int64_t estimatedHostNow = h + int64_t(rttUs / 2.0);
+					int64_t desiredShift = estimatedHostNow - raw_steady_us();
+					if (!m_offsetEmaInit)
+					{
+						m_offsetEmaUs = double(desiredShift);
+						m_offsetEmaInit = true;
+					}
+					else
+						m_offsetEmaUs = m_offsetEmaUs * 0.9 + double(desiredShift) * 0.1;
+					int64_t delta = int64_t(m_offsetEmaUs) - m_timeShiftUs;
 					if (delta > 1000)
 						delta = 1000;
 					else if (delta < -1000)
@@ -497,12 +837,19 @@ public:
 		}
 		else if (type == "clock")
 		{
-			// Host periodic broadcast of authoritative netplay time.
+			// Host periodic broadcast — guests fuse into the same EMA target.
 			int64_t h = get_num("h");
 			if (!m_hosting && h > 0 && m_clockStarted)
 			{
-				int64_t localNow = raw_steady_us() + m_timeShiftUs;
-				int64_t delta = h - localNow;
+				int64_t desiredShift = h - raw_steady_us();
+				if (!m_offsetEmaInit)
+				{
+					m_offsetEmaUs = double(desiredShift);
+					m_offsetEmaInit = true;
+				}
+				else
+					m_offsetEmaUs = m_offsetEmaUs * 0.85 + double(desiredShift) * 0.15;
+				int64_t delta = int64_t(m_offsetEmaUs) - m_timeShiftUs;
 				if (delta > 1000)
 					delta = 1000;
 				else if (delta < -1000)
@@ -513,6 +860,18 @@ public:
 	}
 
 private:
+	int peer_seat(string const &peerId) const
+	{
+		// Host is p0 / seat 0; guests p1, p2, … match mamehub player seats.
+		if (peerId == "p0" || (peerId == m_peerId && m_hosting))
+			return 0;
+		if (peerId.size() >= 2 && peerId[0] == 'p' && isdigit(peerId[1]))
+			return peerId[1] - '0';
+		if (peerId == m_peerId)
+			return m_player;
+		return -1;
+	}
+
 	// Browser shell always sends P1 force_input ids; remap to this peer's seat
 	// so ChronoMap keys match field.mamehub_id() (P2/P3/…).
 	string remap_p1_force_key(string const &key) const
@@ -622,6 +981,20 @@ private:
 		}
 	}
 
+	// Like MyPeer::hasInputValuesAt — only remotes must cover `ts`.
+	bool remotes_cover(int64_t ts)
+	{
+		lock_guard<mutex> lock(m_mutex);
+		for (auto const &kv : m_peers)
+		{
+			if (kv.first == m_peerId)
+				continue;
+			if (kv.second.expiration() <= ts)
+				return false;
+		}
+		return true;
+	}
+
 	unordered_map<string, map<string, string>> collect(int64_t ts)
 	{
 		unordered_map<string, map<string, string>> values;
@@ -645,13 +1018,24 @@ private:
 	map<string, BrowserChronoMap> m_peers;
 	unordered_map<string, string> m_attach;
 	unordered_map<string, string> m_forced;
+	string m_lastDumpedInputSig;
+	unordered_map<string, string> m_lastDumpedReadByKey;
 	int64_t m_lastSendTime = 0;
 	bool m_clockStarted = false;
 	bool m_gameOver = false;
 	chrono::steady_clock::time_point m_epoch;
 	int64_t m_timeShiftUs = 0;
 	int64_t m_lastSyncSendMs = 0;
-	int m_pingMs = 80;
+	mutex m_pingMutex;
+	map<string, PingWindow> m_peerPing;
+	int m_effectivePingMs = 80;
+	chrono::steady_clock::time_point m_lastPingDecrease = chrono::steady_clock::now();
+	double m_offsetEmaUs = 0;
+	bool m_offsetEmaInit = false;
+	// ChronoMap remotes_cover stalls (one episode per machine ts that blocked).
+	uint64_t m_inputWaitEpisodes = 0;
+	uint64_t m_inputWaitSleeps = 0;
+	int64_t m_lastInputWaitTs = -1;
 };
 
 EmscriptenCommon *s_instance = nullptr;
@@ -718,21 +1102,32 @@ string makePrivateKey()
 // Browser automation / virtual pad: sticky netplay input overrides.
 extern "C" EMSCRIPTEN_KEEPALIVE void mamehub_browser_force_input(char const *key, char const *value)
 {
-	if (!s_instance || !key)
+	if (!key)
 		return;
-	s_instance->forceInput(key, value ? value : "");
+	string v = value ? value : "";
+	if (v.empty() || v == "0")
+		s_offlineForced.erase(key);
+	else
+		s_offlineForced[key] = "1";
+	apply_offline_force_fields(key, !v.empty() && v != "0");
+	if (s_instance)
+		s_instance->forceInput(key, v);
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE void mamehub_browser_clear_forced_inputs(void)
 {
+	for (auto const &kv : s_offlineForced)
+		apply_offline_force_fields(kv.first.c_str(), false);
+	s_offlineForced.clear();
 	if (s_instance)
 		s_instance->clearForcedInputs();
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE void mamehub_browser_key(int scancode, int down)
 {
-	// Prefer sticky force_input for netplay; SDL inject is optional and may be
-	// unavailable depending on which SDL3 symbols the link exports.
+	// Prefer sticky force_input (ChronoMap under -mamehub, ioport set_value
+	// offline). SDL inject is optional and may be unavailable depending on
+	// which SDL3 symbols the link exports.
 	(void)scancode;
 	(void)down;
 }

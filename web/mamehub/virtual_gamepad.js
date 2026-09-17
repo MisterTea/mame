@@ -4,21 +4,128 @@
  * Also: keyboard remaps (shell UI) and mobile default for the on-screen pad.
  */
 (function (global) {
-  // SNES → MAME defaults / mamehub_id names for P1
-  const P1 = {
-    up: "INPUT/0/P1 Up",
-    down: "INPUT/0/P1 Down",
-    left: "INPUT/0/P1 Left",
-    right: "INPUT/0/P1 Right",
-    b: "INPUT/0/P1 B",
-    y: "INPUT/0/P1 Y",
-    a: "INPUT/0/P1 A",
-    x: "INPUT/0/P1 X",
-    l: "INPUT/0/P1 L",
-    r: "INPUT/0/P1 R",
-    start: "INPUT/0/P1 Start",
-    select: "INPUT/0/P1 Select"
-  };
+  function profileId() {
+    try {
+      return String((global.MAMEHUB_BROWSER || {}).id || "");
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function dirs(prefix) {
+    return {
+      up: "INPUT/0/" + prefix + "Up",
+      down: "INPUT/0/" + prefix + "Down",
+      left: "INPUT/0/" + prefix + "Left",
+      right: "INPUT/0/" + prefix + "Right"
+    };
+  }
+
+  /** P1 mamehub_id keys for the current shell profile. */
+  function p1Maps() {
+    const id = profileId();
+    if (id === "arcade") {
+      return Object.assign(dirs("P1 "), {
+        b: "INPUT/0/P1 Button 1",
+        a: "INPUT/0/P1 Button 2",
+        y: "INPUT/0/P1 Button 3",
+        x: "INPUT/0/P1 Button 4",
+        l: "INPUT/0/P1 Button 5",
+        r: "INPUT/0/P1 Button 6",
+        start: "INPUT/0/1 Player Start",
+        select: "INPUT/0/Coin 1"
+      });
+    }
+    if (id === "gameboy") {
+      return {
+        up: "INPUT/0/Up",
+        down: "INPUT/0/Down",
+        left: "INPUT/0/Left",
+        right: "INPUT/0/Right",
+        b: "INPUT/0/Button B",
+        a: "INPUT/0/Button A",
+        y: "INPUT/0/Button B",
+        x: "INPUT/0/Button A",
+        l: "INPUT/0/Select",
+        r: "INPUT/0/Start",
+        start: "INPUT/0/Start",
+        select: "INPUT/0/Select"
+      };
+    }
+    if (id === "gba") {
+      return Object.assign(dirs("P1 "), {
+        b: "INPUT/0/B",
+        a: "INPUT/0/A",
+        y: "INPUT/0/B",
+        x: "INPUT/0/A",
+        l: "INPUT/0/P1 L",
+        r: "INPUT/0/P1 R",
+        start: "INPUT/0/P1 Start",
+        select: "INPUT/0/P1 Select"
+      });
+    }
+    if (id === "sms" || id === "gamegear") {
+      return Object.assign(dirs("P1 "), {
+        b: "INPUT/0/P1 Button 1",
+        a: "INPUT/0/P1 Button 2",
+        y: "INPUT/0/P1 Button 1",
+        x: "INPUT/0/P1 Button 2",
+        l: "INPUT/0/P1 Button 1",
+        r: "INPUT/0/P1 Button 2",
+        start: "INPUT/0/P1 Start",
+        select: "INPUT/0/P1 Start"
+      });
+    }
+    if (id === "pce") {
+      return Object.assign(dirs("P1 "), {
+        b: "INPUT/0/P1 Button II",
+        a: "INPUT/0/P1 Button I",
+        y: "INPUT/0/P1 Button II",
+        x: "INPUT/0/P1 Button I",
+        l: "INPUT/0/P1 Select",
+        r: "INPUT/0/P1 Run",
+        start: "INPUT/0/P1 Run",
+        select: "INPUT/0/P1 Select"
+      });
+    }
+    if (id === "genesis") {
+      return Object.assign(dirs("P1 "), {
+        b: "INPUT/0/P1 B",
+        a: "INPUT/0/P1 C",
+        y: "INPUT/0/P1 A",
+        x: "INPUT/0/P1 X",
+        l: "INPUT/0/P1 Y",
+        r: "INPUT/0/P1 Z",
+        start: "INPUT/0/P1 Start",
+        select: "INPUT/0/P1 Mode"
+      });
+    }
+    if (id === "a2600") {
+      return Object.assign(dirs("P1 "), {
+        b: "INPUT/0/P1 Button 1",
+        a: "INPUT/0/P1 Button 1",
+        y: "INPUT/0/P1 Button 1",
+        x: "INPUT/0/P1 Button 1",
+        l: "INPUT/0/Select Game",
+        r: "INPUT/0/Reset Game",
+        start: "INPUT/0/Reset Game",
+        select: "INPUT/0/Select Game"
+      });
+    }
+    // SNES / NES / default: face names match PORT_NAME("%p B") etc.
+    return Object.assign(dirs("P1 "), {
+      b: "INPUT/0/P1 B",
+      y: "INPUT/0/P1 Y",
+      a: "INPUT/0/P1 A",
+      x: "INPUT/0/P1 X",
+      l: "INPUT/0/P1 L",
+      r: "INPUT/0/P1 R",
+      start: "INPUT/0/P1 Start",
+      select: "INPUT/0/P1 Select"
+    });
+  }
+
+  const P1 = p1Maps();
   const P2 = {
     up: "INPUT/1/P2 Up",
     down: "INPUT/1/P2 Down",
@@ -41,19 +148,18 @@
     l: 29, r: 27, start: 30, select: 34
   };
 
-  const ACTION_LABELS = {
+  const FALLBACK_LABELS = {
     up: "Up", down: "Down", left: "Left", right: "Right",
     b: "B", y: "Y", a: "A", x: "X",
     l: "L", r: "R", start: "Start", select: "Select"
   };
-  const ACTION_ORDER = [
+  const FALLBACK_ORDER = [
     "up", "down", "left", "right",
     "b", "a", "y", "x",
     "l", "r", "select", "start"
   ];
-
-  /** Default KeyboardEvent.code → pad action (SNES-ish layout). */
-  const DEFAULT_BINDINGS = {
+  /** Fallback when a profile has no keyboard map (no meta keys). */
+  const FALLBACK_BINDINGS = {
     ArrowUp: "up",
     ArrowDown: "down",
     ArrowLeft: "left",
@@ -65,13 +171,41 @@
     KeyQ: "l",
     KeyW: "r",
     Enter: "start",
-    ShiftLeft: "select"
+    KeyV: "select"
   };
 
-  const STORAGE_KEY = "mamehub.keyboardBindings.v1";
+  function keyboardConfig() {
+    try {
+      const kb = (global.MAMEHUB_BROWSER || {}).keyboard;
+      if (kb && typeof kb === "object")
+        return kb;
+    } catch (_) { /* ignore */ }
+    return {};
+  }
+
+  const ACTION_LABELS = (function () {
+    const labels = keyboardConfig().labels;
+    if (labels && typeof labels === "object")
+      return labels;
+    return FALLBACK_LABELS;
+  })();
+  const ACTION_ORDER = (function () {
+    const order = keyboardConfig().order;
+    if (Array.isArray(order) && order.length)
+      return order.filter((action) => ACTION_LABELS[action]);
+    return FALLBACK_ORDER.filter((action) => ACTION_LABELS[action]);
+  })();
+  const DEFAULT_BINDINGS = (function () {
+    const bindings = keyboardConfig().bindings;
+    if (bindings && typeof bindings === "object")
+      return Object.assign({}, bindings);
+    return Object.assign({}, FALLBACK_BINDINGS);
+  })();
+  const STORAGE_KEY = "mamehub.keyboardBindings.v2." + (profileId() || "default");
 
   const pressed = new Set();
-  let playerMaps = P1;
+  const pointerButtons = new Map();
+  let playerMaps = p1Maps();
   /** @type {Record<string, string>} code → action */
   let bindings = loadBindings();
   let listeningFor = null;
@@ -177,7 +311,7 @@
   function setPlayer(/* playerIndex */) {
     // Always drive P1 control names. MAMEHub remaps P1 → P2/P3/… from
     // Module.mamehubNet.player / getMyPlayers().
-    playerMaps = P1;
+    playerMaps = p1Maps();
   }
 
   function force(name, down) {
@@ -200,15 +334,31 @@
         return;
       pressed.add(name);
       force(name, true);
+      try {
+        if (typeof Module !== "undefined")
+          Module.__mamehubPadPressCount = (Module.__mamehubPadPressCount | 0) + 1;
+      } catch (_) { /* ignore */ }
     } else {
       if (!pressed.has(name))
         return;
       pressed.delete(name);
       force(name, false);
     }
+    try {
+      document.querySelectorAll('#virtual-gamepad [data-pad="' + name + '"]').forEach((el) => {
+        el.classList.toggle("active", !!down);
+      });
+    } catch (_) { /* ignore */ }
+    try {
+      if (global.__mamehubDumpInputs && typeof global.__mamehubDumpInputLine === "function") {
+        const held = [...pressed].sort().join(",") || "(none)";
+        global.__mamehubDumpInputLine("pad " + name + (down ? " down" : " up") + " held=[" + held + "]");
+      }
+    } catch (_) { /* ignore */ }
   }
 
   function releaseAll() {
+    pointerButtons.clear();
     for (const name of [...pressed])
       setPressed(name, false);
   }
@@ -231,13 +381,18 @@
     const down = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
+      pointerButtons.set(ev.pointerId, { name, el });
       el.classList.add("active");
       try { el.setPointerCapture(ev.pointerId); } catch (_) { /* ignore */ }
       setPressed(name, true);
     };
     const up = (ev) => {
+      const held = pointerButtons.get(ev.pointerId);
+      if (!held || held.name !== name)
+        return;
       ev.preventDefault();
       ev.stopPropagation();
+      pointerButtons.delete(ev.pointerId);
       el.classList.remove("active");
       setPressed(name, false);
     };
@@ -245,11 +400,16 @@
     el.addEventListener("pointerdown", down);
     el.addEventListener("pointerup", up);
     el.addEventListener("pointercancel", up);
-    el.addEventListener("lostpointercapture", () => {
-      el.classList.remove("active");
-      setPressed(name, false);
-    });
     el.addEventListener("contextmenu", (ev) => ev.preventDefault());
+  }
+
+  function onGlobalPointerUp(ev) {
+    const held = pointerButtons.get(ev.pointerId);
+    if (!held)
+      return;
+    pointerButtons.delete(ev.pointerId);
+    try { held.el.classList.remove("active"); } catch (_) { /* ignore */ }
+    setPressed(held.name, false);
   }
 
   function applyPadVisibility(show) {
@@ -424,6 +584,8 @@
     if (!root)
       return;
     root.querySelectorAll("[data-pad]").forEach(bindPadButton);
+    window.addEventListener("pointerup", onGlobalPointerUp, true);
+    window.addEventListener("pointercancel", onGlobalPointerUp, true);
     window.addEventListener("blur", releaseAll);
     document.addEventListener("visibilitychange", () => {
       if (document.hidden)
@@ -443,8 +605,8 @@
 
   function showForPlay() {
     setPlayer(0);
-    if (shouldShowByDefault())
-      applyPadVisibility(true);
+    // Always reveal during play when asked — autoscript / tests need a visible pad.
+    applyPadVisibility(true);
   }
 
   function readNetplayTimeMs() {
@@ -481,103 +643,173 @@
   async function holdNetplay(name, netplayMs) {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     setPressed(name, true);
-    const needFrames = Math.max(10, Math.ceil((netplayMs || 800) / 16));
+    const needFrames = Math.max(8, Math.ceil((netplayMs || 800) / 16));
     const startSends = (typeof Module !== "undefined" && Module.__mamehubSendCount) | 0;
-    const deadline = Date.now() + 180000;
+    // Cap wall wait so menu scripts stay snappy under fakelag / slow candy.
+    const wallCap = Math.max(900, Math.min(4000, (netplayMs || 800) * 2));
+    const deadline = Date.now() + wallCap;
     while (Date.now() < deadline) {
       const sends = (typeof Module !== "undefined" && Module.__mamehubSendCount) | 0;
       if (sends - startSends >= needFrames)
         break;
-      await sleep(40);
+      await sleep(30);
     }
     setPressed(name, false);
-    await sleep(80);
+    await sleep(60);
   }
 
   /**
-   * Host: attract → Match Race → race, then random P1 inputs.
-   * Joiner: same P1 pad names; mamehub seat remaps to P2+.
+   * Short ChronoMap tap for menus. holdNetplay() keeps the button down across
+   * many send windows — on SMK that scrolls the mode list past 2P Match Race
+   * (or wraps back to 1P) before confirm.
+   */
+  async function tapNetplay(name, frames, settleMs) {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const need = Math.max(2, Math.min(6, frames == null ? 3 : frames | 0));
+    setPressed(name, true);
+    const startSends = (typeof Module !== "undefined" && Module.__mamehubSendCount) | 0;
+    const deadline = Date.now() + 900;
+    while (Date.now() < deadline) {
+      const sends = (typeof Module !== "undefined" && Module.__mamehubSendCount) | 0;
+      if (sends - startSends >= need)
+        break;
+      await sleep(16);
+    }
+    setPressed(name, false);
+    await sleep(settleMs == null ? 280 : settleMs);
+  }
+
+  function scriptLog(prefix, m) {
+    const line = prefix + m;
+    try {
+      const el = document.getElementById("log");
+      if (el) {
+        el.textContent += line + "\n";
+        el.scrollTop = el.scrollHeight;
+      }
+    } catch (_) { /* ignore */ }
+    console.log(line);
+  }
+
+  /** Both seats: hold accelerate (B) and weave — produces continuous dual-seat ChronoMap inputs. */
+  async function driveAround(log, durationMs) {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const end = Date.now() + (durationMs || 90000);
+    log("driving (hold B + weave)");
+    setPressed("b", true); // SMK accelerate
+    let steerLeft = true;
+    while (Date.now() < end) {
+      setPressed(steerLeft ? "right" : "left", false);
+      setPressed(steerLeft ? "left" : "right", true);
+      // Pulse hop occasionally so input maps keep changing.
+      if (((Date.now() / 900) | 0) % 5 === 0) {
+        setPressed("y", true);
+        await sleep(120);
+        setPressed("y", false);
+      }
+      await sleep(280 + ((Math.random() * 220) | 0));
+      steerLeft = !steerLeft;
+    }
+    releaseAll();
+    log("driving done");
+  }
+
+  /**
+   * Host / P1: Start → wait → Down (2P GAME) → B → Match Race menus → drive.
+   *
+   * Video analysis (/tmp/mamehub-smk-record): after Start the mode list is
+   * "1P GAME / 2P GAME". Extra Start presses confirm 1P (seen entering
+   * MARIOKART GP / TIME TRIAL). Do exactly one Start, wait for that menu,
+   * one Down, then B to advance — never Start again on the mode list.
    */
   async function scriptMarioKartMatchRace() {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const log = (m) => {
-      try {
-        const el = document.getElementById("log");
-        if (el) { el.textContent += m + "\n"; el.scrollTop = el.scrollHeight; }
-      } catch (_) {}
-      console.log(m);
+    const log = (m) => scriptLog("SMK script: ", m);
+    const waitMenu = async (ms, why) => {
+      log("wait " + ms + "ms — " + why);
+      await sleep(ms);
     };
     setPlayer(0);
+    applyPadVisibility(true);
     try {
       const t = await waitForNetplayClock(1200, 180000);
-      log("SMK script: lockstep clock ok (" + t + "ms)");
+      log("lockstep clock ok (" + t + "ms)");
     } catch (err) {
-      log("SMK script: " + (err && err.message ? err.message : err) + " — continuing anyway");
+      log((err && err.message ? err.message : err) + " — continuing anyway");
     }
-    log("SMK script: leave attract (PUSH B)");
-    for (let i = 0; i < 14; i++)
-      await holdNetplay("b", 1000);
-    log("SMK script: select 2P Match Race");
-    await holdNetplay("down", 800);
-    await holdNetplay("b", 1000);
-    log("SMK script: CC class");
-    await holdNetplay("b", 1000);
-    log("SMK script: P1 character");
-    await holdNetplay("b", 1000);
-    log("SMK script: wait for P2 + confirm course");
-    const waitStart = readNetplayTimeMs();
-    while (readNetplayTimeMs() - waitStart < 8000)
-      await sleep(200);
-    await holdNetplay("b", 1000);
-    await holdNetplay("b", 1000);
-    log("SMK script: random race inputs");
-    const end = Date.now() + 90000;
-    const dirs = ["left", "right", "b", "a", "y"];
-    while (Date.now() < end) {
-      const name = dirs[(Math.random() * dirs.length) | 0];
-      await holdNetplay(name, 350 + ((Math.random() * 450) | 0));
-    }
-    releaseAll();
-    log("SMK script: done");
+
+    // Boot logos ignore Start; wait them out before the first press.
+    await waitMenu(12000, "Nintendo / title logos before first Start");
+
+    log("leave attract: single Start");
+    await tapNetplay("start", 4, 200);
+    await waitMenu(8000, "1P GAME / 2P GAME menu");
+
+    log("2P GAME: single Down");
+    await tapNetplay("down", 3, 200);
+    await waitMenu(2500, "cursor on 2P GAME");
+
+    log("advance: B (confirm 2P GAME)");
+    await tapNetplay("b", 4, 200);
+    await waitMenu(5000, "GP / MATCH RACE / BATTLE menu");
+
+    // After 2P GAME the next list defaults to MARIO KART GP — one Down → MATCH RACE.
+    log("MATCH RACE: single Down");
+    await tapNetplay("down", 3, 200);
+    await waitMenu(2500, "cursor on MATCH RACE");
+
+    log("confirm Match Race");
+    await tapNetplay("b", 4, 200);
+    await waitMenu(5000, "CC class");
+
+    log("CC class confirm");
+    await tapNetplay("b", 4, 200);
+    await waitMenu(5000, "P1 character select");
+
+    log("P1 character confirm");
+    await tapNetplay("b", 4, 200);
+    await waitMenu(14000, "P2 character / course");
+
+    log("confirm course / start race");
+    await tapNetplay("b", 4, 300);
+    await waitMenu(2000, "after course confirm");
+    await tapNetplay("b", 4, 300);
+    await waitMenu(8000, "race countdown");
+
+    log("random race inputs");
+    await driveAround(log, 90000);
+    log("done");
   }
 
-  /** Joiner: P1 pad names (remapped by seat); answer menus, then random inputs. */
+  /** Joiner / P2: idle until host reaches 2P character select, then confirm. */
   async function scriptMarioKartJoinMatchRace() {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const log = (m) => {
-      try {
-        const el = document.getElementById("log");
-        if (el) { el.textContent += m + "\n"; el.scrollTop = el.scrollHeight; }
-      } catch (_) {}
-      console.log(m);
-    };
+    const log = (m) => scriptLog("SMK join script: ", m);
     setPlayer(0);
+    applyPadVisibility(true);
     try {
       const t = await waitForNetplayClock(1200, 180000);
-      log("SMK join script: lockstep clock ok (" + t + "ms)");
+      log("lockstep clock ok (" + t + "ms)");
     } catch (err) {
-      log("SMK join script: " + (err && err.message ? err.message : err));
+      log(err && err.message ? err.message : err);
     }
-    log("SMK join script: wait for host menus, then character/course (P1 controls → seat)");
-    const t0 = readNetplayTimeMs();
-    while (readNetplayTimeMs() - t0 < 18000)
-      await sleep(200);
-    for (let i = 0; i < 12; i++)
-      await holdNetplay("b", 1000);
-    log("SMK join script: random race inputs");
-    const end = Date.now() + 90000;
-    const dirs = ["left", "right", "b", "a", "y"];
-    while (Date.now() < end) {
-      const name = dirs[(Math.random() * dirs.length) | 0];
-      await holdNetplay(name, 350 + ((Math.random() * 450) | 0));
+    log("wait for host 2P menus (~45s wall)");
+    await sleep(45000);
+    log("P2 character / confirm");
+    for (let i = 0; i < 8; i++) {
+      await tapNetplay("b", 4, 400);
+      await sleep(1500);
     }
-    releaseAll();
-    log("SMK join script: done");
+    await sleep(5000);
+    log("random race inputs");
+    await driveAround(log, 90000);
+    log("done");
   }
 
   global.MamehubVirtualGamepad = {
     mount,
     showForPlay,
+    applyPadVisibility,
     prefersTouchUi,
     isMobile,
     releaseAll,
@@ -591,6 +823,8 @@
     readNetplayTimeMs,
     waitForNetplayClock,
     holdNetplay,
+    tapNetplay,
+    driveAround,
     scriptMarioKartMatchRace,
     scriptMarioKartJoinMatchRace,
     P1,

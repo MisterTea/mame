@@ -131,6 +131,8 @@ private:
 	attotime            m_throttle_realtime;        // real time the last call to throttle
 	attotime            m_throttle_emutime;         // emulated time the last call to throttle
 	u32                 m_throttle_history;         // history of frames where we were fast enough
+	double              m_offline_origin_ms;        // wall-clock origin for offline realtime cap
+	bool                m_offline_origin_valid;
 
 	// dynamic speed computation
 	osd_ticks_t         m_speed_last_realtime;      // real time at the last speed calculation

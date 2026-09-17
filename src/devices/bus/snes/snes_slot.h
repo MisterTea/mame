@@ -180,6 +180,7 @@ public:
 	// device_image_interface implementation
 	virtual std::pair<std::error_condition, std::string> call_load() override;
 	virtual void call_unload() override;
+	virtual void battery_flush() override;
 
 	virtual bool is_reset_on_load() const noexcept override { return true; }
 

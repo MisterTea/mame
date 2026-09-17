@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MAMEHub Online</title>
+  <style>
+    :root {
+      --bg: #12141a;
+      --fg: #e8e6e3;
+      --muted: #9a9590;
+      --accent: #3d9a6a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #1c2430, var(--bg));
+      color: var(--fg);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    header, footer { padding: 1rem 1.5rem; }
+    h1 { margin: 0; font-size: 1.4rem; letter-spacing: 0.04em; }
+    p { color: var(--muted); margin: 0.35rem 0 0; }
+    main {
+      display: grid;
+      gap: 1rem;
+      padding: 0 1.5rem 1.5rem;
+      align-content: start;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    input, button, select {
+      font: inherit;
+      padding: 0.55rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid #2a303a;
+      background: #1a1f28;
+      color: var(--fg);
+    }
+    button {
+      background: var(--accent);
+      border-color: transparent;
+      color: #04140c;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary { background: #2a303a; color: var(--fg); }
+    #canvas-wrap {
+      background: #000;
+      min-height: 480px;
+      border: 1px solid #2a303a;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    #canvas {
+      width: 100%;
+      max-width: 960px;
+      height: auto;
+      image-rendering: pixelated;
+      display: none;
+    }
+    #canvas-wrap:fullscreen,
+    #canvas-wrap:-webkit-full-screen,
+    #canvas-wrap.is-fallback-fullscreen {
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      border: none;
+      background: #000;
+      display: grid;
+      place-items: center;
+    }
+    #canvas-wrap:fullscreen::backdrop,
+    #canvas-wrap:-webkit-full-screen::backdrop {
+      background: #000;
+    }
+    #canvas-wrap.is-fallback-fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100dvh;
+    }
+    html:fullscreen header,
+    html:fullscreen footer,
+    html:-webkit-full-screen header,
+    html:-webkit-full-screen footer,
+    html:fullscreen main > :not(#canvas-wrap),
+    html:-webkit-full-screen main > :not(#canvas-wrap) {
+      display: none !important;
+    }
+    html:fullscreen #canvas-wrap,
+    html:-webkit-full-screen #canvas-wrap {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100dvh;
+      border: none;
+      background: #000;
+      display: grid;
+      place-items: center;
+    }
+    html:fullscreen,
+    html:-webkit-full-screen,
+    html.mamehub-fs-fallback,
+    html.mamehub-fs-fallback body {
+      overflow: hidden;
+      height: 100%;
+    }
+    #canvas-wrap:fullscreen #canvas,
+    #canvas-wrap:-webkit-full-screen #canvas,
+    #canvas-wrap.is-fallback-fullscreen #canvas,
+    html:fullscreen #canvas,
+    html:-webkit-full-screen #canvas {
+      transform-origin: center center;
+    }
+    #fullscreenExitBtn {
+      position: absolute;
+      top: 0.55rem;
+      right: 0.55rem;
+      z-index: 60;
+      background: rgba(18, 22, 30, 0.78);
+      color: var(--fg);
+      border: 1px solid rgba(232, 230, 227, 0.28);
+    }
+    #fullscreenExitBtn[hidden] { display: none; }
+    #canvas-placeholder { color: var(--muted); padding: 1rem; text-align: center; }
+    #log {
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      background: #0c0e12;
+      border: 1px solid #2a303a;
+      padding: 0.75rem;
+      max-height: 12rem;
+      overflow: auto;
+    }
+    #candy-progress {
+      width: 100%;
+      max-width: 960px;
+      margin: 0.5rem auto 0;
+    }
+    #candy-progress-label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 0.35rem;
+    }
+    #candy-progress-track {
+      height: 8px;
+      background: #1a1f28;
+      border: 1px solid #2a303a;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    #candy-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.15s ease-out;
+    }
+    #software-picker {
+      border: 1px solid #2a303a;
+      background: #151a22;
+      padding: 1rem 1.1rem;
+      border-radius: 8px;
+      max-width: 960px;
+    }
+    #software-picker h2 {
+      margin: 0 0 0.85rem;
+      font-size: 1.05rem;
+    }
+    #software-ac {
+      position: relative;
+      flex: 1 1 18rem;
+      min-width: 14rem;
+      max-width: 36rem;
+    }
+    #softwareAcInput {
+      width: 100%;
+    }
+    #softwareAcList {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 2px);
+      z-index: 20;
+      max-height: 24rem;
+      overflow: auto;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border: 1px solid #2a303a;
+      border-radius: 6px;
+      background: #12161e;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    }
+    #softwareAcList[hidden] { display: none; }
+    #softwareAcList li {
+      padding: 0 0.75rem;
+      height: 36px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      overflow: hidden;
+      color: var(--fg);
+    }
+    #softwareAcList li:hover,
+    #softwareAcList li[aria-selected="true"] {
+      background: rgba(61, 154, 106, 0.22);
+    }
+    #softwareAcList li.ac-spacer {
+      padding: 0;
+      display: block;
+      overflow: hidden;
+      pointer-events: none;
+      cursor: default;
+    }
+    #softwareAcList li.ac-spacer:hover { background: transparent; }
+    #softwareAcList .ac-title {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #softwareAcList .ac-id {
+      color: var(--muted);
+      font-family: ui-monospace, monospace;
+      font-size: 0.85em;
+      flex: 0 0 auto;
+    }
+    #softwareAcList .ac-empty {
+      color: var(--muted);
+      cursor: default;
+      height: auto;
+      padding: 0.45rem 0.75rem;
+    }
+    #host-lobby, #join-lobby {
+      border: 1px solid #2a303a;
+      background: #151a22;
+      padding: 1rem 1.1rem;
+      border-radius: 8px;
+      max-width: 960px;
+    }
+    #host-lobby h2, #join-lobby h2 {
+      margin: 0 0 0.35rem;
+      font-size: 1.05rem;
+    }
+    #host-lobby p, #join-lobby p {
+      margin: 0 0 0.65rem;
+    }
+    #hostLobbyMembers {
+      margin: 0.5rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    #hostLobbyMembers li {
+      padding: 0.4rem 0.55rem;
+      border: 1px solid #2a303a;
+      border-radius: 6px;
+      background: #12161e;
+      margin-top: 0.35rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.92rem;
+    }
+    #hostLobbyMembers .member-status {
+      color: var(--muted);
+      font-family: ui-monospace, monospace;
+      font-size: 0.85em;
+    }
+    #hostLobbyMembers .member-status.connected {
+      color: var(--accent);
+    }
+    #hostLobbyMembers .kick-btn {
+      background: #2a303a;
+      color: var(--fg);
+      border: 1px solid #3a4250;
+      font-weight: 600;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.8rem;
+    }
+    #hostMeshGraph {
+      display: block;
+      width: min(100%, 320px);
+      height: 200px;
+      margin: 0.75rem 0 0.25rem;
+      background: #0e1218;
+      border: 1px solid #2a303a;
+      border-radius: 8px;
+    }
+    #hostMeshHint {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin: 0.25rem 0 0;
+    }
+    #hostStartGameBtn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    #copyJoinLinkStatus {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    #instructions-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: rgba(8, 10, 14, 0.72);
+    }
+    #instructions-modal[hidden] { display: none; }
+    #instructions-dialog {
+      width: min(36rem, 100%);
+      max-height: min(85vh, 40rem);
+      overflow: auto;
+      border: 1px solid #2a303a;
+      border-radius: 10px;
+      background: #151a22;
+      padding: 1.15rem 1.25rem 1.25rem;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+    }
+    #instructions-dialog h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.15rem;
+    }
+    #instructions-dialog h3 {
+      margin: 1rem 0 0.35rem;
+      font-size: 0.95rem;
+      color: var(--fg);
+    }
+    #instructions-dialog p,
+    #instructions-dialog li {
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+    #instructions-dialog ul {
+      margin: 0.25rem 0 0;
+      padding-left: 1.15rem;
+    }
+    #instructions-dialog li + li { margin-top: 0.35rem; }
+    #instructions-dialog .row { margin-top: 1.1rem; }
+    #virtual-gamepad {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 40;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #virtual-gamepad .pad-cluster {
+      position: absolute;
+      display: grid;
+      gap: 0.35rem;
+      pointer-events: auto;
+    }
+    #virtual-gamepad .pad-dpad {
+      left: 0.6rem;
+      bottom: 0.6rem;
+      grid-template-columns: repeat(3, 3.1rem);
+      grid-template-rows: repeat(3, 3.1rem);
+      grid-template-areas:
+        ". up ."
+        "left . right"
+        ". down .";
+    }
+    #virtual-gamepad .pad-face {
+      right: 0.6rem;
+      bottom: 0.6rem;
+      grid-template-columns: repeat(3, 3.1rem);
+      grid-template-rows: repeat(3, 3.1rem);
+      grid-template-areas:
+        ". x ."
+        "y . a"
+        ". b .";
+    }
+    #virtual-gamepad .pad-shoulders {
+      left: 50%;
+      top: 0.55rem;
+      transform: translateX(-50%);
+      grid-auto-flow: column;
+      gap: 1.2rem;
+    }
+    #virtual-gamepad .pad-meta {
+      left: 50%;
+      bottom: 0.55rem;
+      transform: translateX(-50%);
+      grid-auto-flow: column;
+      gap: 0.75rem;
+    }
+    #virtual-gamepad button.pad-btn {
+      width: 3.1rem;
+      height: 3.1rem;
+      margin: 0;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(232, 230, 227, 0.28);
+      background: rgba(18, 22, 30, 0.55);
+      color: rgba(232, 230, 227, 0.92);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      box-shadow: none;
+      touch-action: none;
+    }
+    #virtual-gamepad button.pad-btn.wide {
+      width: 4.2rem;
+      height: 2.4rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+    }
+    #virtual-gamepad button.pad-btn.active {
+      background: rgba(61, 154, 106, 0.72);
+      border-color: rgba(61, 154, 106, 0.95);
+      color: #04140c;
+    }
+    #virtual-gamepad .pad-dpad .up { grid-area: up; }
+    #virtual-gamepad .pad-dpad .down { grid-area: down; }
+    #virtual-gamepad .pad-dpad .left { grid-area: left; }
+    #virtual-gamepad .pad-dpad .right { grid-area: right; }
+    #virtual-gamepad .pad-face .a { grid-area: a; }
+    #virtual-gamepad .pad-face .b { grid-area: b; }
+    #virtual-gamepad .pad-face .x { grid-area: x; }
+    #virtual-gamepad .pad-face .y { grid-area: y; }
+    #controls-panel {
+      border: 1px solid #2a303a;
+      background: #151a22;
+      padding: 1rem 1.1rem;
+      border-radius: 8px;
+      max-width: 960px;
+    }
+    #controls-panel h2 {
+      margin: 0 0 0.35rem;
+      font-size: 1.05rem;
+    }
+    #controls-panel p {
+      margin: 0 0 0.85rem;
+    }
+    #controls-bind-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+      gap: 0.45rem;
+      margin-bottom: 0.85rem;
+    }
+    #controls-bind-list button.bind-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      width: 100%;
+      background: #1a1f28;
+      color: var(--fg);
+      border: 1px solid #2a303a;
+      font-weight: 500;
+    }
+    #controls-bind-list button.bind-row.listening {
+      border-color: var(--accent);
+      color: #b8e0c8;
+    }
+    #controls-bind-list .bind-label { color: var(--muted); }
+    #controls-bind-list .bind-key { font-family: ui-monospace, monospace; }
+    #keyboard-legend {
+      max-width: 960px;
+      margin: 0;
+    }
+    #keyboard-legend img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid #2a303a;
+      background: #12141a;
+    }
+    #keyboard-legend figcaption {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-top: 0.4rem;
+    }
+    @media (max-width: 720px) {
+      #canvas-wrap { min-height: 360px; }
+      #virtual-gamepad .pad-dpad,
+      #virtual-gamepad .pad-face {
+        grid-template-columns: repeat(3, 2.75rem);
+        grid-template-rows: repeat(3, 2.75rem);
+      }
+      #virtual-gamepad button.pad-btn {
+        width: 2.75rem;
+        height: 2.75rem;
+      }
+      #virtual-gamepad button.pad-btn.wide {
+        width: 3.6rem;
+        height: 2.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MAMEHub Online</h1>
+    <p>Self-host shell — Nostr lobby signaling + WebRTC.</p>
+  </header>
+  <main>
+    <figure id="keyboard-legend">
+      <img id="keyboardLayoutImg" alt="Keyboard controls" width="2038" height="580" />
+      <figcaption id="keyboardLayoutCap">Player 1 keyboard. Green keys are active.</figcaption>
+    </figure>
+    <div class="row">
+      <button id="startOfflineBtn" type="button">Start offline</button>
+      <button id="gamepadToggleBtn" type="button" class="secondary" aria-pressed="false" title="Toggle on-screen gamepad">Gamepad</button>
+      <button id="controlsBtn" type="button" class="secondary" title="Open MAME Input Settings">Controls</button>
+      <button id="saveStateBtn" type="button" class="secondary" disabled title="Save state to this browser">Save state</button>
+      <button id="loadStateBtn" type="button" class="secondary" disabled title="Load the saved state">Load state</button>
+      <button id="instructionsBtn" type="button" class="secondary" title="How to play">Instructions</button>
+      <button id="fullscreenBtn" type="button" class="secondary" aria-pressed="false" title="Show only the game, full screen">Fullscreen</button>
+      <span id="pubkey" style="color:var(--muted);font-size:0.85rem"></span>
+    </div>
+    <div class="row">
+      <input id="userId" placeholder="user_id (optional)" size="24" />
+      <button id="hostBtn" type="button" class="secondary">Host lobby</button>
+    </div>
+    <div id="software-picker" hidden>
+      <h2 id="softwarePickerTitle">Offline — Select software</h2>
+      <div class="row">
+        <div id="software-ac">
+          <input id="softwareAcInput" type="text" autocomplete="off" spellcheck="false"
+            placeholder="Search software…"
+            aria-label="Software"
+            aria-autocomplete="list"
+            aria-controls="softwareAcList"
+            role="combobox"
+            aria-expanded="false" />
+          <ul id="softwareAcList" role="listbox" hidden></ul>
+        </div>
+        <button id="softwarePlayBtn" type="button">Play</button>
+        <button id="softwareCancelBtn" type="button" class="secondary">Cancel</button>
+      </div>
+    </div>
+    <div id="host-lobby" hidden>
+      <h2>Host lobby</h2>
+      <p id="hostLobbyGame"></p>
+      <div class="row">
+        <button id="copyJoinLinkBtn" type="button">Copy join link</button>
+        <span id="copyJoinLinkStatus"></span>
+      </div>
+      <p id="hostLobbyWaiting" style="margin-top:0.75rem">Waiting for players to join…</p>
+      <ul id="hostLobbyMembers" hidden></ul>
+      <svg id="hostMeshGraph" hidden aria-label="WebRTC mesh status"></svg>
+      <p id="hostMeshHint"></p>
+      <div class="row" style="margin-top:0.85rem">
+        <button id="hostStartGameBtn" type="button" disabled title="Wait until the mesh is fully connected">Start game</button>
+      </div>
+    </div>
+    <div id="join-lobby" hidden>
+      <h2>Joining game</h2>
+      <p id="joinLobbyGame"></p>
+      <p id="joinLobbyState">Connecting to host…</p>
+    </div>
+    <div id="instructions-modal" hidden>
+      <div id="instructions-dialog" role="dialog" aria-modal="true" aria-labelledby="instructionsTitle">
+        <h2 id="instructionsTitle">How to play</h2>
+        <h3>Host a game</h3>
+        <ul>
+          <li>Click <strong>Host lobby</strong>, pick the game, then <strong>Play</strong>.</li>
+          <li>Use <strong>Copy join link</strong> and send that URL to players (up to 5 joiners / 6 total).</li>
+          <li>Seats are join order: host is <strong>P1</strong>, first joiner <strong>P2</strong>, then P3…</li>
+          <li>Everyone uses the same <strong>P1</strong> keyboard / on-screen pad; MAMEHub maps that to your seat (P2, P3, …).</li>
+          <li>Wait for the mesh graph to show all <strong>green</strong> links, then <strong>Start game</strong>.</li>
+          <li><strong>Kick</strong> anyone with red links; later players shift down a seat.</li>
+        </ul>
+        <h3>Join a game</h3>
+        <ul>
+          <li>Open the host’s join link — the cart is already chosen.</li>
+          <li>Your browser meshes with the host and every earlier joiner.</li>
+          <li>Wait until the host starts the game.</li>
+        </ul>
+        <h3>Change inputs</h3>
+        <ul>
+          <li>After the emulator is running, click <strong>Controls</strong> (or press Tab) to open MAME <strong>Input Settings</strong>.</li>
+          <li>Before play, <strong>Controls</strong> opens a shell remap panel for sticky keyboard → pad bindings.</li>
+        </ul>
+        <h3>Save / load state</h3>
+        <ul>
+          <li><strong>Save state</strong> writes a single snapshot for the current game into this browser’s storage.</li>
+          <li><strong>Load state</strong> restores that snapshot. It replaces the current session.</li>
+        </ul>
+        <h3>Gamepad button</h3>
+        <ul>
+          <li><strong>Gamepad</strong> shows or hides the on-screen pad (touch / mouse).</li>
+          <li>On phones and tablets it starts visible by default; on desktop it starts hidden.</li>
+        </ul>
+        <h3>Fullscreen</h3>
+        <ul>
+          <li><strong>Fullscreen</strong> puts the game on the entire screen and hides the rest of the site.</li>
+          <li>Press Escape or <strong>Exit fullscreen</strong> to return to the page.</li>
+        </ul>
+        <div class="row">
+          <button id="instructionsCloseBtn" type="button" class="secondary">Close</button>
+        </div>
+      </div>
+    </div>
+    <div id="controls-panel" hidden>
+      <h2>Keyboard controls (shell)</h2>
+      <p>Emulator not running yet — remaps here drive sticky <code>force_input</code> after play starts. Once the game is up, <strong>Controls</strong> opens MAME Input Settings instead.</p>
+      <div id="controls-bind-list"></div>
+      <div class="row">
+        <button id="controlsResetBtn" type="button" class="secondary">Reset defaults</button>
+        <button id="controlsCloseBtn" type="button" class="secondary">Close</button>
+      </div>
+    </div>
+    <div id="canvas-wrap">
+      <div id="canvas-placeholder">Start offline → pick software → play.</div>
+      <canvas id="canvas" width="512" height="448" tabindex="1"></canvas>
+      <button id="fullscreenExitBtn" type="button" class="secondary" hidden title="Exit fullscreen">Exit fullscreen</button>
+      <div id="virtual-gamepad" hidden aria-hidden="true" aria-label="On-screen gamepad">
+        <div class="pad-cluster pad-shoulders">
+          <button type="button" class="pad-btn wide" data-pad="l" aria-label="L">L</button>
+          <button type="button" class="pad-btn wide" data-pad="r" aria-label="R">R</button>
+        </div>
+        <div class="pad-cluster pad-dpad" aria-label="D-pad">
+          <button type="button" class="pad-btn up" data-pad="up" aria-label="Up">▲</button>
+          <button type="button" class="pad-btn left" data-pad="left" aria-label="Left">◀</button>
+          <button type="button" class="pad-btn right" data-pad="right" aria-label="Right">▶</button>
+          <button type="button" class="pad-btn down" data-pad="down" aria-label="Down">▼</button>
+        </div>
+        <div class="pad-cluster pad-face" aria-label="Face buttons">
+          <button type="button" class="pad-btn x" data-pad="x" aria-label="X">X</button>
+          <button type="button" class="pad-btn y" data-pad="y" aria-label="Y">Y</button>
+          <button type="button" class="pad-btn a" data-pad="a" aria-label="A">A</button>
+          <button type="button" class="pad-btn b" data-pad="b" aria-label="B">B</button>
+        </div>
+        <div class="pad-cluster pad-meta">
+          <button type="button" class="pad-btn wide" data-pad="select" aria-label="Select">Select</button>
+          <button type="button" class="pad-btn wide" data-pad="start" aria-label="Start">Start</button>
+        </div>
+      </div>
+    </div>
+    <div id="candy-progress" hidden>
+      <div id="candy-progress-label">Candy…</div>
+      <div id="candy-progress-track"><div id="candy-progress-bar"></div></div>
+    </div>
+    <div id="log"></div>
+  </main>
+  <footer></footer>
+  <script>
+    (function () {
+      var parts = location.pathname.split("/").filter(Boolean);
+      var id = (parts[0] || "").toLowerCase();
+      if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(id))
+        id = "snes";
+      document.write('<script src="/config.' + id + '.js?v=html6"><\/script>');
+    })();
+  </script>
+  <script>
+    (function () {
+      var cfg = window.MAMEHUB_BROWSER || {};
+      var img = document.getElementById("keyboardLayoutImg");
+      if (!img)
+        return;
+      img.src = cfg.keyboardLayout || ("/layouts/" + (cfg.id || "snes") + ".png");
+      var title = cfg.title || "This system";
+      img.alt = title + " keyboard controls";
+      var cap = document.getElementById("keyboardLayoutCap");
+      if (cap)
+        cap.textContent = title + " — Player 1 keys. Green keys are active. Controls can remap them.";
+    })();
+  </script>
+  <script src="../vendor/nostr.bundle.js"></script>
+  <script src="../nostr_lobby.js?v=mp39"></script>
+  <script src="../webrtc_peer.js?v=mp39"></script>
+  <script src="../virtual_gamepad.js?v=mp41"></script>
+  <script src="../app.js?v=mp50"></script>
+</body>
+</html>

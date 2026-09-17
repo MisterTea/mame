@@ -577,6 +577,16 @@ int running_machine::run(bool quiet)
 
 	// call all exit callbacks registered
 	call_notifiers(MACHINE_NOTIFY_EXIT);
+#if defined(__EMSCRIPTEN__)
+	// Image batteries are flushed in MACHINE_NOTIFY_EXIT; copy MEMFS to localStorage.
+	if (!netCommon)
+	{
+		EM_ASM({
+			if (typeof Module !== "undefined" && typeof Module.__mamehubPersistNvram === "function")
+				Module.__mamehubPersistNvram();
+		});
+	}
+#endif
 	util::archive_file::cache_clear();
 
 	// close the logfile
@@ -1106,6 +1116,15 @@ void running_machine::handle_saveload()
 						popmessage("%s state %s %s.\nWarning: Save states are not officially supported for this system.", opnamed, preposname, m_saveload_pending_file);
 					else
 						popmessage("%s state %s %s.", opnamed, preposname, m_saveload_pending_file);
+#if defined(__EMSCRIPTEN__)
+					if (m_saveload_schedule == saveload_schedule::SAVE)
+					{
+						EM_ASM({
+							if (typeof Module !== "undefined" && typeof Module.__mamehubPersistSaveState === "function")
+								Module.__mamehubPersistSaveState();
+						});
+					}
+#endif
 					break;
 				}
 
@@ -1556,6 +1575,24 @@ void running_machine::emscripten_main_loop()
 	if (!machine)
 		return;
 
+	int const want_saveload = EM_ASM_INT({
+		if (typeof Module === "undefined")
+			return 0;
+		if (Module.__mamehubWantSave) {
+			Module.__mamehubWantSave = 0;
+			return 1;
+		}
+		if (Module.__mamehubWantLoad) {
+			Module.__mamehubWantLoad = 0;
+			return 2;
+		}
+		return 0;
+	});
+	if (want_saveload == 1 && machine->m_saveload_schedule == saveload_schedule::NONE)
+		machine->schedule_save("1");
+	else if (want_saveload == 2 && machine->m_saveload_schedule == saveload_schedule::NONE)
+		machine->schedule_load("1");
+
 	auto profile = g_profiler.start(PROFILER_EXTRA);
 
 	static double s_last_burst_ms = 0.0;
@@ -1571,10 +1608,17 @@ void running_machine::emscripten_main_loop()
 		const double budget_ms = 20.0;
 		const double start_ms = emscripten_get_now();
 		attotime const start_time = scheduler->time();
+		// Mirror the native run() loop: ChronoMap seq_pressed / ioport sync
+		// gate on machine_time(), which otherwise stays at 0 forever under
+		// Emscripten and makes every netplay button read as released.
 		unsigned slices = 0;
 		while (!machine->m_paused && !machine->scheduled_event_pending())
 		{
+			attotime const time_before = scheduler->time();
 			scheduler->timeslice();
+			attotime const time_after = scheduler->time();
+			if (time_after > time_before)
+				machine->m_machine_time += (time_after - time_before);
 			++slices;
 			if (machine->m_saveload_schedule != saveload_schedule::NONE)
 			{
@@ -1601,6 +1645,49 @@ void running_machine::emscripten_main_loop()
 
 	// Stash for the outer Asyncify sleeper (busy bursts sleep less).
 	EM_ASM({ Module._mameLastBurstMs = $0; }, s_last_burst_ms);
+
+	machine->emscripten_maybe_persist_nvram();
+}
+
+void running_machine::emscripten_offline_nvram_flush()
+{
+	if (netCommon)
+		return;
+	if (options().nvram_save())
+		nvram_save();
+	image().save_batteries();
+	EM_ASM({
+		if (typeof Module !== "undefined" && typeof Module.__mamehubPersistNvram === "function")
+			Module.__mamehubPersistNvram();
+	});
+}
+
+void running_machine::emscripten_maybe_persist_nvram()
+{
+	if (netCommon)
+		return;
+
+	static double s_last_save_ms = 0.0;
+	static bool s_saved_while_hidden = false;
+	constexpr double kIntervalMs = 5.0 * 60.0 * 1000.0;
+	double const now = emscripten_get_now();
+	if (s_last_save_ms <= 0.0)
+		s_last_save_ms = now;
+
+	int const hidden = EM_ASM_INT({
+		return (typeof document !== "undefined" && document.visibilityState === "hidden") ? 1 : 0;
+	});
+	if (!hidden)
+		s_saved_while_hidden = false;
+
+	bool const due = (now - s_last_save_ms) >= kIntervalMs;
+	bool const hide_save = hidden && !s_saved_while_hidden;
+	if (!due && !hide_save)
+		return;
+
+	emscripten_offline_nvram_flush();
+	s_last_save_ms = now;
+	s_saved_while_hidden = hidden != 0;
 }
 
 void running_machine::emscripten_set_running_machine(running_machine *machine)

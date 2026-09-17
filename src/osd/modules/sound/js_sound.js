@@ -25,10 +25,16 @@ var watchDogTimerEvent = null;
 function lazy_init () {
 	//Make
 	if (context) {
-		//Return if already created:
+		if (context.state === "suspended") {
+			context.resume();
+		}
 		return;
 	}
-	if (typeof AudioContext != "undefined") {
+	if (window.__mamehubAudioContext) {
+		// Shell unlocked this during a user gesture (required on iOS Safari).
+		context = window.__mamehubAudioContext;
+	}
+	else if (typeof AudioContext != "undefined") {
 		//Standard context creation:
 		context = new AudioContext();
 	}
@@ -40,6 +46,7 @@ function lazy_init () {
 		//API not found!
 		return;
 	}
+	window.__mamehubAudioContext = context;
 	//Generate a volume control node:
 	gain_node = context.createGain();
 	//Set initial volume to 1:
@@ -184,13 +191,23 @@ function sample_count() {
 	return count;
 }
 
+function unlock () {
+	lazy_init();
+	if (!context) return;
+	if (context.state === "suspended") {
+		context.resume();
+	}
+}
+
 return {
 	stream_sink_update: stream_sink_update,
 	get_context: get_context,
-	sample_count: sample_count
+	sample_count: sample_count,
+	unlock: unlock
 };
 
 })();
 
 window.jsmame_stream_sink_update = jsmame_web_audio.stream_sink_update;
 window.jsmame_sample_count = jsmame_web_audio.sample_count;
+window.jsmame_unlock_audio = jsmame_web_audio.unlock;

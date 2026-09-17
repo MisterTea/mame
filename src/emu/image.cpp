@@ -127,6 +127,12 @@ void image_manager::unload_all()
 	}
 }
 
+void image_manager::save_batteries()
+{
+	for (device_image_interface &image : image_interface_enumerator(machine().root_device()))
+		image.battery_flush();
+}
+
 void image_manager::config_load(config_type cfg_type, config_level cfg_level, util::xml::data_node const *parentnode)
 {
 	if ((cfg_type == config_type::SYSTEM) && parentnode)

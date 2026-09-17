@@ -11,6 +11,47 @@
     return a < b ? (a + "|" + b) : (b + "|" + a);
   }
 
+  function inputMapSignature(payload) {
+    try {
+      const o = typeof payload === "string" ? JSON.parse(payload) : payload;
+      if (!o || o.t !== "put" || !o.m || typeof o.m !== "object")
+        return null;
+      const parts = [];
+      for (const k of Object.keys(o.m)) {
+        if (k.indexOf("INPUT/") !== 0)
+          continue;
+        if (k.indexOf("Start") < 0 && !/\/P[123] B$/.test(k))
+          continue;
+        const v = o.m[k];
+        if (v === undefined || v === null || v === "")
+          continue;
+        parts.push(k.replace(/^INPUT\/\d+\//, "") + "=" + v);
+      }
+      parts.sort();
+      return parts.length ? parts.join(" ") : "(idle)";
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function dumpInputChange(dir, peerId, payload, lastRef) {
+    if (!global.__mamehubDumpInputs)
+      return;
+    const sig = inputMapSignature(payload);
+    if (sig === null || sig === lastRef.v)
+      return;
+    lastRef.v = sig;
+    const line = "INPUT_DUMP " + dir + " " + (peerId || "?") + " " + sig;
+    try {
+      if (typeof global.__mamehubDumpInputLine === "function")
+        global.__mamehubDumpInputLine(dir + " " + (peerId || "?") + " " + sig);
+      else
+        console.log(line);
+    } catch (_) {
+      console.log(line);
+    }
+  }
+
   class WebRtcMeshNetplay {
     constructor(opts) {
       this.roomId = (opts && opts.roomId) || "";
@@ -37,8 +78,25 @@
       this._sendQ = [];
       this._lagTimer = null;
       this._lagStats = { sent: 0, recv: 0, dropped: 0 };
+      this._lastTxInputSig = { v: "" };
+      this._lastRxInputSig = { v: "" };
       /** @type {Map<string, string>} edgeKey → connecting|open|failed */
       this.linkStates = new Map();
+      /** @type {Map<string, number>} peerId → ChronoMap expiration (put end ms) */
+      this._peerCoverage = new Map();
+      this._waitStats = {
+        episodes: 0,
+        softEpisodes: 0,
+        samplesBehind: 0,
+        samplesSoft: 0,
+        samplesTotal: 0,
+        lastBehind: false,
+        lastSoft: false,
+        minSlackMs: null,
+        sumSlackMs: 0,
+        epochMs: 0,
+        timer: null,
+      };
     }
 
     setIdentity({ player, peerId, isHost, selfPubkey } = {}) {
@@ -67,6 +125,159 @@
       this._receiveHook = fn;
     }
 
+    _notePutCoverage(text, peerIdHint) {
+      try {
+        if (!text || text.indexOf('"t":"put"') < 0)
+          return;
+        const idMatch = /"id":"([^"]+)"/.exec(text);
+        const bMatch = /"b":(\d+)/.exec(text);
+        if (!bMatch)
+          return;
+        const id = (idMatch && idMatch[1]) || peerIdHint || "";
+        if (!id)
+          return;
+        const b = +bMatch[1];
+        if (!(b > 0))
+          return;
+        const prev = this._peerCoverage.get(id) || 0;
+        if (b > prev)
+          this._peerCoverage.set(id, b);
+      } catch (_) { /* ignore */ }
+    }
+
+    _readNetplayMs() {
+      try {
+        if (typeof Module !== "undefined" && typeof Module._mamehub_browser_netplay_time_ms === "function")
+          return Number(Module._mamehub_browser_netplay_time_ms()) || 0;
+      } catch (_) { /* ignore */ }
+      try {
+        if (global.JSMAME && typeof global.JSMAME.netplay_time_ms === "function")
+          return Number(global.JSMAME.netplay_time_ms()) || 0;
+      } catch (_) { /* ignore */ }
+      return 0;
+    }
+
+    /**
+     * Approx remotes_cover stalls: remote ChronoMap expiration behind shared
+     * netplay clock (same predicate as C++ remotes_cover(ts≈now)).
+     */
+    _publishWaitStats() {
+      const st = this._waitStats;
+      if (!st.epochMs || st.epochMs < 0)
+        return;
+      const elapsedMin = Math.max(1 / 60, (Date.now() - st.epochMs) / 60000);
+      const perMin = st.episodes / elapsedMin;
+      const softPerMin = st.softEpisodes / elapsedMin;
+      const pctBehind = st.samplesTotal
+        ? Math.round((1000 * st.samplesBehind) / st.samplesTotal) / 10
+        : 0;
+      const avgSlack = st.samplesTotal ? Math.round(st.sumSlackMs / st.samplesTotal) : 0;
+      try {
+        if (typeof Module !== "undefined") {
+          if (Module.__mamehubInputWaitFromCpp)
+            return;
+          Module.__mamehubInputWaitEpisodes = st.episodes;
+          Module.__mamehubInputWaitSleeps = st.samplesBehind;
+          Module.__mamehubInputWaitsPerMin = perMin;
+          Module.__mamehubInputWaitSoftPerMin = softPerMin;
+          Module.__mamehubInputWaitPctBehind = pctBehind;
+          Module.__mamehubInputWaitMinSlackMs = st.minSlackMs;
+          Module.__mamehubInputWaitAvgSlackMs = avgSlack;
+          Module.__mamehubInputWaitSource = "js-coverage";
+        }
+      } catch (_) { /* ignore */ }
+    }
+
+    _tickInputWaitMonitor() {
+      const now = this._readNetplayMs();
+      if (now < 1000)
+        return;
+      // Start the rate clock at first valid netplay time (post barrier).
+      if (!this._waitStats.epochMs || this._waitStats.epochMs < 0) {
+        this._waitStats.epochMs = Date.now();
+        this._waitStats.episodes = 0;
+        this._waitStats.softEpisodes = 0;
+        this._waitStats.samplesBehind = 0;
+        this._waitStats.samplesSoft = 0;
+        this._waitStats.samplesTotal = 0;
+        this._waitStats.lastBehind = false;
+        this._waitStats.lastSoft = false;
+        this._waitStats.minSlackMs = null;
+        this._waitStats.sumSlackMs = 0;
+      }
+      let minRemote = Infinity;
+      for (const [id, exp] of this._peerCoverage) {
+        if (id === this.peerId)
+          continue;
+        if (exp < minRemote)
+          minRemote = exp;
+      }
+      if (minRemote === Infinity)
+        return;
+      const slack = minRemote - now;
+      const st = this._waitStats;
+      st.samplesTotal++;
+      st.sumSlackMs += slack;
+      if (st.minSlackMs == null || slack < st.minSlackMs)
+        st.minSlackMs = slack;
+      // Hard: remotes_cover(now) would fail. Soft: <1 frame of slack left.
+      const behind = slack <= 0;
+      const soft = slack < 16;
+      if (behind) {
+        st.samplesBehind++;
+        if (!st.lastBehind) {
+          st.episodes++;
+          st.lastBehind = true;
+        }
+      } else {
+        st.lastBehind = false;
+      }
+      if (soft) {
+        st.samplesSoft++;
+        if (!st.lastSoft) {
+          st.softEpisodes++;
+          st.lastSoft = true;
+        }
+      } else {
+        st.lastSoft = false;
+      }
+      this._publishWaitStats();
+      if ((st.samplesTotal % 100) === 0) {
+        const elapsedMin = Math.max(1 / 60, (Date.now() - st.epochMs) / 60000);
+        console.log("INPUT_WAIT hard_per_min=" + (st.episodes / elapsedMin).toFixed(1) +
+          " soft_per_min=" + (st.softEpisodes / elapsedMin).toFixed(1) +
+          " pct_behind=" + (st.samplesTotal ? (100 * st.samplesBehind / st.samplesTotal).toFixed(1) : 0) +
+          "% min_slack_ms=" + st.minSlackMs +
+          " avg_slack_ms=" + Math.round(st.sumSlackMs / st.samplesTotal));
+      }
+    }
+
+    startInputWaitMonitor() {
+      const st = this._waitStats;
+      if (st.timer)
+        return;
+      st.epochMs = -1;
+      st.episodes = 0;
+      st.softEpisodes = 0;
+      st.samplesBehind = 0;
+      st.samplesSoft = 0;
+      st.samplesTotal = 0;
+      st.lastBehind = false;
+      st.lastSoft = false;
+      st.minSlackMs = null;
+      st.sumSlackMs = 0;
+      st.timer = setInterval(() => this._tickInputWaitMonitor(), 50);
+    }
+
+    stopInputWaitMonitor() {
+      const st = this._waitStats;
+      if (st.timer) {
+        clearInterval(st.timer);
+        st.timer = null;
+      }
+      this._publishWaitStats();
+    }
+
     peerIds() {
       return this.roster.map((m) => m.peerId);
     }
@@ -93,8 +304,11 @@
       this.ready = this.meshFullyConnected();
       if (this.onMeshChange)
         this.onMeshChange();
-      if (this.ready && !was && this.onReady)
-        this.onReady();
+      if (this.ready && !was) {
+        this.startInputWaitMonitor();
+        if (this.onReady)
+          this.onReady();
+      }
     }
 
     _setLink(a, b, state) {
@@ -149,6 +363,8 @@
 
     send(data) {
       const payload = typeof data === "string" ? data : JSON.stringify(data);
+      dumpInputChange("tx", this.peerId, payload, this._lastTxInputSig);
+      this._notePutCoverage(payload, this.peerId);
       const critical = /__NETPLAY_|\"t\":\"ping\"|\"t\":\"pong\"|\"t\":\"clock\"/.test(payload);
       if (!critical && this.fakeLagDrop > 0 && Math.random() < this.fakeLagDrop) {
         this._lagStats.dropped++;
@@ -241,6 +457,8 @@
       channel.onmessage = (ev) => {
         const data = typeof ev.data === "string" ? ev.data : "";
         this._lagStats.recv++;
+        this._notePutCoverage(data, slot.peerId);
+        dumpInputChange("rx", this.peerId, data, this._lastRxInputSig);
         if (this._receiveHook)
           this._receiveHook(data);
         if (this.onMessage)
@@ -553,6 +771,7 @@
     }
 
     close() {
+      this.stopInputWaitMonitor();
       if (this._lagTimer) {
         clearTimeout(this._lagTimer);
         this._lagTimer = null;
@@ -562,6 +781,7 @@
         this.removePeerByPubkey(pubkey);
       this.peers.clear();
       this.linkStates.clear();
+      this._peerCoverage.clear();
       this.ready = false;
       this.roster = [];
     }

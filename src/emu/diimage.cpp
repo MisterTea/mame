@@ -16,6 +16,8 @@
 #include "softlist.h"
 #include "softlist_dev.h"
 
+#include "NSM_CommonInterface.h"
+
 #include "corestr.h"
 #include "opresolv.h"
 #include "path.h"
@@ -561,13 +563,14 @@ void device_image_interface::battery_load(void *buffer, int length, int fill)
 	std::string const fname = std::string(device().machine().system().name).append(PATH_SEPARATOR).append(m_basename_noext).append(".nv");
 
 	int bytes_read = 0;
-	/* try to open the battery file and read it in, if possible */
-	/* JJG: Disable NVRAM on mamehub
-	emu_file file(device().machine().options().nvram_directory(), OPEN_FLAG_READ);
-	std::error_condition const filerr = file.open(fname);
-	if (!filerr)
-		bytes_read = file.read(buffer, length);
-	*/
+	// Skip battery files during netplay so every peer starts from the same default.
+	if (!netCommon)
+	{
+		emu_file file(device().machine().options().nvram_directory(), OPEN_FLAG_READ);
+		std::error_condition const filerr = file.open(fname);
+		if (!filerr)
+			bytes_read = file.read(buffer, length);
+	}
 
 	// fill remaining bytes (if necessary)
 	memset(((char *)buffer) + bytes_read, fill, length - bytes_read);
@@ -581,13 +584,14 @@ void device_image_interface::battery_load(void *buffer, int length, const void *
 	std::string const fname = std::string(device().machine().system().name).append(PATH_SEPARATOR).append(m_basename_noext).append(".nv");
 
 	int bytes_read = 0;
-	// try to open the battery file and read it in, if possible
-	/* JJG: Disable NVRAM on mamehub
-	emu_file file(device().machine().options().nvram_directory(), OPEN_FLAG_READ);
-	std::error_condition const filerr = file.open(fname);
-	if (!filerr)
-		bytes_read = file.read(buffer, length);
-	*/
+	// Skip battery files during netplay so every peer starts from the same default.
+	if (!netCommon)
+	{
+		emu_file file(device().machine().options().nvram_directory(), OPEN_FLAG_READ);
+		std::error_condition const filerr = file.open(fname);
+		if (!filerr)
+			bytes_read = file.read(buffer, length);
+	}
 
 	// if no file was present, copy the default contents
 	if (!bytes_read && def_buffer)

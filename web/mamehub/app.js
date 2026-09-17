@@ -1,12 +1,90 @@
 (function () {
   const logEl = document.getElementById("log");
   const log = (msg) => {
-    logEl.textContent += msg + "\n";
+    const s = String(msg || "");
+    // High-frequency INPUT_DUMP: keep a ring buffer for tests; skip DOM append
+    // (append+scroll starved emscripten catch-up under dumpinputs=1).
+    if (/^INPUT_DUMP\b/.test(s)) {
+      try {
+        const buf = (window.__mamehubDumpLines = window.__mamehubDumpLines || []);
+        buf.push(s);
+        if (buf.length > 2500)
+          buf.splice(0, buf.length - 2500);
+        // Sticky evidence — ring buffer alone drops early Start/B under long play.
+        const sticky = (window.__mamehubDumpSticky = window.__mamehubDumpSticky || {
+          chronoStart: false, chronoB: false, txB: false, padB: false, padStart: false, padSteer: false
+        });
+        if (/cpp chronomap .*P1 Start=\{p0:1/i.test(s) || /cpp send .*P1 Start=1/i.test(s))
+          sticky.chronoStart = true;
+        if (/cpp chronomap .*P[12] B=\{p[01]:1/i.test(s) || /cpp send .*P[12] B=1/i.test(s))
+          sticky.chronoB = true;
+        if (/INPUT_DUMP tx .*P[12] B=1/i.test(s))
+          sticky.txB = true;
+        if (/INPUT_DUMP pad b down/i.test(s))
+          sticky.padB = true;
+        if (/INPUT_DUMP pad start down/i.test(s))
+          sticky.padStart = true;
+        if (/INPUT_DUMP pad (left|right) down/i.test(s))
+          sticky.padSteer = true;
+      } catch (_) { /* ignore */ }
+      console.log(s);
+      return;
+    }
+    logEl.textContent += s + "\n";
     logEl.scrollTop = logEl.scrollHeight;
-    console.log(msg);
+    console.log(s);
   };
 
   const qs = new URLSearchParams(window.location.search || "");
+  const dumpInputsRequested = (() => {
+    const v = (qs.get("dumpinputs") || qs.get("dump_inputs") || "").toLowerCase();
+    return v === "1" || v === "true" || v === "yes" || v === "on";
+  })();
+  if (dumpInputsRequested) {
+    window.__mamehubDumpInputs = true;
+    log("INPUT_DUMP enabled (?dumpinputs=1) — logging force/ChronoMap input changes");
+  }
+
+  function dumpInputLine(msg) {
+    if (!window.__mamehubDumpInputs)
+      return;
+    const line = "INPUT_DUMP " + msg;
+    try {
+      const buf = (window.__mamehubDumpLines = window.__mamehubDumpLines || []);
+      buf.push(line);
+      if (buf.length > 2500)
+        buf.splice(0, buf.length - 2500);
+      const sticky = (window.__mamehubDumpSticky = window.__mamehubDumpSticky || {
+        chronoStart: false, chronoB: false, txB: false, padB: false, padStart: false, padSteer: false
+      });
+      if (/pad b down/i.test(line)) sticky.padB = true;
+      if (/pad start down/i.test(line)) sticky.padStart = true;
+      if (/pad (left|right) down/i.test(line)) sticky.padSteer = true;
+      if (/tx .*P[12] B=1/i.test(line)) sticky.txB = true;
+    } catch (_) { /* ignore */ }
+    console.log(line);
+  }
+  window.__mamehubDumpInputLine = dumpInputLine;
+
+  function installForceInputDumpHook() {
+    if (!dumpInputsRequested || !window.JSMAME || typeof window.JSMAME.force_input !== "function")
+      return;
+    if (window.JSMAME.__mamehubDumpWrapped)
+      return;
+    window.JSMAME.__mamehubDumpWrapped = true;
+    const orig = window.JSMAME.force_input.bind(window.JSMAME);
+    const lastByKey = Object.create(null);
+    window.JSMAME.force_input = (key, value) => {
+      const k = String(key);
+      const v = value ? String(value) : "";
+      if (lastByKey[k] !== v) {
+        lastByKey[k] = v;
+        dumpInputLine("force " + (v ? (k + "=" + v) : (k + " clear")));
+      }
+      return orig(key, value);
+    };
+  }
+
   const muteRequested = (() => {
     const mute = (qs.get("mute") || "").toLowerCase();
     if (mute === "1" || mute === "true" || mute === "yes" || mute === "on")
@@ -16,6 +94,111 @@
     const vol = qs.get("volume");
     return vol !== null && vol !== "";
   })();
+
+  // iOS Safari starts AudioContext as "suspended" unless resume() runs inside a
+  // user gesture. MAME's js_sound creates the context when the first samples
+  // arrive (long after Start/Play), so sound stays silent. Share one context
+  // created/resumed on tap; js_sound's `new AudioContext()` then reuses it.
+  const iosLike = /iPad|iPhone|iPod/.test(navigator.userAgent || "") ||
+    (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+  const silentWav = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+  function nativeAudioContext() {
+    const cur = window.AudioContext || window.webkitAudioContext;
+    return (cur && cur.__mamehubOrig) || cur || null;
+  }
+  function wrapAudioContextCtor() {
+    const Orig = nativeAudioContext();
+    if (!Orig || Orig.__mamehubWrapped)
+      return;
+    function Wrapped(opts) {
+      if (window.__mamehubAudioContext)
+        return window.__mamehubAudioContext;
+      const ctx = opts !== undefined ? new Orig(opts) : new Orig();
+      window.__mamehubAudioContext = ctx;
+      return ctx;
+    }
+    Wrapped.prototype = Orig.prototype;
+    Wrapped.__mamehubOrig = Orig;
+    Wrapped.__mamehubWrapped = true;
+    if (window.AudioContext)
+      window.AudioContext = Wrapped;
+    if (window.webkitAudioContext)
+      window.webkitAudioContext = Wrapped;
+  }
+  function hideAudioUnlockBanner() {
+    const el = document.getElementById("audio-unlock-banner");
+    if (el)
+      el.hidden = true;
+  }
+  function showAudioUnlockBanner() {
+    if (muteRequested || !iosLike)
+      return;
+    let el = document.getElementById("audio-unlock-banner");
+    if (!el) {
+      el = document.createElement("button");
+      el.id = "audio-unlock-banner";
+      el.type = "button";
+      el.textContent = "Tap to enable sound";
+      el.setAttribute("aria-label", "Tap to enable sound");
+      el.style.cssText = [
+        "position:fixed", "left:50%", "bottom:1.1rem", "transform:translateX(-50%)",
+        "z-index:40", "border:0", "border-radius:999px", "padding:0.65rem 1.1rem",
+        "font:inherit", "color:#fff", "background:#3d9a6a", "box-shadow:0 4px 16px #0008",
+        "cursor:pointer"
+      ].join(";");
+      el.addEventListener("click", () => unlockWebAudio());
+      document.body.appendChild(el);
+    }
+    el.hidden = false;
+  }
+  function unlockWebAudio() {
+    if (muteRequested)
+      return;
+    wrapAudioContextCtor();
+    const Orig = nativeAudioContext();
+    if (!Orig)
+      return;
+    try {
+      if (!window.__mamehubAudioContext)
+        window.__mamehubAudioContext = new Orig();
+      const ctx = window.__mamehubAudioContext;
+      if (ctx.state === "suspended")
+        ctx.resume();
+      const buf = ctx.createBuffer(1, 1, ctx.sampleRate || 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+      if (!window.__mamehubSilentAudio) {
+        const a = new Audio(silentWav);
+        a.setAttribute("playsinline", "true");
+        a.loop = false;
+        window.__mamehubSilentAudio = a;
+      }
+      window.__mamehubSilentAudio.play().catch(() => {});
+      const done = () => {
+        if (ctx.state === "running")
+          hideAudioUnlockBanner();
+      };
+      if (ctx.state === "running")
+        done();
+      else if (ctx.resume)
+        ctx.resume().then(done).catch(() => {});
+    } catch (_) { /* ignore */ }
+  }
+  wrapAudioContextCtor();
+  if (!muteRequested) {
+    ["pointerdown", "touchstart", "click", "keydown"].forEach((ev) => {
+      document.addEventListener(ev, unlockWebAudio, { capture: true, passive: true });
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible")
+        unlockWebAudio();
+    });
+    if (iosLike)
+      showAudioUnlockBanner();
+  }
+  window.__mamehubUnlockAudio = unlockWebAudio;
   const volumeDb = (() => {
     const vol = qs.get("volume");
     if (vol !== null && vol !== "")
@@ -62,6 +245,15 @@
       : pad.scriptMarioKartMatchRace;
     if (typeof run !== "function")
       return;
+    const sys = (window.MAMEHUB_BROWSER || {}).id || "";
+    if (sys && sys !== "snes")
+      return;
+    // Show on-screen pad during autoscript so headed Playwright runs are visible
+    // (inputs are force_input, not OS key events).
+    if (typeof pad.applyPadVisibility === "function")
+      pad.applyPadVisibility(true);
+    else if (typeof pad.showForPlay === "function")
+      pad.showForPlay();
     // Defer until lockstep clock is live (candy + barriers). Scripts wait internally too.
     log("Autoscript: armed Mario Kart " + (role === "join" ? "joiner" : "host") + " Match Race script");
     const kick = () => {
@@ -74,28 +266,585 @@
   }
 
   const cfg0 = window.MAMEHUB_BROWSER || {};
-  const isArcade = (cfg0.mode || "snes") === "arcade";
-  const gameTag = isArcade ? "arcade" : "snes";
-  const pickNoun = isArcade ? "arcade machine" : "SNES software";
+  const isArcade = cfg0.mode === "arcade";
+  const gameTag = cfg0.id || (isArcade ? "arcade" : "snes");
+  const pickNoun = cfg0.noun || (isArcade ? "arcade machine" : "software");
+  const brandTitle = cfg0.title || (isArcade ? "Arcade" : "SNES");
 
   function applyShellBranding() {
-    const brand = isArcade ? "Arcade" : "SNES";
-    document.title = "MAMEHub Online (" + brand + ")";
+    document.title = "MAMEHub Online (" + brandTitle + ")";
     const h1 = document.querySelector("header h1");
     if (h1)
-      h1.textContent = "MAMEHub Online (" + brand + ")";
+      h1.textContent = "MAMEHub Online (" + brandTitle + ")";
     const placeholder = document.getElementById("canvas-placeholder");
     if (placeholder)
-      placeholder.textContent = isArcade
-        ? "Start offline → pick an arcade machine → play."
-        : "Start offline → pick SNES software → play.";
+      placeholder.textContent = "Start offline → pick " + pickNoun + " → play.";
     const input = document.getElementById("softwareAcInput");
     if (input) {
-      input.placeholder = isArcade ? "Search arcade machines…" : "Search SNES software…";
-      input.setAttribute("aria-label", isArcade ? "Arcade machine" : "SNES software");
+      input.placeholder = "Search " + pickNoun + "…";
+      input.setAttribute("aria-label", pickNoun);
+    }
+    const pickerTitle = document.getElementById("softwarePickerTitle");
+    if (pickerTitle)
+      pickerTitle.textContent = "Offline — Select " + pickNoun;
+    const pad = document.getElementById("virtual-gamepad");
+    if (pad)
+      pad.setAttribute("aria-label", "On-screen " + brandTitle + " gamepad");
+    const layoutImg = document.getElementById("keyboardLayoutImg");
+    if (layoutImg) {
+      layoutImg.src = cfg0.keyboardLayout || ("/layouts/" + gameTag + ".png");
+      layoutImg.alt = brandTitle + " keyboard controls";
+    }
+    const layoutCap = document.getElementById("keyboardLayoutCap");
+    if (layoutCap)
+      layoutCap.textContent = brandTitle + " — Player 1 keys. Green keys are active. Controls can remap them.";
+    const canvas = document.getElementById("canvas");
+    if (canvas) {
+      const cw = (cfg0.canvasWidth | 0) || (isArcade ? 1152 : 512);
+      const ch = (cfg0.canvasHeight | 0) || 448;
+      canvas.width = cw;
+      canvas.height = ch;
     }
   }
   applyShellBranding();
+
+  const NVRAM_STORAGE_PREFIX = "mamehub.nvram.v1.";
+  const NVRAM_FS_ROOT = "/nvram";
+
+  function nvramStorageKey(software) {
+    return NVRAM_STORAGE_PREFIX + gameTag + "." + String(software || "").trim();
+  }
+
+  function nvramU8ToB64(u8) {
+    let s = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < u8.length; i += chunk)
+      s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+    return btoa(s);
+  }
+
+  function nvramB64ToU8(b64) {
+    const s = atob(b64);
+    const u8 = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++)
+      u8[i] = s.charCodeAt(i);
+    return u8;
+  }
+
+  function restoreNvramFromStorage(software) {
+    try {
+      if (typeof FS === "undefined" || !FS.mkdirTree)
+        return 0;
+      FS.mkdirTree(NVRAM_FS_ROOT);
+      const raw = localStorage.getItem(nvramStorageKey(software));
+      if (!raw)
+        return 0;
+      const parsed = JSON.parse(raw);
+      const files = parsed && parsed.files;
+      if (!files || typeof files !== "object")
+        return 0;
+      let n = 0;
+      for (const [rel, b64] of Object.entries(files)) {
+        if (typeof rel !== "string" || typeof b64 !== "string")
+          continue;
+        if (!rel || rel.includes("..") || rel.startsWith("/"))
+          continue;
+        const path = NVRAM_FS_ROOT + "/" + rel;
+        const slash = path.lastIndexOf("/");
+        if (slash > 0)
+          FS.mkdirTree(path.slice(0, slash));
+        FS.writeFile(path, nvramB64ToU8(b64));
+        n++;
+      }
+      return n;
+    } catch (err) {
+      console.warn("NVRAM restore:", err);
+      return 0;
+    }
+  }
+
+  function collectNvramFiles() {
+    const files = {};
+    if (typeof FS === "undefined")
+      return files;
+    let exists = false;
+    try {
+      exists = FS.analyzePath(NVRAM_FS_ROOT).exists;
+    } catch (_) {
+      return files;
+    }
+    if (!exists)
+      return files;
+    const walk = (dir) => {
+      let names;
+      try {
+        names = FS.readdir(dir);
+      } catch (_) {
+        return;
+      }
+      for (const name of names) {
+        if (name === "." || name === "..")
+          continue;
+        const p = dir + "/" + name;
+        let st;
+        try {
+          st = FS.stat(p);
+        } catch (_) {
+          continue;
+        }
+        if (FS.isDir(st.mode))
+          walk(p);
+        else if (FS.isFile(st.mode)) {
+          const rel = p.slice(NVRAM_FS_ROOT.length + 1);
+          try {
+            files[rel] = nvramU8ToB64(FS.readFile(p, { encoding: "binary" }));
+          } catch (_) { /* skip */ }
+        }
+      }
+    };
+    walk(NVRAM_FS_ROOT);
+    return files;
+  }
+
+  function persistNvramToStorage() {
+    const mod = window.Module;
+    if (!mod || mod.__mamehubNvramOffline === false)
+      return false;
+    const software = mod.__mamehubNvramSoftware;
+    if (!software)
+      return false;
+    try {
+      const files = collectNvramFiles();
+      if (!Object.keys(files).length)
+        return false;
+      const payload = JSON.stringify({
+        v: 1,
+        software: software,
+        savedAt: Date.now(),
+        files: files
+      });
+      mod.__mamehubNvramPayload = payload;
+      localStorage.setItem(nvramStorageKey(software), payload);
+      return true;
+    } catch (err) {
+      console.warn("NVRAM persist:", err);
+      return false;
+    }
+  }
+
+  function persistNvramOnPageExit() {
+    try {
+      const mod = window.Module;
+      if (!mod || mod.__mamehubNvramOffline === false)
+        return;
+      const software = mod.__mamehubNvramSoftware;
+      const payload = mod.__mamehubNvramPayload;
+      if (software && payload)
+        localStorage.setItem(nvramStorageKey(software), payload);
+      else
+        persistNvramToStorage();
+    } catch (_) { /* ignore quota / private mode */ }
+  }
+
+  window.addEventListener("pagehide", persistNvramOnPageExit);
+  window.addEventListener("beforeunload", persistNvramOnPageExit);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden")
+      persistNvramToStorage();
+  });
+
+  const STATE_STORAGE_PREFIX = "mamehub.state.v1.";
+  const STATE_FS_ROOT = "/sta";
+  const STATE_SLOT = "1";
+  let currentPlaySoftware = "";
+
+  function saveStateStorageKey(software) {
+    return STATE_STORAGE_PREFIX + gameTag + "." + String(software || "").trim();
+  }
+
+  function collectFsTree(root) {
+    const files = {};
+    if (typeof FS === "undefined")
+      return files;
+    let exists = false;
+    try {
+      exists = FS.analyzePath(root).exists;
+    } catch (_) {
+      return files;
+    }
+    if (!exists)
+      return files;
+    const walk = (dir) => {
+      let names;
+      try {
+        names = FS.readdir(dir);
+      } catch (_) {
+        return;
+      }
+      for (const name of names) {
+        if (name === "." || name === "..")
+          continue;
+        const p = dir + "/" + name;
+        let st;
+        try {
+          st = FS.stat(p);
+        } catch (_) {
+          continue;
+        }
+        if (FS.isDir(st.mode))
+          walk(p);
+        else if (FS.isFile(st.mode)) {
+          const rel = p.slice(root.length + 1);
+          try {
+            files[rel] = nvramU8ToB64(FS.readFile(p, { encoding: "binary" }));
+          } catch (_) { /* skip */ }
+        }
+      }
+    };
+    walk(root);
+    return files;
+  }
+
+  function restoreFsTree(root, files) {
+    if (typeof FS === "undefined" || !FS.mkdirTree || !files)
+      return 0;
+    FS.mkdirTree(root);
+    let n = 0;
+    for (const [rel, b64] of Object.entries(files)) {
+      if (typeof rel !== "string" || typeof b64 !== "string")
+        continue;
+      if (!rel || rel.includes("..") || rel.startsWith("/"))
+        continue;
+      const path = root + "/" + rel;
+      const slash = path.lastIndexOf("/");
+      if (slash > 0)
+        FS.mkdirTree(path.slice(0, slash));
+      FS.writeFile(path, nvramB64ToU8(b64));
+      n++;
+    }
+    return n;
+  }
+
+  function persistSaveStateToStorage() {
+    const software = currentPlaySoftware || (window.Module && Module.__mamehubNvramSoftware) || "";
+    if (!software)
+      return false;
+    try {
+      const files = collectFsTree(STATE_FS_ROOT);
+      if (!Object.keys(files).length)
+        return false;
+      localStorage.setItem(saveStateStorageKey(software), JSON.stringify({
+        v: 1,
+        software: software,
+        slot: STATE_SLOT,
+        savedAt: Date.now(),
+        files: files
+      }));
+      updateSaveStateButtons();
+      return true;
+    } catch (err) {
+      const quota = err && (err.name === "QuotaExceededError" || err.code === 22);
+      log(quota
+        ? "Save state is too large for browser storage"
+        : ("Save state storage failed: " + (err && err.message ? err.message : err)));
+      console.warn("Save state persist:", err);
+      return false;
+    }
+  }
+
+  function restoreSaveStateFromStorage(software) {
+    try {
+      const raw = localStorage.getItem(saveStateStorageKey(software));
+      if (!raw)
+        return 0;
+      const parsed = JSON.parse(raw);
+      const files = parsed && parsed.files;
+      if (!files || typeof files !== "object")
+        return 0;
+      return restoreFsTree(STATE_FS_ROOT, files);
+    } catch (err) {
+      console.warn("Save state restore:", err);
+      return 0;
+    }
+  }
+
+  function hasStoredSaveState(software) {
+    try {
+      return !!(software && localStorage.getItem(saveStateStorageKey(software)));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function emulatorSaveLoadReady() {
+    return typeof Module !== "undefined" && !!Module.calledRun;
+  }
+
+  function updateSaveStateButtons() {
+    const saveBtn = document.getElementById("saveStateBtn");
+    const loadBtn = document.getElementById("loadStateBtn");
+    const ready = emulatorSaveLoadReady();
+    if (saveBtn)
+      saveBtn.disabled = !ready;
+    if (loadBtn)
+      loadBtn.disabled = !ready || !hasStoredSaveState(currentPlaySoftware);
+  }
+
+  function requestSaveState() {
+    if (!emulatorSaveLoadReady())
+      return log("Start a game before saving state");
+    log("Saving state…");
+    window.Module.__mamehubWantSave = 1;
+  }
+
+  function requestLoadState() {
+    if (!emulatorSaveLoadReady())
+      return log("Start a game before loading state");
+    const software = currentPlaySoftware;
+    if (!hasStoredSaveState(software))
+      return log("No save state for this game");
+    const n = restoreSaveStateFromStorage(software);
+    if (!n)
+      return log("Failed to restore save state from browser storage");
+    log("Loading state…");
+    window.Module.__mamehubWantLoad = 1;
+  }
+
+  const saveStateBtn = document.getElementById("saveStateBtn");
+  const loadStateBtn = document.getElementById("loadStateBtn");
+  if (saveStateBtn)
+    saveStateBtn.onclick = () => requestSaveState();
+  if (loadStateBtn)
+    loadStateBtn.onclick = () => requestLoadState();
+  updateSaveStateButtons();
+
+  function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function nativeCanvasSize() {
+    const cfg = window.MAMEHUB_BROWSER || {};
+    return {
+      w: (cfg.canvasWidth | 0) || (isArcade ? 1152 : 512),
+      h: (cfg.canvasHeight | 0) || 448
+    };
+  }
+
+  function pinCanvasCssBox(canvas) {
+    if (!canvas || canvas.__mamehubCssPin)
+      return;
+    canvas.__mamehubCssPin = true;
+    const proto = HTMLElement.prototype.getBoundingClientRect;
+    canvas.getBoundingClientRect = function () {
+      const r = proto.call(this);
+      return new DOMRect(r.left, r.top, this.clientWidth, this.clientHeight);
+    };
+  }
+
+  function guardCanvasBufferSize(canvas) {
+    if (!canvas || canvas.__mamehubBufGuard)
+      return;
+    canvas.__mamehubBufGuard = true;
+    const protoW = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, "width");
+    const protoH = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, "height");
+    if (!protoW || !protoH || !protoW.get || !protoH.get)
+      return;
+    Object.defineProperty(canvas, "width", {
+      configurable: true,
+      get() { return protoW.get.call(this); },
+      set(v) {
+        const want = isGameFullscreen() ? nativeCanvasSize().w : (v | 0);
+        if (protoW.get.call(this) === want)
+          return;
+        protoW.set.call(this, want);
+      }
+    });
+    Object.defineProperty(canvas, "height", {
+      configurable: true,
+      get() { return protoH.get.call(this); },
+      set(v) {
+        const want = isGameFullscreen() ? nativeCanvasSize().h : (v | 0);
+        if (protoH.get.call(this) === want)
+          return;
+        protoH.set.call(this, want);
+      }
+    });
+  }
+
+  function exitDocumentFullscreen() {
+    const fn = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen;
+    if (!fn)
+      return Promise.resolve();
+    try {
+      const result = fn.call(document);
+      return result && typeof result.then === "function" ? result : Promise.resolve();
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  function isFallbackFullscreen() {
+    const wrap = document.getElementById("canvas-wrap");
+    return !!(wrap && wrap.classList.contains("is-fallback-fullscreen"));
+  }
+
+  function isGameFullscreen() {
+    const fs = fullscreenElement();
+    return fs === document.documentElement || isFallbackFullscreen();
+  }
+
+  function restoreCanvasLayout() {
+    const canvas = document.getElementById("canvas");
+    if (!canvas)
+      return;
+    const cw = nativeCanvasSize().w;
+    canvas.style.transform = "";
+    canvas.style.transformOrigin = "";
+    canvas.style.width = "";
+    canvas.style.height = "";
+    canvas.style.maxWidth = cw + "px";
+    canvas.style.maxHeight = "";
+  }
+
+  function fitCanvasInFullscreen() {
+    const wrap = document.getElementById("canvas-wrap");
+    const canvas = document.getElementById("canvas");
+    if (!wrap || !canvas || !isGameFullscreen())
+      return;
+    // Scale in CSS only. Changing canvas client/CSS box size makes SDL/Emscripten
+    // recreate the WebGL window and freezes/crashes soft-composite.
+    canvas.style.width = "";
+    canvas.style.height = "";
+    canvas.style.maxWidth = nativeCanvasSize().w + "px";
+    canvas.style.maxHeight = "";
+    const cw = canvas.clientWidth || canvas.width || 1;
+    const ch = canvas.clientHeight || canvas.height || 1;
+    const scale = Math.min(wrap.clientWidth / cw, wrap.clientHeight / ch);
+    canvas.style.transformOrigin = "center center";
+    canvas.style.transform = "scale(" + scale + ")";
+  }
+
+  let fullscreenFitObserver = null;
+
+  function startFullscreenFit() {
+    const wrap = document.getElementById("canvas-wrap");
+    if (!wrap)
+      return;
+    if (typeof ResizeObserver === "function") {
+      if (!fullscreenFitObserver)
+        fullscreenFitObserver = new ResizeObserver(() => fitCanvasInFullscreen());
+      fullscreenFitObserver.observe(wrap);
+    }
+    fitCanvasInFullscreen();
+  }
+
+  function stopFullscreenFit() {
+    if (fullscreenFitObserver) {
+      fullscreenFitObserver.disconnect();
+      fullscreenFitObserver = null;
+    }
+    restoreCanvasLayout();
+  }
+
+  function syncFullscreenUi() {
+    const on = isGameFullscreen();
+    const wrap = document.getElementById("canvas-wrap");
+    const btn = document.getElementById("fullscreenBtn");
+    const exitBtn = document.getElementById("fullscreenExitBtn");
+    if (wrap)
+      wrap.classList.toggle("is-fullscreen", on);
+    document.documentElement.classList.toggle("mamehub-fs-fallback", isFallbackFullscreen());
+    if (btn) {
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.textContent = on ? "Exit fullscreen" : "Fullscreen";
+    }
+    if (exitBtn)
+      exitBtn.hidden = !on;
+    if (on)
+      startFullscreenFit();
+    else
+      stopFullscreenFit();
+    if (on) {
+      const canvas = document.getElementById("canvas");
+      if (canvas)
+        canvas.focus();
+    }
+  }
+
+  function enterFallbackFullscreen() {
+    const wrap = document.getElementById("canvas-wrap");
+    if (!wrap)
+      return;
+    wrap.classList.add("is-fallback-fullscreen");
+    syncFullscreenUi();
+  }
+
+  function exitFallbackFullscreen() {
+    const wrap = document.getElementById("canvas-wrap");
+    if (wrap)
+      wrap.classList.remove("is-fallback-fullscreen");
+    syncFullscreenUi();
+  }
+
+  function isOurFullscreenEvent() {
+    const fs = fullscreenElement();
+    return fs === document.documentElement || isFallbackFullscreen();
+  }
+
+  document.addEventListener("fullscreenchange", (ev) => {
+    if (isOurFullscreenEvent() || isFallbackFullscreen())
+      ev.stopImmediatePropagation();
+    if (!fullscreenElement() && isFallbackFullscreen())
+      exitFallbackFullscreen();
+    else
+      syncFullscreenUi();
+  }, true);
+  document.addEventListener("webkitfullscreenchange", (ev) => {
+    if (isOurFullscreenEvent() || isFallbackFullscreen())
+      ev.stopImmediatePropagation();
+    if (!fullscreenElement() && isFallbackFullscreen())
+      exitFallbackFullscreen();
+    else
+      syncFullscreenUi();
+  }, true);
+  window.addEventListener("resize", (ev) => {
+    if (!isGameFullscreen())
+      return;
+    ev.stopImmediatePropagation();
+    fitCanvasInFullscreen();
+  }, true);
+
+  async function enterGameFullscreen() {
+    enterFallbackFullscreen();
+    const root = document.documentElement;
+    const fn = root.requestFullscreen || root.webkitRequestFullscreen || root.webkitRequestFullScreen;
+    if (!fn)
+      return;
+    try {
+      fn.call(root);
+    } catch (_) { /* tab-fill fallback already applied */ }
+  }
+
+  async function exitGameFullscreen() {
+    if (fullscreenElement()) {
+      try {
+        await exitDocumentFullscreen();
+      } catch (_) { /* ignore */ }
+    }
+    if (isFallbackFullscreen())
+      exitFallbackFullscreen();
+    else
+      syncFullscreenUi();
+  }
+
+  async function toggleGameFullscreen() {
+    if (isGameFullscreen())
+      await exitGameFullscreen();
+    else
+      await enterGameFullscreen();
+  }
+
+  pinCanvasCssBox(document.getElementById("canvas"));
 
   const lobby = new MamehubNostrLobby();
   window.__mamehubActiveLobby = lobby;
@@ -155,10 +904,26 @@
       host.hidden = false;
   }
 
+  function profileBasePath() {
+    // Keep join links under /<profile>/ so peers load the matching config.
+    let path = window.location.pathname || "/";
+    if (path.endsWith(".html"))
+      path = path.replace(/[^/]+$/, "");
+    if (!path.endsWith("/"))
+      path += "/";
+    const id = String(gameTag || "").replace(/[^a-z0-9_-]/gi, "");
+    if (id) {
+      const marker = "/" + id + "/";
+      const idx = path.indexOf(marker);
+      if (idx >= 0)
+        return path.slice(0, idx + marker.length);
+    }
+    // Legacy single-profile packages served from site root.
+    return "/";
+  }
+
   function buildJoinLink(roomId, software) {
-    const u = new URL(window.location.href);
-    u.search = "";
-    u.hash = "";
+    const u = new URL(window.location.origin + profileBasePath());
     u.searchParams.set("join", "1");
     u.searchParams.set("room", roomId);
     u.searchParams.set("soft", software);
@@ -701,6 +1466,12 @@
   let softwareCatalogPromise = null;
   let softwareAcActive = -1;
   let softwareAcFiltered = [];
+  let softwareAcQuery = null;
+  let softwareAcWinStart = -1;
+  let softwareAcWinEnd = -1;
+  let softwareAcPaintRaf = 0;
+  const SOFTWARE_AC_ITEM_H = 36;
+  const SOFTWARE_AC_OVERSCAN = 10;
 
   function decodeXmlText(s) {
     return String(s || "")
@@ -741,23 +1512,36 @@
         log("Arcade catalog: " + entries.length + " machines");
         return entries;
       }
-      const hashUrl = cfg.hashUrl || "hash/snes.xml";
-      log("Loading SNES softlist catalog…");
-      const resp = await fetch(hashUrl);
-      if (!resp.ok)
-        throw new Error("softlist fetch HTTP " + resp.status);
-      const text = await resp.text();
+      const hashFiles = Array.isArray(cfg.hashFiles) && cfg.hashFiles.length
+        ? cfg.hashFiles
+        : [{ url: cfg.hashUrl || ("hash/" + gameTag + ".xml"), file: "", machine: cfg.machine || gameTag }];
+      log("Loading " + brandTitle + " softlist catalog…");
       const entries = [];
       const re = /<software\s+name="([^"]+)"[^>]*>[\s\S]*?<description>([^<]*)<\/description>/gi;
-      let m;
-      while ((m = re.exec(text)) !== null) {
-        const id = m[1];
-        const title = decodeXmlText(m[2]).trim() || id;
-        entries.push({ id, title, titleLower: title.toLowerCase(), idLower: id.toLowerCase() });
+      for (const hf of hashFiles) {
+        const hashUrl = hf.url || cfg.hashUrl;
+        const resp = await fetch(hashUrl);
+        if (!resp.ok)
+          throw new Error("softlist fetch HTTP " + resp.status + " for " + hashUrl);
+        const text = await resp.text();
+        let m;
+        re.lastIndex = 0;
+        while ((m = re.exec(text)) !== null) {
+          const id = m[1];
+          const title = decodeXmlText(m[2]).trim() || id;
+          entries.push({
+            id,
+            title,
+            titleLower: title.toLowerCase(),
+            idLower: id.toLowerCase(),
+            machine: hf.machine || cfg.machine || gameTag,
+            hashFile: hf.file || String(hashUrl).split("/").pop()
+          });
+        }
       }
       entries.sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
       softwareCatalog = entries;
-      log("SNES catalog: " + entries.length + " titles");
+      log(brandTitle + " catalog: " + entries.length + " titles");
       return entries;
     })().catch((err) => {
       softwareCatalogPromise = null;
@@ -780,6 +1564,97 @@
     return false;
   }
 
+  function softwareAcMatchList(query) {
+    const q = (query || "").trim().toLowerCase();
+    if (!q)
+      return softwareCatalog;
+    const out = [];
+    for (const entry of softwareCatalog) {
+      if (softwareAcPrefixMatch(entry, q))
+        out.push(entry);
+    }
+    return out;
+  }
+
+  function ensureSoftwareAcListHandlers(list) {
+    if (list.dataset.acVirtual)
+      return;
+    list.dataset.acVirtual = "1";
+    list.addEventListener("scroll", () => {
+      if (softwareAcPaintRaf)
+        return;
+      softwareAcPaintRaf = requestAnimationFrame(() => {
+        softwareAcPaintRaf = 0;
+        paintSoftwareAcWindow();
+      });
+    });
+    list.addEventListener("mousedown", (ev) => {
+      const li = ev.target.closest("li[role='option']");
+      if (!li)
+        return;
+      ev.preventDefault();
+      const idx = parseInt(li.dataset.idx, 10);
+      if (softwareAcFiltered[idx])
+        selectSoftwareAc(softwareAcFiltered[idx]);
+    });
+  }
+
+  function paintSoftwareAcWindow(force) {
+    const list = document.getElementById("softwareAcList");
+    if (!list || list.hidden)
+      return;
+    if (!softwareAcFiltered.length) {
+      softwareAcWinStart = -1;
+      softwareAcWinEnd = -1;
+      list.innerHTML = "";
+      const li = document.createElement("li");
+      li.className = "ac-empty";
+      li.textContent = softwareAcQuery ? "No matches" : "No software loaded";
+      list.appendChild(li);
+      return;
+    }
+    const itemH = SOFTWARE_AC_ITEM_H;
+    const total = softwareAcFiltered.length;
+    const viewH = Math.max(list.clientHeight || 0, 256);
+    const start = Math.max(0, Math.floor(list.scrollTop / itemH) - SOFTWARE_AC_OVERSCAN);
+    const end = Math.min(total, start + Math.ceil(viewH / itemH) + SOFTWARE_AC_OVERSCAN * 2);
+    if (!force && start === softwareAcWinStart && end === softwareAcWinEnd) {
+      list.querySelectorAll('li[role="option"]').forEach((li) => {
+        const idx = parseInt(li.dataset.idx, 10);
+        li.setAttribute("aria-selected", idx === softwareAcActive ? "true" : "false");
+      });
+      return;
+    }
+    softwareAcWinStart = start;
+    softwareAcWinEnd = end;
+    const frag = document.createDocumentFragment();
+    const top = document.createElement("li");
+    top.className = "ac-spacer";
+    top.setAttribute("aria-hidden", "true");
+    top.style.height = (start * itemH) + "px";
+    frag.appendChild(top);
+    for (let i = start; i < end; i++) {
+      const entry = softwareAcFiltered[i];
+      const li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.id = "softwareAcOpt" + i;
+      li.dataset.id = entry.id;
+      li.dataset.idx = String(i);
+      li.setAttribute("aria-selected", i === softwareAcActive ? "true" : "false");
+      li.innerHTML = '<span class="ac-title"></span><span class="ac-id"></span>';
+      li.querySelector(".ac-title").textContent = entry.title;
+      li.querySelector(".ac-id").textContent = entry.id;
+      frag.appendChild(li);
+    }
+    const bot = document.createElement("li");
+    bot.className = "ac-spacer";
+    bot.setAttribute("aria-hidden", "true");
+    bot.style.height = ((total - end) * itemH) + "px";
+    frag.appendChild(bot);
+    list.innerHTML = "";
+    list.appendChild(frag);
+  }
+
   function closeSoftwareAcList() {
     const list = document.getElementById("softwareAcList");
     const input = document.getElementById("softwareAcInput");
@@ -788,6 +1663,9 @@
     if (input)
       input.setAttribute("aria-expanded", "false");
     softwareAcActive = -1;
+    softwareAcWinStart = -1;
+    softwareAcWinEnd = -1;
+    softwareAcQuery = null;
   }
 
   function renderSoftwareAcList(query) {
@@ -796,53 +1674,34 @@
     if (!list || !input || !softwareCatalog)
       return;
     const q = (query || "").trim().toLowerCase();
-    softwareAcFiltered = [];
-    for (const entry of softwareCatalog) {
-      if (softwareAcPrefixMatch(entry, q)) {
-        softwareAcFiltered.push(entry);
-        if (softwareAcFiltered.length >= 80)
-          break;
-      }
-    }
-    list.innerHTML = "";
-    if (!softwareAcFiltered.length) {
-      const li = document.createElement("li");
-      li.className = "ac-empty";
-      li.textContent = q ? "No matches" : "No software loaded";
-      list.appendChild(li);
-    } else {
-      softwareAcFiltered.forEach((entry, idx) => {
-        const li = document.createElement("li");
-        li.setAttribute("role", "option");
-        li.id = "softwareAcOpt" + idx;
-        li.dataset.id = entry.id;
-        li.innerHTML = '<span class="ac-title"></span><span class="ac-id"></span>';
-        li.querySelector(".ac-title").textContent = entry.title;
-        li.querySelector(".ac-id").textContent = entry.id;
-        li.addEventListener("mousedown", (ev) => {
-          ev.preventDefault();
-          selectSoftwareAc(entry);
-        });
-        list.appendChild(li);
-      });
-    }
-    softwareAcActive = softwareAcFiltered.length ? 0 : -1;
-    updateSoftwareAcActive();
+    const queryChanged = q !== softwareAcQuery;
+    softwareAcQuery = q;
+    softwareAcFiltered = softwareAcMatchList(query);
+    ensureSoftwareAcListHandlers(list);
     list.hidden = false;
     input.setAttribute("aria-expanded", "true");
+    if (queryChanged)
+      list.scrollTop = 0;
+    softwareAcActive = softwareAcFiltered.length ? 0 : -1;
+    softwareAcWinStart = -1;
+    void list.offsetHeight;
+    paintSoftwareAcWindow(true);
   }
 
   function updateSoftwareAcActive() {
     const list = document.getElementById("softwareAcList");
     if (!list)
       return;
-    const items = list.querySelectorAll('li[role="option"]');
-    items.forEach((li, idx) => {
-      const on = idx === softwareAcActive;
-      li.setAttribute("aria-selected", on ? "true" : "false");
-      if (on)
-        li.scrollIntoView({ block: "nearest" });
-    });
+    if (softwareAcActive >= 0 && softwareAcFiltered.length) {
+      const itemH = SOFTWARE_AC_ITEM_H;
+      const top = softwareAcActive * itemH;
+      const viewH = list.clientHeight || 256;
+      if (top < list.scrollTop)
+        list.scrollTop = top;
+      else if (top + itemH > list.scrollTop + viewH)
+        list.scrollTop = Math.max(0, top + itemH - viewH);
+    }
+    paintSoftwareAcWindow(true);
   }
 
   function selectSoftwareAc(entry) {
@@ -851,7 +1710,27 @@
       return;
     input.value = entry.title + " (" + entry.id + ")";
     input.dataset.shortname = entry.id;
+    input.dataset.machine = entry.machine || "";
     closeSoftwareAcList();
+  }
+
+  function machineForSoftware(software) {
+    const cfg = window.MAMEHUB_BROWSER || {};
+    const id = String(software || "").trim();
+    if (softwareCatalog && id) {
+      const hit = softwareCatalog.find((e) => e.id === id);
+      if (hit && hit.machine)
+        return hit.machine;
+    }
+    return cfg.machine || gameTag;
+  }
+
+  function selectedSoftwareMachine() {
+    const input = document.getElementById("softwareAcInput");
+    const fromData = input && (input.dataset.machine || "").trim();
+    if (fromData)
+      return fromData;
+    return machineForSoftware(selectedSoftwareShortname());
   }
 
   function selectedSoftwareShortname() {
@@ -920,7 +1799,7 @@
     const title = document.getElementById("softwarePickerTitle");
     const input = document.getElementById("softwareAcInput");
     mountSoftwareAutocomplete();
-    const noun = isArcade ? "arcade machine" : "SNES software";
+    const noun = pickNoun;
     if (mode === "host")
       title.textContent = "Host game — Select " + noun;
     else if (mode === "join")
@@ -934,8 +1813,10 @@
         const cfg = window.MAMEHUB_BROWSER || {};
         const prefer = isArcade
           ? (cfg.defaultMachine || "xmen6p")
-          : ((mode === "host" || mode === "join") ? "smkart" : "smw");
-        const entry = softwareCatalog.find((e) => e.id === prefer) || softwareCatalog[0];
+          : ((mode === "host" || mode === "join")
+            ? (cfg.defaultHostSoftware || cfg.defaultSoftware)
+            : (cfg.defaultSoftware || cfg.defaultHostSoftware));
+        const entry = (prefer && softwareCatalog.find((e) => e.id === prefer)) || softwareCatalog[0];
         if (entry)
           selectSoftwareAc(entry);
         input.focus();
@@ -949,7 +1830,7 @@
     else if (isArcade)
       log("Offline — select an arcade machine. Candy fetches the machine zip.");
     else
-      log("Offline — select SNES software. Candy fetches snes.zip + the cart.");
+      log("Offline — select " + noun + ". Candy fetches the system zip + the cart.");
   }
 
   function setCandyProgress(loaded, total, name) {
@@ -982,10 +1863,10 @@
 
   async function bootEmulator(software, opts) {
     const cfg = window.MAMEHUB_BROWSER || {};
-    const jsPath = cfg.wasmJs || (isArcade ? "dist/mamearcadehub.js" : "dist/mamesneshub.js");
+    const jsPath = cfg.wasmJs || ("dist/mame" + gameTag + "hub.js");
     const romPath = cfg.romPath || "/roms";
     const hashPath = cfg.hashPath || "/hash";
-    const hashUrl = cfg.hashUrl || "hash/snes.xml";
+    const media = cfg.media || "cart";
     const canvas = document.getElementById("canvas");
     const placeholder = document.getElementById("canvas-placeholder");
 
@@ -998,22 +1879,33 @@
     if (!software)
       throw new Error(isArcade ? "No machine shortname" : "No software shortname");
 
-    let hashData = null;
+    if (!isArcade && !opts.machine)
+      await loadSoftwareCatalog().catch(() => {});
+    const machine = (opts.machine || machineForSoftware(software) || cfg.machine || gameTag).trim();
+
+    const hashFiles = Array.isArray(cfg.hashFiles) && cfg.hashFiles.length
+      ? cfg.hashFiles
+      : (cfg.hashUrl ? [{ url: cfg.hashUrl, file: String(cfg.hashUrl).split("/").pop() }] : []);
+    const hashDataByFile = {};
     if (!isArcade) {
-      hashData = await loadHashXml(hashUrl);
+      for (const hf of hashFiles) {
+        const file = hf.file || String(hf.url || "").split("/").pop();
+        hashDataByFile[file] = await loadHashXml(hf.url);
+      }
     }
     placeholder.style.display = "none";
     canvas.style.display = "block";
     // Keep the SDL/WebGL window near native aspect so soft-composite stays cheap.
-    if (isArcade) {
-      canvas.width = 1152;
-      canvas.height = 448;
-      canvas.style.maxWidth = "1152px";
-      canvas.style.aspectRatio = "1152 / 448";
-    } else {
-      canvas.width = 512;
-      canvas.height = 448;
-    }
+    const cw = (cfg.canvasWidth | 0) || (isArcade ? 1152 : 512);
+    const ch = (cfg.canvasHeight | 0) || (isArcade ? 448 : 448);
+    canvas.width = cw;
+    canvas.height = ch;
+    canvas.style.maxWidth = cw + "px";
+    canvas.style.aspectRatio = cw + " / " + ch;
+    pinCanvasCssBox(canvas);
+    guardCanvasBufferSize(canvas);
+    if (isGameFullscreen())
+      fitCanvasInFullscreen();
     canvas.focus();
     if (window.MamehubVirtualGamepad && typeof window.MamehubVirtualGamepad.showForPlay === "function")
       window.MamehubVirtualGamepad.showForPlay();
@@ -1024,7 +1916,7 @@
           "-rompath", romPath,
           "-window",
           // Cap OSD window / soft-composite size (xmen6p dual layout is wide).
-          "-resolution", "1152x448",
+          "-resolution", cw + "x" + ch,
           opts.mamehub ? "-mamehub" : "-nomamehub",
           "-candy",
           "-skip_gameinfo",
@@ -1033,15 +1925,17 @@
           "-video", "opengl",
           "-nowaitvsync",
           "-nosyncrefresh",
-          "-nodiscord"
+          "-nodiscord",
+          "-nvram_directory", "/nvram",
+          "-state_directory", "/sta"
         ]
       : [
-          "snes",
-          "-cart", software,
+          machine,
+          "-" + media, software,
           "-rompath", romPath,
           "-hashpath", hashPath,
           "-window",
-          "-resolution", "512x448",
+          "-resolution", cw + "x" + ch,
           opts.mamehub ? "-mamehub" : "-nomamehub",
           "-candy",
           "-skip_gameinfo",
@@ -1050,7 +1944,9 @@
           "-video", "opengl",
           "-nowaitvsync",
           "-nosyncrefresh",
-          "-nodiscord"
+          "-nodiscord",
+          "-nvram_directory", "/nvram",
+          "-state_directory", "/sta"
         ];
     if (opts.mamehub)
       log("Netplay throttle enabled (shared WebRTC clock)");
@@ -1082,20 +1978,47 @@
     }
 
     const net = opts.net || null;
+    const nvramOffline = !opts.mamehub;
+    currentPlaySoftware = software;
     window.Module = {
       canvas,
       candyProxyBase: cfg.candyProxyBase || "/candy-proxy",
       candyProgress: setCandyProgress,
       arguments: args,
       mamehubNet: net,
+      __mamehubDumpInputs: !!dumpInputsRequested,
+      __mamehubNvramSoftware: software,
+      __mamehubNvramOffline: nvramOffline,
+      __mamehubPersistNvram: function () {
+        if (!nvramOffline)
+          return;
+        if (persistNvramToStorage())
+          log("Saved NVRAM to browser storage");
+      },
+      __mamehubPersistSaveState: function () {
+        if (persistSaveStateToStorage())
+          log("Saved state to browser storage");
+      },
       preRun: [
         function () {
           try {
             if (typeof FS !== "undefined" && FS.mkdirTree) {
               FS.mkdirTree(romPath);
-              if (!isArcade && hashData) {
-                FS.mkdirTree(hashPath);
-                FS.writeFile(hashPath + "/snes.xml", hashData);
+              FS.mkdirTree(NVRAM_FS_ROOT);
+              FS.mkdirTree(STATE_FS_ROOT);
+              if (!isArcade) {
+                const names = Object.keys(hashDataByFile);
+                if (names.length) {
+                  FS.mkdirTree(hashPath);
+                  names.forEach((file) => {
+                    FS.writeFile(hashPath + "/" + file, hashDataByFile[file]);
+                  });
+                }
+              }
+              if (nvramOffline) {
+                const n = restoreNvramFromStorage(software);
+                if (n)
+                  log("Restored NVRAM from browser storage (" + n + " file" + (n === 1 ? "" : "s") + ")");
               }
             }
           } catch (err) {
@@ -1108,15 +2031,23 @@
           return jsPath.replace(/\.js$/, ".wasm") + "?v=" + Date.now();
         return path;
       },
-      print: () => {},
+      print: (text) => {
+        const s = String(text || "");
+        if (dumpInputsRequested && /INPUT_DUMP|INPUT_FRAME/i.test(s))
+          log(s);
+      },
       printErr: (text) => {
         const s = String(text || "");
         if (/DESYNC|FATAL|abort|error/i.test(s))
+          log(s);
+        else if (dumpInputsRequested && /INPUT_DUMP|INPUT_FRAME/i.test(s))
           log(s);
       },
       onRuntimeInitialized: () => {
         log("WASM runtime initialized — candy loading " + software +
           (opts.mamehub ? " (netplay)" : ""));
+        installForceInputDumpHook();
+        updateSaveStateButtons();
         if (opts.mamehub && !isArcade)
           maybeStartInputScript(opts.isHost ? "host" : "join");
       },
@@ -1135,7 +2066,7 @@
 
     const bootLabel = isArcade
       ? (software + (opts.mamehub ? "; mamehub webrtc" : "; offline"))
-      : ("snes -cart " + software + (opts.mamehub ? "; mamehub webrtc" : "; offline"));
+      : (machine + " -" + media + " " + software + (opts.mamehub ? "; mamehub webrtc" : "; offline"));
     log("Loading " + jsPath + " (" + bootLabel + ") …");
     await new Promise((resolve, reject) => {
       const script = document.createElement("script");
@@ -1144,6 +2075,12 @@
       script.onerror = () => reject(new Error("Failed to load " + jsPath));
       document.body.appendChild(script);
     });
+    const readyTick = setInterval(() => {
+      updateSaveStateButtons();
+      if (emulatorSaveLoadReady())
+        clearInterval(readyTick);
+    }, 400);
+    setTimeout(() => clearInterval(readyTick), 120000);
   }
 
   async function startNetplay(software, role, roomOverride) {
@@ -1302,9 +2239,10 @@
       return log("Pick a " + pickNoun + " (or type a shortname)");
     document.getElementById("software-picker").hidden = true;
     closeSoftwareAcList();
+    const machine = selectedSoftwareMachine();
     const run = pendingRole
       ? startNetplay(shortname, pendingRole)
-      : bootEmulator(shortname, { mamehub: false });
+      : bootEmulator(shortname, { mamehub: false, machine });
     run.catch((err) => log("Start failed: " + (err && err.message ? err.message : err)));
   };
 
@@ -1349,7 +2287,23 @@
   window.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && !instructionsModal.hidden)
       instructionsModal.hidden = true;
+    if (ev.key === "Escape" && isFallbackFullscreen())
+      exitFallbackFullscreen();
   });
+
+  const fullscreenBtn = document.getElementById("fullscreenBtn");
+  if (fullscreenBtn) {
+    fullscreenBtn.onclick = () => {
+      toggleGameFullscreen().catch((err) =>
+        log("Fullscreen failed: " + (err && err.message ? err.message : err)));
+    };
+  }
+  const fullscreenExitBtn = document.getElementById("fullscreenExitBtn");
+  if (fullscreenExitBtn) {
+    fullscreenExitBtn.onclick = () => {
+      exitGameFullscreen().catch(() => {});
+    };
+  }
 
   // Auto-join from shared link: ?join=1&room=…&soft=…
   if (joinFromQuery) {

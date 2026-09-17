@@ -1,0 +1,307 @@
+{
+  "defaultProfile": "snes",
+  "relays": [
+    "wss://relay.damus.io",
+    "wss://nos.lol"
+  ],
+  "iceServers": [
+    { "urls": "stun:stun.l.google.com:19302" }
+  ],
+  "profiles": [
+    {
+      "id": "arcade",
+      "title": "Arcade",
+      "blurb": "Popular 2P+ cabinets (including 4P TMNT and 6P X-Men) over the arcade wasm build.",
+      "mode": "arcade",
+      "subtarget": "arcade",
+      "generateFlt": false,
+      "noun": "arcade machine",
+      "machinesUrl": "/arcade_top_mp.json",
+      "defaultMachine": "xmen6p",
+      "canvasWidth": 1152,
+      "canvasHeight": 448,
+      "appTag": "mamehub-browser-arcade-v1",
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "Button 1", "a": "Button 2", "y": "Button 3",
+          "x": "Button 4", "l": "Button 5", "r": "Button 6",
+          "start": "1P Start", "select": "Coin"
+        },
+        "keycaps": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "B1", "a": "B2", "y": "B3", "x": "B4", "l": "B5", "r": "B6",
+          "start": "Start", "select": "Coin"
+        },
+        "order": ["up", "down", "left", "right", "b", "a", "y", "x", "l", "r", "select", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "b", "KeyX": "a", "KeyC": "y",
+          "KeyA": "x", "KeyS": "l", "KeyD": "r",
+          "Enter": "start", "Digit5": "select"
+        }
+      }
+    },
+    {
+      "id": "gameboy",
+      "title": "Game Boy",
+      "blurb": "Game Boy and Game Boy Color carts over the GB wasm build.",
+      "mode": "console",
+      "subtarget": "gameboy",
+      "flt": ["nintendo/gb.cpp"],
+      "machine": "gameboy",
+      "media": "cart",
+      "noun": "Game Boy software",
+      "hashFiles": [
+        { "file": "gameboy.xml", "machine": "gameboy" },
+        { "file": "gbcolor.xml", "machine": "gbcolor" }
+      ],
+      "defaultSoftware": "tetris",
+      "defaultHostSoftware": "tetris",
+      "canvasWidth": 320,
+      "canvasHeight": 288,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "B", "a": "A", "start": "Start", "select": "Select"
+        },
+        "order": ["up", "down", "left", "right", "b", "a", "select", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "b", "KeyX": "a", "KeyV": "select", "Enter": "start"
+        }
+      }
+    },
+    {
+      "id": "gba",
+      "title": "Game Boy Advance",
+      "blurb": "GBA carts over the GBA wasm build.",
+      "mode": "console",
+      "subtarget": "gba",
+      "flt": ["nintendo/gba.cpp"],
+      "machine": "gba",
+      "media": "cart",
+      "noun": "GBA software",
+      "hashFiles": [{ "file": "gba.xml", "machine": "gba" }],
+      "defaultSoftware": "mariokrt",
+      "defaultHostSoftware": "mariokrt",
+      "canvasWidth": 480,
+      "canvasHeight": 320,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "B", "a": "A", "l": "L", "r": "R",
+          "start": "Start", "select": "Select"
+        },
+        "order": ["up", "down", "left", "right", "b", "a", "l", "r", "select", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "b", "KeyX": "a", "KeyQ": "l", "KeyW": "r",
+          "KeyV": "select", "Enter": "start"
+        }
+      }
+    },
+    {
+      "id": "nes",
+      "title": "NES",
+      "blurb": "NES / Famicom carts over the NES wasm build.",
+      "mode": "console",
+      "subtarget": "nes",
+      "flt": ["nintendo/nes.cpp"],
+      "machine": "nes",
+      "media": "cart",
+      "noun": "NES software",
+      "hashFiles": [{ "file": "nes.xml", "machine": "nes" }],
+      "defaultSoftware": "smb",
+      "defaultHostSoftware": "tmnt",
+      "canvasWidth": 512,
+      "canvasHeight": 480,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "B", "a": "A", "start": "Start", "select": "Select"
+        },
+        "order": ["up", "down", "left", "right", "b", "a", "select", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "b", "KeyX": "a", "KeyV": "select", "Enter": "start"
+        }
+      }
+    },
+    {
+      "id": "snes",
+      "title": "SNES",
+      "blurb": "Softlist carts (Super Mario World, Mario Kart, …) over the SNES wasm build.",
+      "mode": "console",
+      "subtarget": "snes",
+      "flt": ["nintendo/snes.cpp"],
+      "machine": "snes",
+      "media": "cart",
+      "noun": "SNES software",
+      "hashFiles": [{ "file": "snes.xml", "machine": "snes" }],
+      "defaultSoftware": "smw",
+      "defaultHostSoftware": "smkart",
+      "canvasWidth": 512,
+      "canvasHeight": 448,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "B", "a": "A", "y": "Y", "x": "X",
+          "l": "L", "r": "R", "start": "Start", "select": "Select"
+        },
+        "order": ["up", "down", "left", "right", "b", "a", "y", "x", "l", "r", "select", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "b", "KeyX": "a", "KeyA": "y", "KeyS": "x",
+          "KeyQ": "l", "KeyW": "r", "KeyV": "select", "Enter": "start"
+        }
+      }
+    },
+    {
+      "id": "genesis",
+      "title": "Genesis",
+      "blurb": "Mega Drive / Genesis carts over the Genesis wasm build.",
+      "mode": "console",
+      "subtarget": "genesis",
+      "flt": ["sega/mdconsole.cpp"],
+      "machine": "genesis",
+      "media": "cart",
+      "noun": "Genesis software",
+      "hashFiles": [{ "file": "megadriv.xml", "machine": "genesis" }],
+      "defaultSoftware": "sonic",
+      "defaultHostSoftware": "sor2",
+      "canvasWidth": 640,
+      "canvasHeight": 448,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "y": "A", "b": "B", "a": "C", "x": "X", "l": "Y", "r": "Z",
+          "start": "Start", "select": "Mode"
+        },
+        "order": ["up", "down", "left", "right", "y", "b", "a", "x", "l", "r", "select", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "y", "KeyX": "b", "KeyC": "a",
+          "KeyA": "x", "KeyS": "l", "KeyD": "r",
+          "KeyV": "select", "Enter": "start"
+        }
+      }
+    },
+    {
+      "id": "a2600",
+      "title": "Atari 2600",
+      "blurb": "Atari 2600 carts over the 2600 wasm build.",
+      "mode": "console",
+      "subtarget": "a2600",
+      "flt": ["atari/a2600.cpp"],
+      "machine": "a2600",
+      "media": "cart",
+      "noun": "Atari 2600 software",
+      "hashFiles": [{ "file": "a2600.xml", "machine": "a2600" }],
+      "defaultSoftware": "combat",
+      "defaultHostSoftware": "combat",
+      "canvasWidth": 320,
+      "canvasHeight": 384,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "Fire", "start": "Reset", "select": "Select"
+        },
+        "order": ["up", "down", "left", "right", "b", "select", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "Space": "b", "KeyV": "select", "Enter": "start"
+        }
+      }
+    },
+    {
+      "id": "sms",
+      "title": "Master System",
+      "blurb": "Sega Master System carts over the SMS wasm build.",
+      "mode": "console",
+      "subtarget": "sms",
+      "flt": ["sega/sms.cpp"],
+      "machine": "sms",
+      "media": "cart",
+      "noun": "Master System software",
+      "hashFiles": [{ "file": "sms.xml", "machine": "sms" }],
+      "defaultSoftware": "sonic",
+      "defaultHostSoftware": "sonic",
+      "canvasWidth": 512,
+      "canvasHeight": 384,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "Button 1", "a": "Button 2", "start": "Start"
+        },
+        "keycaps": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "B1", "a": "B2", "start": "Start"
+        },
+        "order": ["up", "down", "left", "right", "b", "a", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "b", "KeyX": "a", "Enter": "start"
+        }
+      }
+    },
+    {
+      "id": "gamegear",
+      "title": "Game Gear",
+      "blurb": "Game Gear carts (shares the Master System wasm build).",
+      "mode": "console",
+      "subtarget": "sms",
+      "generateFlt": false,
+      "machine": "gamegear",
+      "media": "cart",
+      "noun": "Game Gear software",
+      "hashFiles": [{ "file": "gamegear.xml", "machine": "gamegear" }],
+      "defaultSoftware": "sonic",
+      "defaultHostSoftware": "sonic",
+      "canvasWidth": 320,
+      "canvasHeight": 288,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "Button 1", "a": "Button 2", "start": "Start"
+        },
+        "keycaps": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "B1", "a": "B2", "start": "Start"
+        },
+        "order": ["up", "down", "left", "right", "b", "a", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "b", "KeyX": "a", "Enter": "start"
+        }
+      }
+    },
+    {
+      "id": "pce",
+      "title": "PC Engine",
+      "blurb": "PC Engine / TurboGrafx-16 HuCards over the PCE wasm build.",
+      "mode": "console",
+      "subtarget": "pce",
+      "flt": ["nec/pce.cpp"],
+      "machine": "pce",
+      "media": "cart",
+      "noun": "PC Engine software",
+      "hashFiles": [{ "file": "pce.xml", "machine": "pce" }],
+      "defaultSoftware": "outrun",
+      "defaultHostSoftware": "outrun",
+      "canvasWidth": 512,
+      "canvasHeight": 448,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "II", "a": "I", "start": "Run", "select": "Select"
+        },
+        "order": ["up", "down", "left", "right", "b", "a", "select", "start"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "b", "KeyX": "a", "KeyV": "select", "Enter": "start"
+        }
+      }
+    }
+  ]
+}

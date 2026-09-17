@@ -103,6 +103,8 @@ video_manager::video_manager(running_machine &machine)
 	, m_throttle_realtime(attotime::zero)
 	, m_throttle_emutime(attotime::zero)
 	, m_throttle_history(0)
+	, m_offline_origin_ms(0.0)
+	, m_offline_origin_valid(false)
 	, m_speed_last_realtime(0)
 	, m_speed_last_emutime(attotime::zero)
 	, m_speed_percent(1.0)
@@ -813,14 +815,8 @@ bool video_manager::finish_screen_updates()
 
 void video_manager::update_throttle(attotime emutime)
 {
-#if defined(__EMSCRIPTEN__)
-	// Offline browser is paced by the Asyncify/RAF loop. Netplay still needs
-	// shared-clock sleep (via mamehub_osd_sleep → emscripten_sleep).
-	if (!netCommon)
-		return;
-#endif
-
 	// MAMEHub: sync emulation to netplay / WGA global clock instead of stock OSD ticks.
+	// Offline browser uses a local wall-clock origin so we never run faster than realtime.
 	// Target a one-frame lead over shared now so a Present hitch burns slack
 	// instead of immediately putting us behind. Skip OSD when behind by >=1ms.
 	static int s_renderSkips = 0;
@@ -840,7 +836,18 @@ void video_manager::update_throttle(attotime emutime)
 		}
 		else
 		{
+#if defined(__EMSCRIPTEN__)
+			double const nowMs = emscripten_get_now();
+			if (!m_offline_origin_valid)
+			{
+				m_offline_origin_ms = nowMs - emutime.as_double() * 1000.0;
+				m_offline_origin_valid = true;
+			}
+			double const elapsedUs = (nowMs - m_offline_origin_ms) * 1000.0;
+			curTime = elapsedUs > 0.0 ? int64_t(elapsedUs) : 0;
+#else
 			curTime = wga::GlobalClock::currentTimeMicros();
+#endif
 		}
 
 		attotime expectedEmulationTime(

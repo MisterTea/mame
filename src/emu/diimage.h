@@ -87,6 +87,8 @@ public:
 	virtual std::pair<std::error_condition, std::string> call_load() { return std::make_pair(std::error_condition(), std::string()); }
 	virtual std::pair<std::error_condition, std::string> call_create(int format_type, util::option_resolution *format_options) { return std::make_pair(std::error_condition(), std::string()); }
 	virtual void call_unload() { }
+	// Dump battery-backed RAM to the NVRAM directory without unloading.
+	virtual void battery_flush() { }
 	virtual std::string call_display() { return std::string(); }
 	virtual u32 unhashed_header_length() const noexcept { return 0; }
 	virtual bool core_opens_image_file() const noexcept { return true; }

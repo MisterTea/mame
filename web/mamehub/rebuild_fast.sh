@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Incremental wasm rebuild for browser iteration.
-# Default SUBTARGET=snes (mamesneshub.*). Use SUBTARGET=arcade for mamearcadehub.*.
+#   ./web/mamehub/rebuild_fast.sh              # default SUBTARGET=snes
+#   SUBTARGET=arcade ./web/mamehub/rebuild_fast.sh
+#   ./web/mamehub/rebuild_fast.sh nes genesis
+#   ./web/mamehub/rebuild_fast.sh all          # every unique subtarget in profiles.json
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
@@ -8,29 +11,53 @@ cd "$ROOT"
 export EMSCRIPTEN="${EMSCRIPTEN:-/opt/homebrew/opt/emscripten/libexec}"
 export PATH="/opt/homebrew/opt/emscripten/bin:${PATH}"
 
-SUBTARGET="${SUBTARGET:-snes}"
 JOBS="${JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || nproc)}"
-# Link must be -O2 with Asyncify or browsers reject the wasm (local count too large).
-# Avoid flipping OPTIMIZE= between builds (forces mass recompile).
-MAKE_ARGS=(SUBTARGET="$SUBTARGET" WEBASSEMBLY=1 -j"$JOBS")
-if [[ "${REGENIE:-0}" == "1" ]]; then
-  MAKE_ARGS+=(REGENIE=1)
-  echo "==> build SUBTARGET=$SUBTARGET (REGENIE=1 -j$JOBS; Asyncify link -O2)"
+GEN="$ROOT/scripts/mamehub/gen_browser_profiles.py"
+
+targets=()
+if [[ "${1:-}" == "all" ]]; then
+  while IFS= read -r st; do
+    [[ -n "$st" ]] && targets+=("$st")
+  done < <(python3 "$GEN" subtargets all)
+elif [[ $# -gt 0 ]]; then
+  targets=("$@")
 else
-  echo "==> build SUBTARGET=$SUBTARGET (no-REGENIE -j$JOBS; Asyncify link -O2)"
+  targets=("${SUBTARGET:-snes}")
 fi
 
-time emmake make "${MAKE_ARGS[@]}"
-
-BIN="mame${SUBTARGET}hub"
-mkdir -p web/mamehub/dist
-if [[ ! -f "${BIN}.js" || ! -f "${BIN}.wasm" ]]; then
-  echo "missing ${BIN}.js / ${BIN}.wasm after build" >&2
+if [[ ${#targets[@]} -eq 0 ]]; then
+  echo "no subtargets" >&2
   exit 1
 fi
-cp -f "${BIN}.js" "${BIN}.wasm" web/mamehub/dist/
-echo "==> copied to web/mamehub/dist/ ($(du -h "web/mamehub/dist/${BIN}.wasm" | awk '{print $1}'))"
+
+build_one() {
+  local st="$1"
+  local regen="${REGENIE:-0}"
+  # Switching subtarget, or a first-time binary, needs a project regen.
+  if [[ ${#targets[@]} -gt 1 || ! -f "mame${st}hub.wasm" ]]; then
+    regen=1
+  fi
+  local make_args=(SUBTARGET="$st" WEBASSEMBLY=1 -j"$JOBS")
+  if [[ "$regen" == "1" ]]; then
+    make_args+=(REGENIE=1)
+    echo "==> build SUBTARGET=$st (REGENIE=1 -j$JOBS; Asyncify link -O2)"
+  else
+    echo "==> build SUBTARGET=$st (no-REGENIE -j$JOBS; Asyncify link -O2)"
+  fi
+  time emmake make "${make_args[@]}"
+  local bin="mame${st}hub"
+  mkdir -p web/mamehub/dist
+  if [[ ! -f "${bin}.js" || ! -f "${bin}.wasm" ]]; then
+    echo "missing ${bin}.js / ${bin}.wasm after build" >&2
+    exit 1
+  fi
+  cp -f "${bin}.js" "${bin}.wasm" web/mamehub/dist/
+  echo "==> copied to web/mamehub/dist/ ($(du -h "web/mamehub/dist/${bin}.wasm" | awk '{print $1}'))"
+}
+
+for st in "${targets[@]}"; do
+  build_one "$st"
+done
+
 echo "Hard-refresh http://127.0.0.1:8765/ (or bump app.js ?v=)"
-if [[ "$SUBTARGET" == "snes" ]]; then
-  echo "SNES dist left as mamesneshub.*; arcade builds use SUBTARGET=arcade (mamearcadehub.*)."
-fi
+echo "Landing lists every profile in web/mamehub/profiles.json"

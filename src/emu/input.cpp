@@ -1012,13 +1012,9 @@ bool input_manager::seq_pressed(const input_seq &seq)
 {
 	if (netCommon && !seq.mamehub_input_key().empty())
 	{
-#if defined(__EMSCRIPTEN__)
-		// Browser builds often run behind the netplay wall clock; read "now" so
-		// sticky/forced inputs still affect the current frame while catching up.
-		auto timestamp = netCommon->getCurrentTime() / 1000;
-#else
+		// Same timestamp as WGA: machine time. Browser waits in getAllInputValues
+		// until every peer ChronoMap covers this ts (delay-lockstep + yield).
 		auto timestamp = machine().machine_time().to_msec();
-#endif
 		if (timestamp < 1000)
 			return false;
 
@@ -1133,11 +1129,7 @@ s32 input_manager::seq_axis_value(const input_seq &seq, input_item_class &itemcl
 
 	if (netCommon && !seq.mamehub_input_key().empty())
 	{
-#if defined(__EMSCRIPTEN__)
-		auto timestamp = netCommon->getCurrentTime() / 1000;
-#else
 		auto timestamp = machine().machine_time().to_msec();
-#endif
 		if (timestamp < 1000)
 			return 0;
 

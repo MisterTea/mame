@@ -1325,6 +1325,11 @@ void ioport_field::frame_update(ioport_value &result)
 
 	// if the state changed, look for switch down/switch up
 	bool curstate = (netCommon ? false : m_digital_value) || machine().input().seq_pressed(seq_peers(SEQ_TYPE_STANDARD));
+#if defined(__EMSCRIPTEN__)
+	// Offline virtual pad uses force_input; with no ChronoMap, honor sticky keys.
+	if (!netCommon && mamehubBrowserOfflineForced(std::string("INPUT/") + mamehub_id()))
+		curstate = true;
+#endif
 	bool changed = false;
 	if (curstate != m_live->last)
 	{

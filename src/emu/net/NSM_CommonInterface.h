@@ -200,4 +200,9 @@ string makePrivateKey();
 
 extern CommonBase *netCommon;
 
+#if defined(__EMSCRIPTEN__)
+// Sticky pad / shell overrides used when -nomamehub (no ChronoMap instance).
+bool mamehubBrowserOfflineForced(const std::string &key);
+#endif
+
 #endif

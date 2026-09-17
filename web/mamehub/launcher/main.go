@@ -26,6 +26,7 @@ func main() {
 	rootFlag := flag.String("root", "", "directory to serve (default: folder containing this executable)")
 	cacheFlag := flag.String("cache", "", "candy download cache (default: <root>/.candy-cache)")
 	openBrowser := flag.Bool("open", true, "open the default browser")
+	profile := flag.String("profile", "", "open /<id>/ directly (snes, arcade, nes, …; default: landing page)")
 	flag.Parse()
 
 	root, err := resolveRoot(*rootFlag)
@@ -50,8 +51,26 @@ func main() {
 		log.Fatalf("listen %s: %v", addr, err)
 	}
 
-	urlStr := fmt.Sprintf("http://%s/", addr)
-	fmt.Printf("MAMEHub Online (SNES)\nServing %s\n%s\nCandy proxy: /candy-proxy  cache: %s\nClose this window to stop the server.\n",
+	openPath := "/"
+	prof := strings.ToLower(strings.TrimSpace(*profile))
+	switch prof {
+	case "", "all", "home", "landing":
+		openPath = "/"
+	default:
+		ok := true
+		for _, r := range prof {
+			if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '_' && r != '-' {
+				ok = false
+				break
+			}
+		}
+		if !ok || prof == "" {
+			log.Fatalf("unknown -profile %q (use a profiles.json id, or omit for landing)", *profile)
+		}
+		openPath = "/" + prof + "/"
+	}
+	urlStr := fmt.Sprintf("http://%s%s", addr, openPath)
+	fmt.Printf("MAMEHub Online\nServing %s\n%s\nCandy proxy: /candy-proxy  cache: %s\nProfiles: landing / plus /<id>/\nClose this window to stop the server.\n",
 		root, urlStr, cache)
 
 	if *openBrowser {

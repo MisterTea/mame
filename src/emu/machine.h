@@ -351,6 +351,8 @@ private:
 #if defined(__EMSCRIPTEN__)
 private:
 	static running_machine *emscripten_running_machine;
+	void emscripten_offline_nvram_flush();
+	void emscripten_maybe_persist_nvram();
 public:
 	static void emscripten_main_loop();
 	static void emscripten_set_running_machine(running_machine *machine);

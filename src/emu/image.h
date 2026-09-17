@@ -22,6 +22,7 @@ public:
 	image_manager(running_machine &machine);
 
 	void unload_all();
+	void save_batteries();
 	void postdevice_init();
 
 	// getters

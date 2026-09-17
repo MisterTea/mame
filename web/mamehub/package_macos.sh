@@ -1,49 +1,50 @@
 #!/usr/bin/env bash
 # Build a macOS zip: MAMEHubOnline + shell assets (wasm, hash/json, js).
-# PROFILE=snes (default) or PROFILE=arcade
+# PROFILE=all (default, every profiles.json site) | arcade | snes | nes | ...
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-PROFILE="${PROFILE:-snes}"
+REPO="$(cd "$ROOT/../.." && pwd)"
+GEN="$REPO/scripts/mamehub/gen_browser_profiles.py"
+PROFILE="${PROFILE:-all}"
 BIN_NAME="MAMEHubOnline"
 
-if [[ "$PROFILE" == "arcade" ]]; then
-  OUT="${1:-$ROOT/release/MAMEHubOnline-Arcade-macos}"
-  WASM_JS="$ROOT/dist/mamearcadehub.js"
-  WASM_BIN="$ROOT/dist/mamearcadehub.wasm"
-  CONFIG_SRC="$ROOT/config.arcade.js"
-  EXTRA_JSON="$ROOT/arcade_top_mp.json"
-  LABEL="Arcade"
+valid=0
+while IFS= read -r id; do
+  [[ "$id" == "$PROFILE" ]] && valid=1
+done < <(python3 "$GEN" ids)
+if [[ "$PROFILE" != "all" && "$valid" -ne 1 ]]; then
+  echo "PROFILE must be all or a profiles.json id (got: $PROFILE)" >&2
+  python3 "$GEN" ids | sed 's/^/  /' >&2
+  exit 1
+fi
+
+if [[ "$PROFILE" == "all" ]]; then
+  OUT="${1:-$ROOT/release/MAMEHubOnline-macos}"
+  LABEL="all profiles"
 else
-  PROFILE=snes
-  OUT="${1:-$ROOT/release/MAMEHubOnline-SNES-macos}"
-  WASM_JS="$ROOT/dist/mamesneshub.js"
-  WASM_BIN="$ROOT/dist/mamesneshub.wasm"
-  CONFIG_SRC="$ROOT/config.js"
-  EXTRA_JSON=""
-  LABEL="SNES"
+  OUT="${1:-$ROOT/release/MAMEHubOnline-${PROFILE}-macos}"
+  LABEL="$PROFILE"
 fi
 
 need=(
   "$ROOT/index.html"
+  "$ROOT/play.html"
   "$ROOT/app.js"
-  "$CONFIG_SRC"
+  "$ROOT/profiles.json"
   "$ROOT/virtual_gamepad.js"
   "$ROOT/webrtc_peer.js"
   "$ROOT/nostr_lobby.js"
-  "$WASM_JS"
-  "$WASM_BIN"
   "$ROOT/vendor/nostr.bundle.js"
 )
-if [[ "$PROFILE" == "snes" ]]; then
-  need+=("$ROOT/hash/snes.xml")
-else
-  need+=("$EXTRA_JSON")
-fi
+while IFS= read -r rel; do
+  [[ -n "$rel" ]] && need+=("$ROOT/$rel")
+done < <(python3 "$GEN" package-files "$PROFILE")
+
 for f in "${need[@]}"; do
   if [[ ! -f "$f" ]]; then
     echo "missing $f" >&2
-    if [[ "$f" == *mame*hub.* ]]; then
-      echo "Run SUBTARGET=$PROFILE ./web/mamehub/rebuild_fast.sh first." >&2
+    if [[ "$f" == *hub.* ]]; then
+      echo "Build wasm first, e.g. ./web/mamehub/rebuild_fast.sh all" >&2
     fi
     exit 1
   fi
@@ -72,63 +73,46 @@ else
   echo "    single-arch (no lipo): $HOST_ARCH"
 fi
 
-copy_files=(
-  index.html app.js virtual_gamepad.js webrtc_peer.js nostr_lobby.js
+copy_shared=(
+  app.js play.html virtual_gamepad.js webrtc_peer.js nostr_lobby.js profiles.json
 )
-for f in "${copy_files[@]}"; do
+for f in "${copy_shared[@]}"; do
   cp -f "$ROOT/$f" "$OUT/$f"
 done
-cp -f "$CONFIG_SRC" "$OUT/config.js"
-cp -f "$WASM_JS" "$WASM_BIN" "$OUT/dist/"
 cp -f "$ROOT/vendor/nostr.bundle.js" "$OUT/vendor/"
-if [[ "$PROFILE" == "snes" ]]; then
-  cp -f "$ROOT/hash/snes.xml" "$OUT/hash/"
-else
-  cp -f "$EXTRA_JSON" "$OUT/arcade_top_mp.json"
+cp -f "$ROOT/index.html" "$OUT/index.html"
+
+while IFS= read -r rel; do
+  [[ -z "$rel" ]] && continue
+  mkdir -p "$OUT/$(dirname "$rel")"
+  cp -f "$ROOT/$rel" "$OUT/$rel"
+done < <(python3 "$GEN" package-files "$PROFILE")
+
+# Root config.js matches default profile (snes) for legacy root-only packages.
+if [[ "$PROFILE" == "all" || "$PROFILE" == "snes" ]]; then
+  cp -f "$ROOT/config.snes.js" "$OUT/config.js"
+elif [[ -f "$ROOT/config.${PROFILE}.js" ]]; then
+  cp -f "$ROOT/config.${PROFILE}.js" "$OUT/config.js"
 fi
 
-if [[ "$PROFILE" == "arcade" ]]; then
-  cat > "$OUT/README.txt" <<'EOF'
-MAMEHub Online (Arcade) — macOS package
+cat > "$OUT/README.txt" <<EOF
+MAMEHub Online — macOS package ($LABEL)
 =======================================
 
-1. Unzip this folder somewhere permanent (not Downloads-only if Gatekeeper blocks)
-2. Double-click MAMEHubOnline (or run it from Terminal: ./MAMEHubOnline)
-3. Your browser opens to http://127.0.0.1:8765/
-4. Leave the Terminal/console open while playing (local server + ROM proxy)
-5. Quit the process (Ctrl+C or close the window) to stop
+1. Unzip somewhere permanent (not Downloads-only if Gatekeeper blocks)
+2. Double-click MAMEHubOnline (or: ./MAMEHubOnline)
+3. Browser opens http://127.0.0.1:8765/ — pick a system
+4. Leave the process running while playing
+5. Quit (Ctrl+C / close window) to stop
 
 If macOS says the app is damaged / can’t be opened (unsigned binary):
-  xattr -dr com.apple.quarantine /path/to/MAMEHubOnline-Arcade-macos
+  xattr -dr com.apple.quarantine /path/to/$(basename "$OUT")
 
-Host: Host lobby → pick a 2P+ arcade machine → Play → Copy join link → share URL
-     Wait for a full green mesh, then Start game (Kick before start if needed)
-Join: open the host’s join link (machine is already chosen) → wait for Start
+Optional: ./MAMEHubOnline -profile snes   (or arcade, nes, gameboy, …)
 
-Default pick is X-Men (6 Players) / xmen6p. Everyone uses P1 controls; MAMEHub maps them to your seat.
+Host: Host lobby → pick game → Play → Copy join link → share URL
+Join: open the host’s join link → wait for Start
 EOF
-else
-  cat > "$OUT/README.txt" <<'EOF'
-MAMEHub Online (SNES) — macOS package
-=====================================
-
-1. Unzip this folder somewhere permanent (not Downloads-only if Gatekeeper blocks)
-2. Double-click MAMEHubOnline (or run it from Terminal: ./MAMEHubOnline)
-3. Your browser opens to http://127.0.0.1:8765/
-4. Leave the Terminal/console open while playing (local server + ROM proxy)
-5. Quit the process (Ctrl+C or close the window) to stop
-
-If macOS says the app is damaged / can’t be opened (unsigned binary):
-  xattr -dr com.apple.quarantine /path/to/MAMEHubOnline-SNES-macos
-
-Host: Host lobby → pick cart → Play → Copy join link → share URL
-     Wait for a full green mesh, then Start game (Kick before start if needed)
-Join: open the host’s join link (cart is already chosen) → wait for Start
-
-Controls: Z/X/A/S = B/A/Y/X, arrows = D-pad, Q/W = L/R
-Everyone uses P1 controls; MAMEHub maps them to your seat (P2/P3/…).
-EOF
-fi
 
 ZIP="$OUT.zip"
 rm -f "$ZIP"
@@ -136,5 +120,6 @@ rm -f "$ZIP"
 echo "==> package ready ($LABEL):"
 echo "    $OUT/"
 echo "    $ZIP"
-du -h "$OUT/$BIN_NAME" "$OUT/dist/$(basename "$WASM_BIN")" "$ZIP" | sed 's/^/    /'
+du -h "$OUT/$BIN_NAME" "$ZIP" | sed 's/^/    /'
 file "$OUT/$BIN_NAME" | sed 's/^/    /'
+ls "$OUT/dist" | sed 's/^/    dist\//'

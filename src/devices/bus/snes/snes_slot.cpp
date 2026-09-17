@@ -730,7 +730,7 @@ std::pair<std::error_condition, std::string> base_sns_cart_slot_device::call_loa
  call_unload
  -------------------------------------------------*/
 
-void base_sns_cart_slot_device::call_unload()
+void base_sns_cart_slot_device::battery_flush()
 {
 	if (m_cart)
 	{
@@ -741,11 +741,16 @@ void base_sns_cart_slot_device::call_unload()
 			if (m_cart->get_nvram_size())
 				memcpy(&temp_nvram[0], m_cart->get_nvram_base(), m_cart->get_nvram_size());
 			if (m_cart->get_rtc_ram_size())
-				memcpy(&temp_nvram[m_cart->get_nvram_size()], m_cart->get_rtc_ram_base(), m_cart->get_rtc_ram_size());
+				memcpy(&temp_nvram[m_cart->get_rtc_ram_size()], m_cart->get_rtc_ram_base(), m_cart->get_rtc_ram_size());
 
 			battery_save(&temp_nvram[0], tot_size);
 		}
 	}
+}
+
+void base_sns_cart_slot_device::call_unload()
+{
+	battery_flush();
 }
 
 
