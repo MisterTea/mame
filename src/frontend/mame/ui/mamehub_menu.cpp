@@ -76,6 +76,13 @@ bool ensure_discord_authenticated(mame_ui_manager &mui)
 
 static void launch_offline_game(mame_ui_manager &mui, game_driver const &driver, ui_software_info const *software = nullptr)
 {
+	// A cancelled or crashed lobby can leave netplay state alive.  Offline
+	// launch must not wait on peers, or the window appears frozen.
+	abortNetCommon();
+	deleteNetCommon();
+	mamehub_manager::instance()->reset();
+	mamehub::discord_discovery::instance().clear_my_hosted_lobby();
+
 	auto &options = mui.machine().options();
 	if (software && !software->startempty)
 	{
@@ -650,7 +657,13 @@ void menu_mamehub_lobby::populate()
 			auto const &member = room.members[i];
 			bool const is_member_host = (member.discord_id == m_directory_server->host_id());
 			std::string role = is_member_host ? "[Host]" : "[Player]";
-			item_append(string_format("%s %s", role, member.display_name), _("Connected"), FLAG_DISABLE, nullptr);
+			std::string name = member.display_name;
+			if (name.empty() || mamehub::looks_like_discord_snowflake(name))
+			{
+				if (is_member_host && !m_host_name.empty() && !mamehub::looks_like_discord_snowflake(m_host_name))
+					name = m_host_name;
+			}
+			item_append(string_format("%s %s", role, name), _("Connected"), FLAG_DISABLE, nullptr);
 		}
 		item_append(menu_item_type::SEPARATOR);
 
@@ -730,6 +743,17 @@ void menu_mamehub_lobby::leave_and_pop()
 		mamehub::discord_discovery::instance().clear_my_hosted_lobby();
 	}
 	abortNetCommon();
+	if (m_connection.valid())
+	{
+		m_connection.wait();
+		try
+		{
+			m_connection.get();
+		}
+		catch (...)
+		{
+		}
+	}
 	deleteNetCommon();
 	m_directory_server.reset();
 	stack_pop_to_special_main();
@@ -743,7 +767,9 @@ void menu_mamehub_lobby::begin_peer_connection()
 	m_peer_connection_started = true;
 
 	auto &options = ui().machine().options();
-	std::string userId = std::to_string(mamehub::discord_service::instance().current_identity().id);
+	auto const identity = mamehub::discord_service::instance().current_identity();
+	std::string userId = std::to_string(identity.id);
+	std::string displayName = identity.display_name.empty() ? userId : identity.display_name;
 	std::string privateKey = options.password();
 	unsigned short peerPort = (unsigned short)options.port();
 	unsigned short dirPort = m_directory_server->port();
@@ -754,14 +780,15 @@ void menu_mamehub_lobby::begin_peer_connection()
 	std::string gameString = m_system_name + ";" + m_software_name;
 
 	deleteNetCommon();
+	clearNetCommonAbort();
 
 	if (mamehub::discord_service::is_mock_enabled())
 		wga::DISABLE_PORT_MAPPING = true;
 
 	// Match the CLI waiting-room order: register peer keys/endpoints first,
 	// then block inside createNetCommon until the host publishes start.
-	m_connection = std::async(std::launch::async, [userId, privateKey, peerPort, dirPort, gameString, fakeLag, connectTimeout] {
-		createNetCommon(userId, privateKey, peerPort, "", dirPort, 50, gameString, fakeLag, connectTimeout);
+	m_connection = std::async(std::launch::async, [userId, displayName, privateKey, peerPort, dirPort, gameString, fakeLag, connectTimeout] {
+		createNetCommon(userId, privateKey, peerPort, "", dirPort, 50, gameString, fakeLag, connectTimeout, displayName);
 	});
 	m_connect_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(connectTimeout);
 }

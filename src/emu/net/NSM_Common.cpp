@@ -46,17 +46,24 @@ void abortNetCommon() {
   s_abortNetCommon.store(true);
 }
 
+void clearNetCommonAbort() {
+  s_abortNetCommon.store(false);
+}
+
 CommonBase *createNetCommon(const string &userId,
                             const string &privateKeyString,
                             unsigned short _port, const string &lobbyHostname,
                             unsigned short lobbyPort, int _unmeasuredNoise,
                             const string &gameName, bool fakeLag,
-                            int directConnectTimeoutSeconds) {
-  s_abortNetCommon.store(false);
+                            int directConnectTimeoutSeconds,
+                            const string &displayName) {
+  if (s_abortNetCommon.load()) {
+    throw runtime_error("NetCommon initialization cancelled");
+  }
   try {
     netCommon = new Common(userId, privateKeyString, _port, lobbyHostname,
                            lobbyPort, _unmeasuredNoise, gameName, fakeLag,
-                           directConnectTimeoutSeconds);
+                           directConnectTimeoutSeconds, displayName);
     return netCommon;
   } catch (...) {
     netCommon = NULL;
@@ -188,7 +195,7 @@ Common::Common(const string &_userId, const string &privateKeyString,
                unsigned short _port, const string &lobbyHostname,
                unsigned short lobbyPort, int _unmeasuredNoise,
                const string &gameName, bool fakeLag,
-               int directConnectTimeoutSeconds)
+               int directConnectTimeoutSeconds, const string &displayName)
     : machineTimeShift(wga::GlobalClock::currentTimeMicros()),
       netplayClockStarted(false),
       userId(_userId),
@@ -230,9 +237,10 @@ Common::Common(const string &_userId, const string &privateKeyString,
     server->start();
   }
 
+  string const peerName = displayName.empty() ? userId : displayName;
   myPeer.reset(new wga::MyPeer(userId, privateKey, _port,
                                localLobby ? "" : lobbyHostname, lobbyPort,
-                               userId));
+                               peerName));
   if (myPeer->isHosting()) {
     LOG(INFO) << "Hosting game: " << gameName;
     myPeer->host(gameName);

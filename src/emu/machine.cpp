@@ -352,12 +352,9 @@ int running_machine::run(bool quiet)
 {
 	int error = EMU_ERR_NONE;
 
-  vector<int> peerIDs;
-#if 0
-	// use try/catch for deep error recovery
+	// Recover from missing files / netplay failures instead of aborting the process.
 	try
 	{
-#endif
 		m_manager.http()->clear();
 
 		// move to the init phase
@@ -419,7 +416,18 @@ int running_machine::run(bool quiet)
 		// Direct networking is prepared from the lobby, but the shared clock
 		// must not start until this game has loaded on every peer.
 		if (netCommon)
-			netCommon->startNetplayClock();
+		{
+			try
+			{
+				netCommon->startNetplayClock();
+			}
+			catch (std::exception const &ex)
+			{
+				osd_printf_error("Netplay failed to start: %s\n", ex.what());
+				deleteNetCommon();
+				schedule_exit();
+			}
+		}
 
 		export_http_api();
 
@@ -518,7 +526,6 @@ int running_machine::run(bool quiet)
 		if (options().nvram_save())
 			nvram_save();
 		m_configuration->save_settings();
-#if 0
 	}
 	catch (emu_fatalerror const &fatal)
 	{
@@ -552,7 +559,6 @@ int running_machine::run(bool quiet)
 		osd_printf_error("Caught unhandled exception\n");
 		error = EMU_ERR_FATALERROR;
 	}
-#endif
 	// make sure our phase is set properly before cleaning up,
 	// in case we got here via exception
 	m_current_phase = machine_phase::EXIT;

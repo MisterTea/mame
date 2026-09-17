@@ -5,6 +5,7 @@
 #define DISCORDPP_IMPLEMENTATION
 #include "discordpp.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <deque>
@@ -232,6 +233,36 @@ bool load_tokens(std::string &refresh, std::string &access, int &type)
 	return true;
 }
 
+std::string best_discord_display_name(discordpp::UserHandle const &user)
+{
+	auto usable = [] (std::string const &candidate) -> std::string
+	{
+		if (candidate.empty())
+			return {};
+		if ((candidate.size() >= 16) && (candidate.size() <= 20) &&
+			std::all_of(candidate.begin(), candidate.end(), [] (char ch) { return (ch >= '0') && (ch <= '9'); }))
+			return {};
+		return candidate;
+	};
+
+	if (auto name = usable(user.DisplayName()); !name.empty())
+		return name;
+	if (auto global = user.GlobalName(); global)
+	{
+		if (auto name = usable(*global); !name.empty())
+			return name;
+	}
+	if (auto name = usable(user.Username()); !name.empty())
+		return name;
+	std::string username = user.Username();
+	if (!username.empty())
+		return username;
+	std::string display = user.DisplayName();
+	if (!display.empty())
+		return display;
+	return std::to_string(user.Id());
+}
+
 } // anonymous namespace
 
 class discord_service::implementation
@@ -361,7 +392,7 @@ bool discord_service::authenticate(discord_identity &identity, std::string &erro
 		auto user = m_impl->client.GetCurrentUserV2();
 		if (user)
 		{
-			identity = { user->Id(), user->DisplayName() };
+			identity = { user->Id(), best_discord_display_name(*user) };
 			return true;
 		}
 	}
@@ -393,7 +424,7 @@ bool discord_service::authenticate(discord_identity &identity, std::string &erro
 					if (user)
 					{
 						m_impl->authenticated = true;
-						m_impl->identity = { user->Id(), user->DisplayName() };
+						m_impl->identity = { user->Id(), best_discord_display_name(*user) };
 						identity = m_impl->identity;
 						return true;
 					}
@@ -443,7 +474,7 @@ bool discord_service::authenticate(discord_identity &identity, std::string &erro
 						if (user)
 						{
 							m_impl->authenticated = true;
-							m_impl->identity = { user->Id(), user->DisplayName() };
+							m_impl->identity = { user->Id(), best_discord_display_name(*user) };
 							identity = m_impl->identity;
 							return true;
 						}
@@ -532,7 +563,7 @@ bool discord_service::authenticate(discord_identity &identity, std::string &erro
 	}
 	save_tokens(token->refresh, token->access, static_cast<int>(token->type));
 	m_impl->authenticated = true;
-	m_impl->identity = { user->Id(), user->DisplayName() };
+	m_impl->identity = { user->Id(), best_discord_display_name(*user) };
 	identity = m_impl->identity;
 	return true;
 }
@@ -601,6 +632,9 @@ bool discord_service::leave_lobby(std::uint64_t lobby_id, std::string &error)
 		m_impl->mock_lines_read.erase(lobby_id);
 		return true;
 	}
+
+	if (!m_impl->authenticated || (lobby_id == 0))
+		return true;
 
 	struct leave_result { bool successful = false; bool finished = false; std::string error; };
 	auto operation = std::make_shared<leave_result>();

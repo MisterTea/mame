@@ -79,6 +79,17 @@ TEST_CASE("Once the host starts the game, the lobby is closed to new players", "
 	REQUIRE(host.members().at("guest1").public_key == "guest1-crypto-key");
 }
 
+TEST_CASE("Re-joining with a Discord user id keeps the human display name", "[mamehub][discord]")
+{
+	mamehub::discord_lobby host("lobby-1", "110466784909328384", "110466784909328384", "t2");
+	REQUIRE(host.receive("110466784909328384", host.make_join_message("kinjaku_", "host-key")));
+	REQUIRE(host.members().at("110466784909328384").display_name == "kinjaku_");
+
+	REQUIRE(host.receive("110466784909328384", host.make_join_message("110466784909328384", "host-crypto-key")));
+	REQUIRE(host.members().at("110466784909328384").display_name == "kinjaku_");
+	REQUIRE(host.members().at("110466784909328384").public_key == "host-crypto-key");
+}
+
 TEST_CASE("Players can leave the lobby before start", "[mamehub][discord]")
 {
 	mamehub::discord_lobby host("lobby-1", "host", "host", "sf2");
@@ -220,6 +231,37 @@ TEST_CASE("Decentralized discovery and lobby lifecycle over mock Discord transpo
 
 	auto lobbies_after_close = mamehub::discord_discovery::instance().get_open_lobbies();
 	REQUIRE(lobbies_after_close.empty());
+
+	mamehub::discord_service::reset_mock();
+	mamehub::discord_discovery::instance().reset();
+	mamehub::discord_service::clear_mock_storage();
+}
+
+TEST_CASE("Stale directory announces from lobby history are ignored", "[mamehub][discord][mock]")
+{
+	mamehub::discord_service::clear_mock_storage();
+	mamehub::discord_service::reset_mock();
+	mamehub::discord_discovery::instance().reset();
+
+	mamehub::discord_service::set_mock_user("GhostHost");
+	mamehub::discord_identity host_ident;
+	std::string err;
+	REQUIRE(mamehub::discord_service::instance().authenticate(host_ident, err));
+	REQUIRE(mamehub::discord_discovery::instance().ensure_connected());
+
+	std::uint64_t lobby_id = 0;
+	REQUIRE(mamehub::discord_service::instance().create_or_join_lobby("mamehub-directory-v1", lobby_id, err));
+	std::string const stale = "{\"v\":1,\"type\":\"announce\",\"secret\":\"dead-lobby\",\"game\":\"nes\",\"software\":\"nes:dokidoki\",\"title\":\"Doki Doki Panic\",\"host_name\":\"GhostHost\",\"host_id\":\"1\",\"players\":1,\"open\":true,\"ts\":1}";
+	REQUIRE(mamehub::discord_service::instance().send_lobby_message(lobby_id, stale, err));
+
+	mamehub::discord_service::reset_mock();
+	mamehub::discord_discovery::instance().reset();
+
+	mamehub::discord_service::set_mock_user("Joiner");
+	mamehub::discord_identity joiner;
+	REQUIRE(mamehub::discord_service::instance().authenticate(joiner, err));
+	REQUIRE(mamehub::discord_discovery::instance().ensure_connected());
+	REQUIRE(mamehub::discord_discovery::instance().get_open_lobbies().empty());
 
 	mamehub::discord_service::reset_mock();
 	mamehub::discord_discovery::instance().reset();

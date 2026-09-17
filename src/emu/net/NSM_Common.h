@@ -88,7 +88,8 @@ class Common : public CommonBase {
   Common(const string &userId, const string &privateKeyString,
          unsigned short _port, const string &lobbyHostname,
          unsigned short lobbyPort, int _unmeasuredNoise, const string &gameName,
-         bool fakeLag, int directConnectTimeoutSeconds);
+         bool fakeLag, int directConnectTimeoutSeconds,
+         const string &displayName = "");
 
   virtual ~Common();
 

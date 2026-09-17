@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <string_view>
@@ -21,6 +22,15 @@ struct lobby_member
 	bool endpoints_ready = false;
 	bool ready = false;
 };
+
+// Discord snowflakes are 17-19 digit user ids.  Peer re-register currently
+// publishes that id as the lobby "name", so the UI must not treat it as one.
+inline bool looks_like_discord_snowflake(std::string_view text)
+{
+	if ((text.size() < 16) || (text.size() > 20))
+		return false;
+	return std::all_of(text.begin(), text.end(), [] (char ch) { return (ch >= '0') && (ch <= '9'); });
+}
 
 // State and wire format are independent of the Discord SDK.  The SDK adapter
 // supplies the authenticated sender ID alongside every received message.

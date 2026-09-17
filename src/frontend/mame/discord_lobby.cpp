@@ -140,8 +140,29 @@ bool discord_lobby::receive(std::string_view authenticated_sender_id, std::strin
 				m_last_error = "player selected a different game";
 				return false;
 			}
-			auto &member = m_members[sender];
-			member = { sender, data.at("name").get<std::string>(), data.at("key").get<std::string>(), { }, false, false };
+			std::string display_name = data.at("name").get<std::string>();
+			std::string const public_key = data.at("key").get<std::string>();
+			auto found = m_members.find(sender);
+			if (found != m_members.end())
+			{
+				// Direct-connect re-register sends the Discord user id as "name".
+				// Keep a human-readable name from the original join when that happens.
+				if ((display_name.empty() || looks_like_discord_snowflake(display_name)) &&
+					!found->second.display_name.empty() &&
+					!looks_like_discord_snowflake(found->second.display_name))
+				{
+					display_name = found->second.display_name;
+				}
+				found->second.display_name = display_name;
+				found->second.public_key = public_key;
+				found->second.endpoints.clear();
+				found->second.endpoints_ready = false;
+				found->second.ready = false;
+			}
+			else
+			{
+				m_members[sender] = { sender, display_name, public_key, { }, false, false };
+			}
 		}
 		else if (type == "leave")
 		{

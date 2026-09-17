@@ -173,9 +173,11 @@ CommonBase *createNetCommon(const string &userId,
                             unsigned short _port, const string &lobbyHostname,
                             unsigned short lobbyPort, int _unmeasuredNoise,
                             const string &gameName, bool fakeLag,
-                            int directConnectTimeoutSeconds = 10);
+                            int directConnectTimeoutSeconds = 10,
+                            const string &displayName = "");
 void deleteNetCommon();
 void abortNetCommon();
+void clearNetCommonAbort();
 string makePrivateKey();
 
 extern CommonBase *netCommon;

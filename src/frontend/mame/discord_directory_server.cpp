@@ -122,8 +122,12 @@ discord_directory_server::discord_directory_server(discord_identity identity, st
 
 discord_directory_server::~discord_directory_server()
 {
-	if (!m_hosting)
-		publish(m_lobby.make_leave_message());
+	publish(m_lobby.make_leave_message());
+	if (m_discord_lobby_id)
+	{
+		std::string error;
+		discord_service::instance().leave_lobby(m_discord_lobby_id, error);
+	}
 	m_server.stop();
 	if (m_server_thread.joinable())
 		m_server_thread.join();

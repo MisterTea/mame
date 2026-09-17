@@ -374,10 +374,12 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
       // If a private lobby was provided on the command line, perform direct connection
       if (*m_options.discord_lobby()) {
         string userId = m_options.user_id();
+        string displayName;
         std::unique_ptr<mamehub::discord_directory_server> discordDirectory;
         if (m_options.discord_auth() && mamehub::discord_service::instance().is_authenticated()) {
           auto const &discordIdentity = mamehub::discord_service::instance().current_identity();
           userId = to_string(discordIdentity.id);
+          displayName = discordIdentity.display_name.empty() ? userId : discordIdentity.display_name;
           // Both host and guest must advertise the same game string so lobby
           // join validation succeeds (empty guest game is rejected by the host).
           string selectedGame = m_options.system_name();
@@ -394,6 +396,7 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
           }
         }
         deleteNetCommon();
+        clearNetCommonAbort();
         string gameString = m_options.system_name();
         gameString += ";" + m_options.software_name();
         if (discordDirectory) {
@@ -402,10 +405,12 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
           unsigned short const directoryPort = discordDirectory->port();
           bool const fakeLag = m_options.fake_lag();
           int const connectTimeout = m_options.direct_connect_timeout();
+          if (displayName.empty())
+            displayName = userId;
           if (mamehub::discord_service::is_mock_enabled())
             wga::DISABLE_PORT_MAPPING = true;
-          auto connection = std::async(std::launch::async, [userId, privateKey, peerPort, directoryPort, gameString, fakeLag, connectTimeout] {
-            return createNetCommon(userId, privateKey, peerPort, "", directoryPort, 50, gameString, fakeLag, connectTimeout);
+          auto connection = std::async(std::launch::async, [userId, displayName, privateKey, peerPort, directoryPort, gameString, fakeLag, connectTimeout] {
+            return createNetCommon(userId, privateKey, peerPort, "", directoryPort, 50, gameString, fakeLag, connectTimeout, displayName);
           });
           mamehub::show_discord_waiting_room(*discordDirectory, m_options.discord_host(), [&connection] {
             return connection.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
@@ -437,6 +442,7 @@ void cli_frontend::start_execution(mame_machine_manager *manager, const std::vec
         }
       }
       deleteNetCommon();
+      clearNetCommonAbort();
       string gameString = m_options.system_name();
       gameString += ";" + m_options.software_name();
       createNetCommon(userId,

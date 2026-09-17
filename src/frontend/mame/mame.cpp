@@ -317,6 +317,17 @@ int mame_machine_manager::execute()
 			mamehub::discord_discovery::instance().reset();
 		}
 
+		if (error != EMU_ERR_NONE && started_empty && !is_empty)
+		{
+			osd_printf_error("Unable to start the selected game (error %d). Returning to MAMEHub.\n", error);
+			m_options.set_system_name("");
+			m_options.set_value(OPTION_SOFTWARENAME, "", OPTION_PRIORITY_CMDLINE);
+			m_options.set_software("");
+			m_options.set_value(OPTION_BIOS, "", OPTION_PRIORITY_CMDLINE);
+			m_new_driver_pending = nullptr;
+			error = EMU_ERR_NONE;
+		}
+
 		if (machine.exit_pending() && (!started_empty || is_empty))
 			exit_pending = true;
 
