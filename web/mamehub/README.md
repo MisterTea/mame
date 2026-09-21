@@ -45,6 +45,7 @@ cd web/mamehub && python3 serve.py --port 8765 --open
 # http://127.0.0.1:8765/snes/     → SNES shell
 # http://127.0.0.1:8765/arcade/   → Arcade shell
 # http://127.0.0.1:8765/nes/      → NES shell (etc.)
+# http://127.0.0.1:8765/msx/      → MSX shell
 ```
 
 `serve.py` (and the desktop launcher) serve the static tree plus `/candy-proxy?url=…` (archive.org hosts only). Browser candy mode uses Asyncify `fetch` through that proxy into the Emscripten `/roms` path.

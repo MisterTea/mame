@@ -178,7 +178,7 @@
         return;
       if (join === "0" || join === "false" || join === "no")
         return;
-      var ids = ["arcade", "gameboy", "gba", "nes", "snes", "genesis", "a2600", "sms", "gamegear", "pce"];
+      var ids = ["arcade", "gameboy", "gba", "nes", "snes", "genesis", "a2600", "sms", "gamegear", "pce", "msx"];
       var sys = (params.get("sys") || params.get("profile") || "").trim().toLowerCase();
       if (ids.indexOf(sys) < 0)
         sys = "snes";
@@ -260,6 +260,11 @@
         <td class="thumb"><a href="/pce/"><img src="/systems/pce.png" alt="PC Engine" width="320" height="240"></a></td>
         <th scope="row"><a href="/pce/">PC Engine</a></th>
         <td class="about"><a href="/pce/">PC Engine / TurboGrafx-16 HuCards over the PCE wasm build.</a></td>
+      </tr>
+      <tr>
+        <td class="thumb"><a href="/msx/"><img src="/systems/msx.png" alt="MSX" width="320" height="240"></a></td>
+        <th scope="row"><a href="/msx/">MSX</a></th>
+        <td class="about"><a href="/msx/">MSX1 and MSX2 cartridges over the MSX wasm build (Sony HB-75P / Philips NMS 8250).</a></td>
       </tr>
         </tbody>
       </table>

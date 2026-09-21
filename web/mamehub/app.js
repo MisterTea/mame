@@ -1677,6 +1677,18 @@
     softwareAcQuery = null;
   }
 
+  function softwareAcIndexOfShortname() {
+    const input = document.getElementById("softwareAcInput");
+    const id = ((input && input.dataset.shortname) || "").trim().toLowerCase();
+    if (!id)
+      return -1;
+    for (let i = 0; i < softwareAcFiltered.length; i++) {
+      if (softwareAcFiltered[i].idLower === id)
+        return i;
+    }
+    return -1;
+  }
+
   function renderSoftwareAcList(query) {
     const list = document.getElementById("softwareAcList");
     const input = document.getElementById("softwareAcInput");
@@ -1689,28 +1701,39 @@
     ensureSoftwareAcListHandlers(list);
     list.hidden = false;
     input.setAttribute("aria-expanded", "true");
-    if (queryChanged)
-      list.scrollTop = 0;
-    softwareAcActive = softwareAcFiltered.length ? 0 : -1;
+    const selectedIdx = softwareAcIndexOfShortname();
+    softwareAcActive = selectedIdx >= 0 ? selectedIdx : (softwareAcFiltered.length ? 0 : -1);
     softwareAcWinStart = -1;
     void list.offsetHeight;
-    paintSoftwareAcWindow(true);
+    if (queryChanged && selectedIdx < 0)
+      list.scrollTop = 0;
+    if (softwareAcActive >= 0)
+      updateSoftwareAcActive();
+    else
+      paintSoftwareAcWindow(true);
+  }
+
+  function scrollSoftwareAcActiveIntoView() {
+    const list = document.getElementById("softwareAcList");
+    if (!list || softwareAcActive < 0 || !softwareAcFiltered.length)
+      return;
+    const itemH = SOFTWARE_AC_ITEM_H;
+    const top = softwareAcActive * itemH;
+    const viewH = Math.max(list.clientHeight || 0, 256);
+    if (top < list.scrollTop)
+      list.scrollTop = top;
+    else if (top + itemH > list.scrollTop + viewH)
+      list.scrollTop = Math.max(0, top + itemH - viewH);
   }
 
   function updateSoftwareAcActive() {
     const list = document.getElementById("softwareAcList");
     if (!list)
       return;
-    if (softwareAcActive >= 0 && softwareAcFiltered.length) {
-      const itemH = SOFTWARE_AC_ITEM_H;
-      const top = softwareAcActive * itemH;
-      const viewH = list.clientHeight || 256;
-      if (top < list.scrollTop)
-        list.scrollTop = top;
-      else if (top + itemH > list.scrollTop + viewH)
-        list.scrollTop = Math.max(0, top + itemH - viewH);
-    }
+    // Paint first so the virtual list has a real scrollHeight, then scroll.
     paintSoftwareAcWindow(true);
+    scrollSoftwareAcActiveIntoView();
+    paintSoftwareAcWindow();
   }
 
   function selectSoftwareAc(entry) {

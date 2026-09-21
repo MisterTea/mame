@@ -64,6 +64,18 @@
         select: "INPUT/0/P1 Select"
       });
     }
+    if (id === "msx") {
+      return Object.assign(dirs("P1 "), {
+        b: "INPUT/0/P1 Button 1",
+        a: "INPUT/0/P1 Button 2",
+        y: "INPUT/0/P1 Button 1",
+        x: "INPUT/0/P1 Button 2",
+        l: "INPUT/0/P1 Button 1",
+        r: "INPUT/0/P1 Button 2",
+        start: "INPUT/0/P1 Button 1",
+        select: "INPUT/0/P1 Button 2"
+      });
+    }
     if (id === "sms" || id === "gamegear") {
       return Object.assign(dirs("P1 "), {
         b: "INPUT/0/P1 Button 1",

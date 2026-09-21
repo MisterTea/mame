@@ -302,6 +302,40 @@
           "KeyZ": "b", "KeyX": "a", "KeyV": "select", "Enter": "start"
         }
       }
+    },
+    {
+      "id": "msx",
+      "title": "MSX",
+      "blurb": "MSX1 and MSX2 cartridges over the MSX wasm build (Sony HB-75P / Philips NMS 8250).",
+      "mode": "console",
+      "subtarget": "msx",
+      "flt": ["msx/msx1.cpp", "msx/msx2.cpp"],
+      "machine": "hb75p",
+      "media": "cart",
+      "noun": "MSX software",
+      "hashFiles": [
+        { "file": "msx1_cart.xml", "machine": "hb75p" },
+        { "file": "msx2_cart.xml", "machine": "nms8250" }
+      ],
+      "defaultSoftware": "pengadv",
+      "defaultHostSoftware": "bombman",
+      "canvasWidth": 512,
+      "canvasHeight": 448,
+      "keyboard": {
+        "labels": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "Button 1", "a": "Button 2"
+        },
+        "keycaps": {
+          "up": "Up", "down": "Down", "left": "Left", "right": "Right",
+          "b": "B1", "a": "B2"
+        },
+        "order": ["up", "down", "left", "right", "b", "a"],
+        "bindings": {
+          "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right",
+          "KeyZ": "b", "KeyX": "a"
+        }
+      }
     }
   ]
 }
