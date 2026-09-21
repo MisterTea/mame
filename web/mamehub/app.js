@@ -1847,7 +1847,7 @@
         let entry = fromQuery ? (softwareAcMatchList(fromQuery)[0] || null) : null;
         if (!entry) {
           const prefer = isArcade
-            ? (cfg.defaultMachine || "xmen6p")
+            ? (cfg.defaultMachine || "xmen")
             : ((mode === "host" || mode === "join")
               ? (cfg.defaultHostSoftware || cfg.defaultSoftware)
               : (cfg.defaultSoftware || cfg.defaultHostSoftware));

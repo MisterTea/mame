@@ -19,7 +19,7 @@ window.MAMEHUB_BROWSER = Object.assign({
   hashUrl: "",
   hashFiles: [],
   machinesUrl: "/arcade_top_mp.json",
-  defaultMachine: "xmen6p",
+  defaultMachine: "xmen",
   canvasWidth: 1152,
   canvasHeight: 448,
   keyboardLayout: "/layouts/arcade.png",

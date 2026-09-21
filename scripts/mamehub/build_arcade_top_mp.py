@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Build arcade_top_mp.json (exactly 100 unique 2P+ titles) + src/mame/arcade.flt
 # Primary: IAM/KLOV Top 100 + Wikipedia highest-grossing fills, then multiplayer backfill.
-# Forced: xmen6p, bombrman. Variants collapsed (one preferred MAME set per commercial title).
+# Forced: xmen (4P), bombrman. Variants collapsed (one preferred MAME set per commercial title).
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ CANDIDATES: list[tuple[str, str, str]] = [
     ("Double Dragon", "ddragon", "klov"),
     ("Golden Axe", "goldnaxe", "klov"),
     ("Smash TV", "smashtv", "klov"),
-    ("X-Men (6 Players)", "xmen6p", "klov+forced"),
+    ("X-Men (4 Players)", "xmen", "klov+forced"),
     ("Mortal Kombat", "mk", "klov"),
     ("NBA Jam", "nbajam", "klov"),
     ("Terminator 2: Judgment Day", "term2", "klov"),
@@ -367,12 +367,12 @@ def main() -> int:
         print(f"missing mame binary: {MAME}", file=sys.stderr)
         return 1
 
-    # Dedupe candidates by mame id, preserve order; force xmen6p first among X-Men
+    # Dedupe candidates by mame id, preserve order; force 4P xmen first among X-Men
     seen_ids: set[str] = set()
     ordered: list[tuple[str, str, str]] = []
-    # Ensure xmen6p and bombrman are present early enough to make the 100
+    # Ensure xmen and bombrman are present early enough to make the 100
     forced = [
-        ("X-Men (6 Players)", "xmen6p", "klov+forced"),
+        ("X-Men (4 Players)", "xmen", "klov+forced"),
         ("Bomber Man", "bombrman", "backfill+forced"),
     ]
     for title, mid, src in [*forced, *CANDIDATES]:
@@ -414,8 +414,8 @@ def main() -> int:
         )
         print(f"  + {len(selected):3d} {mid:16s} p={meta['players']}  {title}")
 
-    if not any(e["mame"] == "xmen6p" for e in selected):
-        print("FATAL: xmen6p not in selection", file=sys.stderr)
+    if not any(e["mame"] == "xmen" for e in selected):
+        print("FATAL: xmen not in selection", file=sys.stderr)
         return 1
     if not any(e["mame"] == "bombrman" for e in selected):
         print("FATAL: bombrman not in selection", file=sys.stderr)
@@ -432,7 +432,7 @@ def main() -> int:
         "notes": (
             "Exactly 100 unique popular arcade titles with MAME players>=2. "
             "Primary IAM/KLOV Top 100 + Wikipedia highest-grossing fills, then backfill. "
-            "Variants collapsed to one MAME set; xmen6p and bombrman forced."
+            "Variants collapsed to one MAME set; xmen and bombrman forced."
         ),
         "games": selected,
     }

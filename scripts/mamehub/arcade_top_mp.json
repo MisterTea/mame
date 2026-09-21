@@ -1,14 +1,14 @@
 {
   "version": 1,
   "count": 100,
-  "notes": "Exactly 100 unique popular arcade titles with MAME players>=2. Primary IAM/KLOV Top 100 + Wikipedia highest-grossing fills, then backfill. Variants collapsed to one MAME set; xmen6p and bombrman forced.",
+  "notes": "Exactly 100 unique popular arcade titles with MAME players>=2. Primary IAM/KLOV Top 100 + Wikipedia highest-grossing fills, then backfill. Variants collapsed to one MAME set; xmen and bombrman forced.",
   "games": [
     {
-      "title": "X-Men (6 Players)",
-      "mame": "xmen6p",
-      "players": 6,
+      "title": "X-Men (4 Players)",
+      "mame": "xmen",
+      "players": 4,
       "sourcefile": "konami/xmen.cpp",
-      "description": "X-Men (6 Players ver ECB)",
+      "description": "X-Men (4 Players ver EBA)",
       "source": "klov+forced"
     },
     {
