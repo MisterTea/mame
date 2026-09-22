@@ -68,16 +68,29 @@ bool s_candy_clock_active = false;
 double s_candy_clock_start_ms = 0.0;
 double s_candy_clock_pending_ms = 0.0;
 int s_asyncify_sleep_ms = 0;
+bool s_asyncify_yielded = false;
+bool s_emscripten_frame_done = false;
 }
 
 void mamehub_asyncify_sleep_reset()
 {
 	s_asyncify_sleep_ms = 0;
+	s_asyncify_yielded = false;
 }
 
-int mamehub_asyncify_sleep_ms()
+bool mamehub_asyncify_yielded()
 {
-	return s_asyncify_sleep_ms;
+	return s_asyncify_yielded;
+}
+
+void mamehub_emscripten_frame_done_reset()
+{
+	s_emscripten_frame_done = false;
+}
+
+bool mamehub_emscripten_frame_done()
+{
+	return s_emscripten_frame_done;
 }
 
 void mamehub_candy_clock_begin()
@@ -284,6 +297,7 @@ static void mamehub_osd_sleep(osd_ticks_t duration)
 	if (ms > 50)
 		ms = 50;
 	s_asyncify_sleep_ms += ms;
+	s_asyncify_yielded = true;
 	emscripten_sleep(ms);
 #else
 	auto const t0 = std::chrono::steady_clock::now();
@@ -292,6 +306,39 @@ static void mamehub_osd_sleep(osd_ticks_t duration)
 			std::chrono::steady_clock::now() - t0).count());
 #endif
 }
+
+#if defined(__EMSCRIPTEN__)
+static void mamehub_osd_yield()
+{
+	mamehub_browser_yield_to_browser();
+}
+
+EM_ASYNC_JS(void, mamehub_yield_to_browser_js, (), {
+	// setTimeout(0) is clamped (~4ms nested). scheduler.yield() / MessageChannel
+	// are macrotasks that still let the page paint and take input.
+	if (globalThis.scheduler && typeof scheduler.yield === "function") {
+		await scheduler.yield();
+		return;
+	}
+	await new Promise((resolve) => {
+		let ch = Module.__mamehubYieldCh;
+		if (!ch) {
+			ch = new MessageChannel();
+			Module.__mamehubYieldCh = ch;
+			ch.port1.start();
+			ch.port2.start();
+		}
+		ch.port1.onmessage = resolve;
+		ch.port2.postMessage(0);
+	});
+});
+
+void mamehub_browser_yield_to_browser()
+{
+	s_asyncify_yielded = true;
+	mamehub_yield_to_browser_js();
+}
+#endif
 
 void video_manager::frame_update(bool from_debugger)
 {
@@ -396,12 +443,7 @@ void video_manager::frame_update(bool from_debugger)
 	}
 	bool const update_screens = (phase == machine_phase::RUNNING) && (!machine().paused() || machine().options().update_in_pause());
 	int64_t t0 = nowUs();
-	// SKIP_OSD is set at the end of the previous frame. When we are already
-	// behind, skip PPU finalize + quad composite so catch-up is not display-capped.
-	// Netplay still composites every frame (skipped_it is forced off above).
-	bool anything_changed = false;
-	if (update_screens && !(SKIP_OSD && !netCommon))
-		anything_changed = finish_screen_updates();
+	bool anything_changed = update_screens && finish_screen_updates();
 	curBusy.video_us = nowUs() - t0;
 
 	// update inputs and draw the user interface
@@ -482,6 +524,9 @@ void video_manager::frame_update(bool from_debugger)
 		if (screen && ((machine().paused() && machine().options().update_in_pause()) || from_debugger || within_instruction_hook))
 			screen->reset_partial_updates();
 	}
+#if defined(__EMSCRIPTEN__)
+	s_emscripten_frame_done = true;
+#endif
 }
 
 
@@ -985,6 +1030,11 @@ void video_manager::update_throttle(attotime emutime)
 			s_renderSkips = 0;
 			s_statsWindowStart = now;
 		}
+#if defined(__EMSCRIPTEN__)
+		// Behind / on-time: give the browser a turn. Ahead already slept above.
+		if (!s_asyncify_yielded)
+			mamehub_osd_yield();
+#endif
 		return;
 	}
 }

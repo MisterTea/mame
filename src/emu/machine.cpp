@@ -1603,15 +1603,16 @@ void running_machine::emscripten_main_loop()
 		device_scheduler * scheduler;
 		scheduler = &(machine->scheduler());
 
-		// Run until wall budget is spent. Empty quanta are cheap; a low slice
-		// cap previously exited after ~3ms and slept, capping present rate.
-		const double budget_ms = 20.0;
-		const double start_ms = emscripten_get_now();
+		// Run until the next vblank/frame_update. Video throttle yields when
+		// ahead of realtime; when behind it yields immediately (no setTimeout
+		// clamp) so the tab can paint without a per-timeslice wall-clock poll.
+		mamehub_emscripten_frame_done_reset();
 		attotime const start_time = scheduler->time();
 		// Mirror the native run() loop: ChronoMap seq_pressed / ioport sync
 		// gate on machine_time(), which otherwise stays at 0 forever under
 		// Emscripten and makes every netplay button read as released.
 		unsigned slices = 0;
+		const double start_ms = emscripten_get_now();
 		while (!machine->m_paused && !machine->scheduled_event_pending())
 		{
 			attotime const time_before = scheduler->time();
@@ -1625,7 +1626,7 @@ void running_machine::emscripten_main_loop()
 				machine->handle_saveload();
 				break;
 			}
-			if ((emscripten_get_now() - start_ms) >= budget_ms)
+			if (mamehub_emscripten_frame_done())
 				break;
 			// Bail only if time is wedged (no progress) after many quanta.
 			if ((slices & 0x3ff) == 0 && scheduler->time() == start_time)
@@ -1705,11 +1706,10 @@ void running_machine::emscripten_set_running_machine(running_machine *machine)
 	{
 		mamehub_asyncify_sleep_reset();
 		emscripten_main_loop();
-		// Throttle already slept if we were ahead of realtime. A fixed 2–4ms
-		// wait on top of a 20ms burst caps even a fast machine at ~91%.
-		// Only yield when we did not already wait, so the tab can paint/input.
-		if (mamehub_asyncify_sleep_ms() <= 0)
-			emscripten_sleep(0);
+		// Throttle already slept if we were ahead; catch-up yields in video.cpp.
+		// Only yield here if this burst never returned to JS (candy / no frame yet).
+		if (!mamehub_asyncify_yielded())
+			mamehub_browser_yield_to_browser();
 	}
 }
 

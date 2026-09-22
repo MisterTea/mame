@@ -210,6 +210,8 @@ EM_JS(void, mamehub_webgl_blit, (int w, int h, int pitch, uintptr_t src), {
 	gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, heap8.subarray(src, src + bytes));
 	gl.useProgram(ov._prog);
 	gl.drawArrays(gl.TRIANGLES, 0, 6);
+	if (typeof Module !== "undefined" && typeof Module._mamehubOnPresent === "function")
+		Module._mamehubOnPresent();
 });
 #endif
 

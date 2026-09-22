@@ -186,10 +186,16 @@ private:
 // emulation does not start already seconds behind wall time.
 void mamehub_candy_clock_begin();
 void mamehub_candy_clock_end();
-// Throttle Asyncify sleeps this burst — the outer run loop must not add another
-// 2–4ms wait on top or even a fast machine is capped below realtime.
+// Throttle / catch-up Asyncify yields this burst — the outer run loop must
+// not add another wait on top.
 void mamehub_asyncify_sleep_reset();
-int mamehub_asyncify_sleep_ms();
+bool mamehub_asyncify_yielded();
+// Set from frame_update so the wasm run loop can stop after one vblank
+// instead of polling wall-clock every scheduler timeslice.
+void mamehub_emscripten_frame_done_reset();
+bool mamehub_emscripten_frame_done();
+// Cooperative yield with no setTimeout(0) 4ms clamp (scheduler.yield / MessageChannel).
+void mamehub_browser_yield_to_browser();
 #endif
 
 #endif // MAME_EMU_VIDEO_H

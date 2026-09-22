@@ -88,6 +88,85 @@
     };
   }
 
+  const showFpsRequested = (() => {
+    const v = (qs.get("showfps") || qs.get("fps") || "1").toLowerCase();
+    return v !== "0" && v !== "false" && v !== "off" && v !== "no";
+  })();
+
+  function installFpsHud() {
+    const hud = document.getElementById("fps-hud");
+    if (!hud || hud.dataset.mounted === "1")
+      return;
+    hud.dataset.mounted = "1";
+    let presents = 0;
+    let lastMs = performance.now();
+    let lastCount = 0;
+    let presentFps = 0;
+    const bump = () => { presents++; };
+    window.__mamehubOnPresent = bump;
+    const hookGl = () => {
+      const ov = document.getElementById("mame-webgl");
+      if (!ov || ov._fpsHooked)
+        return;
+      const gl = ov._gl;
+      if (!gl || typeof gl.drawArrays !== "function")
+        return;
+      ov._fpsHooked = true;
+      const orig = gl.drawArrays.bind(gl);
+      gl.drawArrays = function () {
+        bump();
+        return orig.apply(this, arguments);
+      };
+    };
+    const enableMameFps = () => {
+      try {
+        const M = window.Module;
+        if (!M)
+          return;
+        const getUi = (window.JSMAME && typeof JSMAME.get_ui === "function")
+          ? JSMAME.get_ui
+          : M.__ZN15running_machine17emscripten_get_uiEv;
+        const setFps = (window.JSMAME && typeof JSMAME.ui_set_show_fps === "function")
+          ? JSMAME.ui_set_show_fps
+          : M.__ZN15mame_ui_manager12set_show_fpsEb;
+        if (typeof getUi !== "function" || typeof setFps !== "function")
+          return;
+        const ui = getUi();
+        if (!ui)
+          return;
+        setFps(ui, 1);
+      } catch (_) { /* UI not ready yet */ }
+    };
+    const tick = () => {
+      hookGl();
+      if (window.Module)
+        Module._mamehubOnPresent = bump;
+      if (showFpsRequested)
+        enableMameFps();
+      const now = performance.now();
+      const dt = now - lastMs;
+      if (dt >= 500) {
+        presentFps = (presents - lastCount) * 1000 / dt;
+        lastCount = presents;
+        lastMs = now;
+        window.__mamehubHudFps = presentFps;
+        window.__mamehubPresentCount = presents;
+        if (showFpsRequested) {
+          hud.hidden = false;
+          hud.style.display = "block";
+          hud.textContent = presentFps.toFixed(1) + " FPS";
+        }
+      }
+    };
+    setInterval(tick, 250);
+    if (showFpsRequested) {
+      hud.hidden = false;
+      hud.style.display = "block";
+      hud.textContent = "FPS …";
+    }
+  }
+  installFpsHud();
+
   const muteRequested = (() => {
     const mute = (qs.get("mute") || "").toLowerCase();
     if (mute === "1" || mute === "true" || mute === "yes" || mute === "on")
@@ -2542,5 +2621,14 @@
         setJoinLobbyState("Join failed: " + msg);
       log("Join failed: " + msg);
     });
+  } else {
+    const autoGame = queryPreferredGame();
+    const autostart = /^(1|true|yes|on)$/i.test(qs.get("autostart") || qs.get("autoplay") || "");
+    if (autostart && autoGame) {
+      hideModeButtons();
+      log("Autostart " + autoGame);
+      bootEmulator(autoGame, { mamehub: false }).catch((err) =>
+        log("Autostart failed: " + (err && err.message ? err.message : err)));
+    }
   }
 })();
