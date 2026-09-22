@@ -186,6 +186,10 @@ private:
 // emulation does not start already seconds behind wall time.
 void mamehub_candy_clock_begin();
 void mamehub_candy_clock_end();
+// Throttle Asyncify sleeps this burst — the outer run loop must not add another
+// 2–4ms wait on top or even a fast machine is capped below realtime.
+void mamehub_asyncify_sleep_reset();
+int mamehub_asyncify_sleep_ms();
 #endif
 
 #endif // MAME_EMU_VIDEO_H

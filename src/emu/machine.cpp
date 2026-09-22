@@ -1703,14 +1703,13 @@ void running_machine::emscripten_set_running_machine(running_machine *machine)
 	// hard resets.
 	while (!machine->exit_pending() && !machine->hard_reset_pending())
 	{
+		mamehub_asyncify_sleep_reset();
 		emscripten_main_loop();
-		// Adaptive yield: short sleep after a full emu burst, longer when idle.
-		// Avoid 1ms — Asyncify unwind overhead dominates at that cadence.
-		double const burst = EM_ASM_DOUBLE({ return Module._mameLastBurstMs || 0; });
-		// Full burst → short yield; slice-starved/idle → also short so we retry.
-		// Keep ≥2ms: 1ms is dominated by Asyncify unwind overhead.
-		int const sleep_ms = (burst >= 10.0) ? 2 : 4;
-		emscripten_sleep(sleep_ms);
+		// Throttle already slept if we were ahead of realtime. A fixed 2–4ms
+		// wait on top of a 20ms burst caps even a fast machine at ~91%.
+		// Only yield when we did not already wait, so the tab can paint/input.
+		if (mamehub_asyncify_sleep_ms() <= 0)
+			emscripten_sleep(0);
 	}
 }
 

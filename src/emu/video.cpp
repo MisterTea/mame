@@ -67,6 +67,17 @@ namespace {
 bool s_candy_clock_active = false;
 double s_candy_clock_start_ms = 0.0;
 double s_candy_clock_pending_ms = 0.0;
+int s_asyncify_sleep_ms = 0;
+}
+
+void mamehub_asyncify_sleep_reset()
+{
+	s_asyncify_sleep_ms = 0;
+}
+
+int mamehub_asyncify_sleep_ms()
+{
+	return s_asyncify_sleep_ms;
 }
 
 void mamehub_candy_clock_begin()
@@ -272,6 +283,7 @@ static void mamehub_osd_sleep(osd_ticks_t duration)
 		ms = 1;
 	if (ms > 50)
 		ms = 50;
+	s_asyncify_sleep_ms += ms;
 	emscripten_sleep(ms);
 #else
 	auto const t0 = std::chrono::steady_clock::now();
@@ -384,7 +396,12 @@ void video_manager::frame_update(bool from_debugger)
 	}
 	bool const update_screens = (phase == machine_phase::RUNNING) && (!machine().paused() || machine().options().update_in_pause());
 	int64_t t0 = nowUs();
-	bool anything_changed = update_screens && finish_screen_updates();
+	// SKIP_OSD is set at the end of the previous frame. When we are already
+	// behind, skip PPU finalize + quad composite so catch-up is not display-capped.
+	// Netplay still composites every frame (skipped_it is forced off above).
+	bool anything_changed = false;
+	if (update_screens && !(SKIP_OSD && !netCommon))
+		anything_changed = finish_screen_updates();
 	curBusy.video_us = nowUs() - t0;
 
 	// update inputs and draw the user interface
@@ -935,8 +952,10 @@ void video_manager::update_throttle(attotime emutime)
 
 		if (msBehind >= 1 && emutime.seconds() > 0)
 		{
-			SKIP_OSD = true;
+			// Still present 1 in 3 so a heavy cart (SA-1, etc.) does not freeze
+			// on the first frame if we never catch all the way up.
 			++s_renderSkips;
+			SKIP_OSD = (s_renderSkips % 3) != 0;
 			if (msBehind > 100)
 			{
 				static int lastSecondBehind = 0;
