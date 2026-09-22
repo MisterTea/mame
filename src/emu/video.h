@@ -181,4 +181,11 @@ private:
 	static const int PAUSED_REFRESH_RATE = 30;
 };
 
+#if defined(__EMSCRIPTEN__)
+// Freeze the realtime throttle clock while candy is blocked on a download so
+// emulation does not start already seconds behind wall time.
+void mamehub_candy_clock_begin();
+void mamehub_candy_clock_end();
+#endif
+
 #endif // MAME_EMU_VIDEO_H

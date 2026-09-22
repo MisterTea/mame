@@ -27,12 +27,21 @@ CommonBase *netCommon = nullptr;
 
 namespace {
 unordered_map<string, string> s_offlineForced;
+unordered_map<string, int> s_offlineLatch;
 }
 
 bool mamehubBrowserOfflineForced(const std::string &key)
 {
 	auto it = s_offlineForced.find(key);
-	return it != s_offlineForced.end() && it->second == "1";
+	if (it != s_offlineForced.end() && it->second == "1")
+		return true;
+	auto latch = s_offlineLatch.find(key);
+	return latch != s_offlineLatch.end() && latch->second != 0;
+}
+
+void mamehubBrowserOfflineForceSampled(const std::string &key)
+{
+	s_offlineLatch.erase(key);
 }
 
 static void apply_offline_force_fields(char const *key, bool down)
@@ -453,7 +462,12 @@ public:
 		if (value.empty())
 			m_forced.erase(mapped);
 		else
+		{
 			m_forced[mapped] = value;
+			// Latch at least one ChronoMap send even if the pad is released
+			// before the next ioport poll (common when emu is below realtime).
+			m_attach[mapped] = value;
+		}
 		// Also clear the unmapped P1 key if we remapped.
 		if (mapped != key)
 			m_forced.erase(key);
@@ -1108,7 +1122,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE void mamehub_browser_force_input(char const *key
 	if (v.empty() || v == "0")
 		s_offlineForced.erase(key);
 	else
+	{
 		s_offlineForced[key] = "1";
+		s_offlineLatch[key] = 1;
+	}
 	apply_offline_force_fields(key, !v.empty() && v != "0");
 	if (s_instance)
 		s_instance->forceInput(key, v);
@@ -1119,6 +1136,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE void mamehub_browser_clear_forced_inputs(void)
 	for (auto const &kv : s_offlineForced)
 		apply_offline_force_fields(kv.first.c_str(), false);
 	s_offlineForced.clear();
+	s_offlineLatch.clear();
 	if (s_instance)
 		s_instance->clearForcedInputs();
 }

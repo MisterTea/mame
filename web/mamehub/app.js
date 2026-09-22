@@ -714,15 +714,14 @@
     const canvas = document.getElementById("canvas");
     if (!wrap || !canvas || !isGameFullscreen())
       return;
-    // Scale in CSS only. Changing canvas client/CSS box size makes SDL/Emscripten
-    // recreate the WebGL window and freezes/crashes soft-composite.
-    canvas.style.width = "";
-    canvas.style.height = "";
-    canvas.style.maxWidth = nativeCanvasSize().w + "px";
-    canvas.style.maxHeight = "";
-    const cw = canvas.clientWidth || canvas.width || 1;
-    const ch = canvas.clientHeight || canvas.height || 1;
-    const scale = Math.min(wrap.clientWidth / cw, wrap.clientHeight / ch);
+    // Pin the CSS box to the GL backbuffer. Scaling is transform-only so
+    // orientation/resize cannot change clientWidth and freeze WebGL.
+    const native = nativeCanvasSize();
+    canvas.style.width = native.w + "px";
+    canvas.style.height = native.h + "px";
+    canvas.style.maxWidth = "none";
+    canvas.style.maxHeight = "none";
+    const scale = Math.min(wrap.clientWidth / native.w, wrap.clientHeight / native.h);
     canvas.style.transformOrigin = "center center";
     canvas.style.transform = "scale(" + scale + ")";
   }
@@ -816,6 +815,18 @@
     ev.stopImmediatePropagation();
     fitCanvasInFullscreen();
   }, true);
+  window.addEventListener("orientationchange", () => {
+    if (isGameFullscreen())
+      fitCanvasInFullscreen();
+  });
+  try {
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", () => {
+        if (isGameFullscreen())
+          fitCanvasInFullscreen();
+      });
+    }
+  } catch (_) { /* ignore */ }
 
   async function enterGameFullscreen() {
     enterFallbackFullscreen();
@@ -1744,6 +1755,7 @@
     input.dataset.shortname = entry.id;
     input.dataset.machine = entry.machine || "";
     closeSoftwareAcList();
+    prefetchCandyRoms(entry.id, entry.machine || (isArcade ? entry.id : machineForSoftware(entry.id)));
   }
 
   function machineForSoftware(software) {
@@ -1866,9 +1878,168 @@
     if (mode === "host")
       log("Host — select " + noun + ", then Play. Share the join link; start when a player connects.");
     else if (isArcade)
-      log("Offline — select an arcade machine. Candy fetches the machine zip.");
+      log("Offline — select an arcade machine. Candy downloads the zip before the emulator starts.");
     else
-      log("Offline — select " + noun + ". Candy fetches the system zip + the cart.");
+      log("Offline — select " + noun + ". Candy downloads the system zip + cart before the emulator starts.");
+  }
+
+  function candyProxyFetchUrl(archiveUrl) {
+    const cfg = window.MAMEHUB_BROWSER || {};
+    const proxyBase = cfg.candyProxyBase || "/candy-proxy";
+    return proxyBase + (proxyBase.indexOf("?") >= 0 ? "&" : "?") + "url=" + encodeURIComponent(archiveUrl);
+  }
+
+  function candyListName(software, machine) {
+    const cfg = window.MAMEHUB_BROWSER || {};
+    const id = String(software || "").trim();
+    if (softwareCatalog && id) {
+      const hit = softwareCatalog.find((e) => e.id === id);
+      if (hit && hit.hashFile)
+        return String(hit.hashFile).replace(/\.xml$/i, "");
+    }
+    const hashFiles = Array.isArray(cfg.hashFiles) ? cfg.hashFiles : [];
+    const hf = hashFiles.find((h) => (h.machine || cfg.machine || gameTag) === machine) || hashFiles[0];
+    if (hf && hf.file)
+      return String(hf.file).replace(/\.xml$/i, "");
+    if (cfg.hashUrl)
+      return String(cfg.hashUrl).split("/").pop().replace(/\.xml$/i, "");
+    return machine || gameTag;
+  }
+
+  function candyJobsFor(software, machine) {
+    const cfg = window.MAMEHUB_BROWSER || {};
+    const romPath = cfg.romPath || "/roms";
+    const jobs = [];
+    if (isArcade) {
+      jobs.push({
+        name: software + ".zip",
+        url: "https://archive.org/download/MAME220RomsOnlyMerged/" + software + ".zip",
+        out: romPath + "/" + software + ".zip"
+      });
+      return jobs;
+    }
+    jobs.push({
+      name: machine + ".zip",
+      url: "https://archive.org/download/MAME220RomsOnlyMerged/" + machine + ".zip",
+      out: romPath + "/" + machine + ".zip"
+    });
+    if (machine === "snes") {
+      jobs.push({
+        name: "s_smp.zip",
+        copyFrom: romPath + "/snes.zip",
+        out: romPath + "/s_smp.zip"
+      });
+    }
+    const list = candyListName(software, machine);
+    jobs.push({
+      name: software + ".zip",
+      url: "https://archive.org/download/MAME_0.202_Software_List_ROMs_merged/" +
+        list + ".zip/" + list + "%2F" + software + ".zip",
+      altUrl: "https://archive.org/download/MAME_0.202_Software_List_ROMs_merged/" +
+        list + ".zip/" + list + "/" + software + ".zip",
+      out: romPath + "/" + list + "/" + software + ".zip"
+    });
+    return jobs;
+  }
+
+  async function fetchCandyBytes(archiveUrl, name, altUrl) {
+    const tryUrl = async (url) => {
+      const resp = await fetch(candyProxyFetchUrl(url));
+      if (!resp.ok)
+        throw new Error("HTTP " + resp.status);
+      const total = Number(resp.headers.get("Content-Length")) || 0;
+      if (resp.body && typeof resp.body.getReader === "function") {
+        const reader = resp.body.getReader();
+        const chunks = [];
+        let loaded = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done)
+            break;
+          chunks.push(value);
+          loaded += value.length;
+          setCandyProgress(loaded, total, name);
+        }
+        const data = new Uint8Array(loaded);
+        let offset = 0;
+        for (const chunk of chunks) {
+          data.set(chunk, offset);
+          offset += chunk.length;
+        }
+        return data;
+      }
+      const buf = new Uint8Array(await resp.arrayBuffer());
+      setCandyProgress(buf.length, buf.length, name);
+      return buf;
+    };
+    try {
+      return await tryUrl(archiveUrl);
+    } catch (err) {
+      if (!altUrl)
+        throw err;
+      log("Candy retry " + name);
+      return await tryUrl(altUrl);
+    }
+  }
+
+  const candyFileCache = new Map();
+  let candyPrefetchKey = "";
+  let candyPrefetchPromise = null;
+
+  async function ensureCandyRoms(software, machine) {
+    software = (software || "").trim();
+    machine = (machine || (isArcade ? software : "")).trim();
+    if (!software)
+      return [];
+    if (!isArcade && !machine)
+      machine = machineForSoftware(software);
+    const key = isArcade ? software : (machine + ":" + software);
+    if (candyPrefetchKey === key && candyPrefetchPromise)
+      return candyPrefetchPromise;
+    candyPrefetchKey = key;
+    candyPrefetchPromise = (async () => {
+      const jobs = candyJobsFor(software, machine);
+      const files = [];
+      for (const job of jobs) {
+        if (job.copyFrom)
+          continue;
+        if (candyFileCache.has(job.out)) {
+          files.push({ out: job.out, data: candyFileCache.get(job.out) });
+          continue;
+        }
+        try {
+          const data = await fetchCandyBytes(job.url, job.name, job.altUrl);
+          candyFileCache.set(job.out, data);
+          files.push({ out: job.out, data });
+          log("Candy ready " + job.name + " (" + data.length + " bytes)");
+        } catch (err) {
+          log("Candy prefetch failed for " + job.name + ": " +
+            (err && err.message ? err.message : err) + " (emulator candy will retry)");
+        }
+      }
+      for (const job of jobs) {
+        if (!job.copyFrom)
+          continue;
+        if (candyFileCache.has(job.out)) {
+          files.push({ out: job.out, data: candyFileCache.get(job.out) });
+          continue;
+        }
+        const src = candyFileCache.get(job.copyFrom);
+        if (!src)
+          continue;
+        candyFileCache.set(job.out, src);
+        files.push({ out: job.out, data: src });
+        log("Candy aliased " + job.name);
+      }
+      return files;
+    })();
+    return candyPrefetchPromise;
+  }
+
+  function prefetchCandyRoms(software, machine) {
+    ensureCandyRoms(software, machine).catch((err) => {
+      log("Candy prefetch: " + (err && err.message ? err.message : err));
+    });
   }
 
   function setCandyProgress(loaded, total, name) {
@@ -1920,6 +2091,8 @@
     if (!isArcade && !opts.machine)
       await loadSoftwareCatalog().catch(() => {});
     const machine = (opts.machine || machineForSoftware(software) || cfg.machine || gameTag).trim();
+    log("Candy: ensuring ROMs before emulator start…");
+    const candyFiles = await ensureCandyRoms(software, machine);
 
     const hashFiles = Array.isArray(cfg.hashFiles) && cfg.hashFiles.length
       ? cfg.hashFiles
@@ -2053,6 +2226,16 @@
                   });
                 }
               }
+              candyFiles.forEach((file) => {
+                try {
+                  const dir = file.out.includes("/") ? file.out.slice(0, file.out.lastIndexOf("/")) : "";
+                  if (dir)
+                    FS.mkdirTree(dir);
+                  FS.writeFile(file.out, file.data);
+                } catch (err) {
+                  console.warn("Candy FS write " + file.out + ":", err);
+                }
+              });
               if (nvramOffline) {
                 const n = restoreNvramFromStorage(software);
                 if (n)
@@ -2082,7 +2265,7 @@
           log(s);
       },
       onRuntimeInitialized: () => {
-        log("WASM runtime initialized — candy loading " + software +
+        log("WASM runtime initialized — starting " + software +
           (opts.mamehub ? " (netplay)" : ""));
         installForceInputDumpHook();
         updateSaveStateButtons();
@@ -2138,6 +2321,7 @@
     joinStartWaiters = [];
     hostBootSoftware = software;
     meshLinkStates.clear();
+    prefetchCandyRoms(software, machineForSoftware(software));
 
     if (isHost) {
       const userId = document.getElementById("userId").value.trim() || "host";

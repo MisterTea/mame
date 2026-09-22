@@ -203,6 +203,8 @@ extern CommonBase *netCommon;
 #if defined(__EMSCRIPTEN__)
 // Sticky pad / shell overrides used when -nomamehub (no ChronoMap instance).
 bool mamehubBrowserOfflineForced(const std::string &key);
+// Drop a one-shot latch after ioport has sampled a tap that was released early.
+void mamehubBrowserOfflineForceSampled(const std::string &key);
 #endif
 
 #endif

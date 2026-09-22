@@ -706,6 +706,10 @@ void sdl_osd_interface::process_window_event(SDL_Event const &event)
 		break;
 
 	case SDL_WINDOWEVENT_RESIZED:
+#if defined(__EMSCRIPTEN__)
+		// CSS/orientation must not rebuild the WebGL window.
+		break;
+#else
 #ifdef SDLMAME_LINUX
 		/* FIXME: SDL2 sends some spurious resize events on Ubuntu
 		* while in fullscreen mode. Ignore them for now.
@@ -717,6 +721,7 @@ void sdl_osd_interface::process_window_event(SDL_Event const &event)
 			window->renderer().notify_changed();
 		}
 		break;
+#endif
 
 	case SDL_WINDOWEVENT_ENTER:
 		{

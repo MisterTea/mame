@@ -393,6 +393,12 @@ void candy_mode(const std::string& baseName, const std::string& leafName, const 
 	}
 
 #if defined(__EMSCRIPTEN__)
+	struct candy_clock_guard
+	{
+		candy_clock_guard() { mamehub_candy_clock_begin(); }
+		~candy_clock_guard() { mamehub_candy_clock_end(); }
+	} candy_clock;
+
 	std::string out_dir = (mediaPath && mediaPath[0]) ? std::string(mediaPath) : std::string("/roms");
 	// Prefer an absolute path under the Emscripten FS root.
 	if (!out_dir.empty() && out_dir[0] != '/')

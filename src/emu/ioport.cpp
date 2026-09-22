@@ -1328,7 +1328,10 @@ void ioport_field::frame_update(ioport_value &result)
 #if defined(__EMSCRIPTEN__)
 	// Offline virtual pad uses force_input; with no ChronoMap, honor sticky keys.
 	if (!netCommon && mamehubBrowserOfflineForced(std::string("INPUT/") + mamehub_id()))
+	{
 		curstate = true;
+		mamehubBrowserOfflineForceSampled(std::string("INPUT/") + mamehub_id());
+	}
 #endif
 	bool changed = false;
 	if (curstate != m_live->last)
@@ -2563,6 +2566,16 @@ void ioport_manager::frame_update()
     auto futureInputTime = netCommon->getCurrentTime()/1000 + delayFromPing;
     auto sendTime = futureInputTime;
     int64_t curTime = curMachineTime.to_msec();
+#if defined(__EMSCRIPTEN__)
+		// Don't pre-commit ChronoMap windows far ahead of emulated time. A slow
+		// client otherwise records "released" for the future, then never sees its
+		// own pad presses until (if ever) it catches up.
+		int64_t const maxSend = curTime + delayFromPing + 32;
+		if (sendTime > maxSend)
+			sendTime = maxSend;
+		if (sendTime <= curTime)
+			sendTime = curTime + 16;
+#endif
 
 		// Align on ~60Hz frame boundary (16ms)
 		sendTime = (sendTime - (sendTime % 16)) + 16;

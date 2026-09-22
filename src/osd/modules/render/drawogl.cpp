@@ -94,6 +94,24 @@ static osd_dim mamehub_clamp_present_dim(osd_dim nd)
 	return osd_dim(w, h);
 }
 
+// CSS/fullscreen/orientation changes the canvas layout box. Recreating the
+// WebGL window from that size hangs Asyncify (destroy_all_textures). Keep
+// the present target pinned to the GL backbuffer.
+static osd_dim mamehub_canvas_buffer_dim(osd_dim fallback)
+{
+	int const w = EM_ASM_INT({
+		var c = (typeof Module !== "undefined" && Module["canvas"]) ? Module["canvas"] : document.getElementById("canvas");
+		return (c && c.width) ? (c.width | 0) : 0;
+	});
+	int const h = EM_ASM_INT({
+		var c = (typeof Module !== "undefined" && Module["canvas"]) ? Module["canvas"] : document.getElementById("canvas");
+		return (c && c.height) ? (c.height | 0) : 0;
+	});
+	if (w > 0 && h > 0)
+		return osd_dim(w, h);
+	return fallback;
+}
+
 EM_JS(void, mamehub_webgl_blit, (int w, int h, int pitch, uintptr_t src), {
 	if (w <= 0 || h <= 0 || pitch < w)
 		return;
@@ -440,7 +458,7 @@ public:
 	{
 		osd_dim nd = window().get_size_pixels();
 #if defined(__EMSCRIPTEN__)
-		nd = mamehub_clamp_present_dim(nd);
+		nd = mamehub_clamp_present_dim(mamehub_canvas_buffer_dim(nd));
 #endif
 		if (nd != m_blit_dim)
 		{
@@ -1329,10 +1347,16 @@ int renderer_ogl::draw(const int update)
 
 	osd_dim wdim = window().get_size_pixels();
 #if defined(__EMSCRIPTEN__)
-	wdim = mamehub_clamp_present_dim(wdim);
+	wdim = mamehub_clamp_present_dim(mamehub_canvas_buffer_dim(wdim));
 #endif
 
-	if (has_flags(FI_CHANGED) || (wdim.width() != m_width) || (wdim.height() != m_height))
+	bool const size_changed = (wdim.width() != m_width) || (wdim.height() != m_height);
+#if defined(__EMSCRIPTEN__)
+	// Ignore FI_CHANGED from CSS/orientation; only rebuild if the backbuffer size changed.
+	if (size_changed)
+#else
+	if (has_flags(FI_CHANGED) || size_changed)
+#endif
 	{
 		destroy_all_textures();
 		m_width = wdim.width();
@@ -1341,6 +1365,10 @@ int renderer_ogl::draw(const int update)
 		m_init_context = 1;
 		clear_flags(FI_CHANGED);
 	}
+#if defined(__EMSCRIPTEN__)
+	else
+		clear_flags(FI_CHANGED);
+#endif
 
 	m_gl_context->make_current();
 

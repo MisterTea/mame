@@ -62,6 +62,30 @@
 // MAMEHub: skip OSD blit when behind netplay clock by >=1ms
 bool SKIP_OSD = false;
 
+#if defined(__EMSCRIPTEN__)
+namespace {
+bool s_candy_clock_active = false;
+double s_candy_clock_start_ms = 0.0;
+double s_candy_clock_pending_ms = 0.0;
+}
+
+void mamehub_candy_clock_begin()
+{
+	if (s_candy_clock_active)
+		return;
+	s_candy_clock_active = true;
+	s_candy_clock_start_ms = emscripten_get_now();
+}
+
+void mamehub_candy_clock_end()
+{
+	if (!s_candy_clock_active)
+		return;
+	s_candy_clock_pending_ms += emscripten_get_now() - s_candy_clock_start_ms;
+	s_candy_clock_active = false;
+}
+#endif
+
 // frameskipping tables
 const bool video_manager::s_skiptable[FRAMESKIP_LEVELS][FRAMESKIP_LEVELS] =
 {
@@ -383,8 +407,15 @@ void video_manager::frame_update(bool from_debugger)
 	// if we're throttling, synchronize before rendering
 	attotime current_time = machine().time();
 	t0 = nowUs();
+#if defined(__EMSCRIPTEN__)
+	// Only pace once we are actually running. Loading-text frame updates during
+	// RESET would otherwise start the offline origin before candy finishes.
+	if (!from_debugger && phase == machine_phase::RUNNING && !s_candy_clock_active && !m_low_latency && effective_throttle())
+		update_throttle(current_time);
+#else
 	if (!from_debugger && phase > machine_phase::INIT && !m_low_latency && effective_throttle())
 		update_throttle(current_time);
+#endif
 	curBusy.throttle_us = nowUs() - t0;
 
 	// ask the OSD to update
@@ -396,8 +427,13 @@ void video_manager::frame_update(bool from_debugger)
 	curBusy.blit_us = nowUs() - t0;
 
 	// we synchronize after rendering instead of before, if low latency mode is enabled
+#if defined(__EMSCRIPTEN__)
+	if (!from_debugger && phase == machine_phase::RUNNING && !s_candy_clock_active && m_low_latency && effective_throttle())
+		update_throttle(current_time);
+#else
 	if (!from_debugger && phase > machine_phase::INIT && m_low_latency && effective_throttle())
 		update_throttle(current_time);
+#endif
 
 	machine().osd().input_update(false);
 	emulator_info::periodic_check();
@@ -829,6 +865,16 @@ void video_manager::update_throttle(attotime emutime)
 	while (true)
 	{
 		VLOG(1) << "In video update";
+#if defined(__EMSCRIPTEN__)
+		if (s_candy_clock_active)
+			return;
+		if (s_candy_clock_pending_ms > 0.0)
+		{
+			if (m_offline_origin_valid)
+				m_offline_origin_ms += s_candy_clock_pending_ms;
+			s_candy_clock_pending_ms = 0.0;
+		}
+#endif
 		int64_t curTime;
 		if (netCommon)
 		{
